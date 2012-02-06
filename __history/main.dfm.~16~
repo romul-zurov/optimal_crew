@@ -2,7 +2,7 @@ object form_main: Tform_main
   Left = 0
   Top = 0
   Caption = #1055#1086#1076#1073#1086#1088' '#1086#1087#1090#1080#1084#1072#1083#1100#1085#1086#1075#1086' '#1101#1082#1080#1087#1072#1078#1072' '#1040#1057'-'#1058#1072#1082#1089#1080
-  ClientHeight = 536
+  ClientHeight = 418
   ClientWidth = 580
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -50,10 +50,10 @@ object form_main: Tform_main
     Caption = #1042#1088#1077#1084#1103' '#1076#1086' '#1087#1086#1076#1072#1095#1080':'
   end
   object grid_crews: TStringGrid
-    Left = 0
+    Left = 8
     Top = 96
-    Width = 580
-    Height = 41
+    Width = 570
+    Height = 114
     ColCount = 3
     Ctl3D = False
     FixedCols = 0
@@ -78,21 +78,19 @@ object form_main: Tform_main
   end
   object stbar_main: TStatusBar
     Left = 0
-    Top = 517
+    Top = 399
     Width = 580
     Height = 19
     Panels = <
       item
         Width = 50
       end>
-    ExplicitTop = 399
   end
   object DBGrid1: TDBGrid
-    Left = 0
-    Top = 143
-    Width = 580
-    Height = 374
-    Align = alBottom
+    Left = 8
+    Top = 216
+    Width = 570
+    Height = 177
     DataSource = datasource_main
     TabOrder = 4
     TitleFont.Charset = DEFAULT_CHARSET

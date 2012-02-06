@@ -8,5 +8,7 @@
     <Transaction>2012.02.02 02:55:51.357.dfm,D:\work\optimal_crew\optimal_crew.dfm=D:\work\optimal_crew\main.dfm</Transaction>
     <Transaction>2012.02.02 02:56:03.354.dproj,D:\work\optimal_crew\optimal_crew_porj.dproj=D:\work\optimal_crew\optimal_crew.dproj</Transaction>
     <Transaction>2012.02.02 02:56:24.194.dproj,D:\work\optimal_crew\optimal_crew.dproj=D:\work\optimal_crew\optimal_crew.dproj</Transaction>
+    <Transaction>2012.02.07 00:29:44.708.pas,D:\work\optimal_crew\Unit1.pas=D:\work\optimal_crew\utils.pas</Transaction>
+    <Transaction>2012.02.07 00:29:58.428.pas,D:\work\optimal_crew\utils.pas=D:\work\optimal_crew\crew_utils.pas</Transaction>
   </Transactions>
 </BorlandProject>

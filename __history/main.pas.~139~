@@ -52,7 +52,7 @@ begin
 	begin
 		dataset_main.SelectSQL.Clear;
 		sel := 'select ID, STATE, CODE, NAME from CREWS order by ID';
-		 sel := 'select ID, COORDS from CREWS_COORDS';// where ID between 3 and 25';
+		 sel := 'select ID, COORDS from CREWS_COORDS where ID beetwean 3 and 25';
 		// sel := 'SELECT ID, MEASURE_START_TIME, MEASURE_END_TIME, COORDS FROM CREWS_COORDS WHERE MEASURE_START_TIME>''{Last_day_30}'' ORDER BY MEASURE_START_TIME ASC, ID ASC';
 		// sel := replace_day(sel, cur_time);
 		// sel := 'select CREWS.ID, CREWS.CODE, CREWS.NAME, CREWS_COORDS.COORDS from CREWS, CREWS_COORDS where CREWS.STATE=2 and CREWS_COORDS.ID=CREWS.ID';
