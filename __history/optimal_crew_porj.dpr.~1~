@@ -1,0 +1,14 @@
+program optimal_crew_porj;
+
+uses
+  Forms,
+  optimal_crew in 'optimal_crew.pas' {Form1};
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  Application.CreateForm(TForm1, Form1);
+  Application.Run;
+end.

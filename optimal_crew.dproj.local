@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2012.01.31 02:01:45.140.pas,C:\Documents and Settings\mohn\Мои документы\RAD Studio\Projects\Unit1.pas=D:\work\optimal_crew\optimal_crew.pas</Transaction>
+    <Transaction>2012.01.31 02:01:45.140.dfm,C:\Documents and Settings\mohn\Мои документы\RAD Studio\Projects\Unit1.dfm=D:\work\optimal_crew\optimal_crew.dfm</Transaction>
+    <Transaction>2012.01.31 03:02:19.900.dproj,C:\Documents and Settings\mohn\Мои документы\RAD Studio\Projects\Project1.dproj=D:\work\optimal_crew\optimal_crew_porj.dproj</Transaction>
+    <Transaction>2012.02.02 02:55:51.357.pas,D:\work\optimal_crew\optimal_crew.pas=D:\work\optimal_crew\main.pas</Transaction>
+    <Transaction>2012.02.02 02:55:51.357.dfm,D:\work\optimal_crew\optimal_crew.dfm=D:\work\optimal_crew\main.dfm</Transaction>
+    <Transaction>2012.02.02 02:56:03.354.dproj,D:\work\optimal_crew\optimal_crew_porj.dproj=D:\work\optimal_crew\optimal_crew.dproj</Transaction>
+    <Transaction>2012.02.02 02:56:24.194.dproj,D:\work\optimal_crew\optimal_crew.dproj=D:\work\optimal_crew\optimal_crew.dproj</Transaction>
+  </Transactions>
+</BorlandProject>
