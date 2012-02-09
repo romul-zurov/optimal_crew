@@ -2,7 +2,7 @@ object form_main: Tform_main
   Left = 0
   Top = 0
   Caption = #1055#1086#1076#1073#1086#1088' '#1086#1087#1090#1080#1084#1072#1083#1100#1085#1086#1075#1086' '#1101#1082#1080#1087#1072#1078#1072' '#1040#1057'-'#1058#1072#1082#1089#1080
-  ClientHeight = 536
+  ClientHeight = 418
   ClientWidth = 580
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -51,9 +51,10 @@ object form_main: Tform_main
   end
   object grid_crews: TStringGrid
     Left = 0
-    Top = 96
+    Top = 108
     Width = 580
-    Height = 210
+    Height = 114
+    Align = alBottom
     ColCount = 3
     Ctl3D = False
     FixedCols = 0
@@ -61,6 +62,9 @@ object form_main: Tform_main
     FixedRows = 0
     ParentCtl3D = False
     TabOrder = 0
+    ExplicitLeft = 8
+    ExplicitTop = 96
+    ExplicitWidth = 570
   end
   object edit_zakaz4ik: TEdit
     Left = 88
@@ -78,7 +82,7 @@ object form_main: Tform_main
   end
   object stbar_main: TStatusBar
     Left = 0
-    Top = 517
+    Top = 399
     Width = 580
     Height = 19
     Panels = <
@@ -88,9 +92,9 @@ object form_main: Tform_main
   end
   object DBGrid1: TDBGrid
     Left = 0
-    Top = 312
+    Top = 222
     Width = 580
-    Height = 205
+    Height = 177
     Align = alBottom
     DataSource = datasource_main
     TabOrder = 4
@@ -106,23 +110,23 @@ object form_main: Tform_main
       'password=masterkey'
       'lc_ctype=WIN1251')
     LoginPrompt = False
-    Left = 136
-    Top = 416
+    Left = 544
+    Top = 64
   end
   object ta_main: TIBTransaction
     DefaultDatabase = db_main
-    Left = 392
-    Top = 400
+    Left = 496
+    Top = 32
   end
   object dataset_main: TIBDataSet
     Database = db_main
     Transaction = ta_main
-    Left = 304
-    Top = 360
+    Left = 448
+    Top = 72
   end
   object datasource_main: TDataSource
     DataSet = dataset_main
-    Left = 208
-    Top = 392
+    Left = 400
+    Top = 32
   end
 end

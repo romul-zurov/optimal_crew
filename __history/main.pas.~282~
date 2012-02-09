@@ -118,8 +118,6 @@ begin
 		end;
 		grid_crews.RowCount := grid_crews.RowCount - 1;
         list.Assign(grid_crews.Cols[0]);
-        list.Sorted := true;
-        grid_crews.Cols[0].Assign(list);
 		// grid_crews.Cols[0].Sorted := True;
 	end;
 end;

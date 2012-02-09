@@ -43,84 +43,27 @@ begin
 	form_main.stbar_main.Panels[0].Text := status;
 end;
 
-function coords_to_str(field : TField) : TStringList;
-var
-	nfields, j, l, l2 : integer;
-	s, s2, d : string;
-	date0, date1, date2 : TDateTime;
-	b : TBytes;
-	pint : ^integer;
-	plat, plong : ^single;
-	sid, scoords : string;
-	res : TStringList;
-
-begin
-	res := TStringList.Create;
-	l := field.DataSize;
-	l2 := l div 12;
-	date0 := date0 / l2;
-	setlength(b, l);
-	b := field.AsBytes;
-	j := 0;
-	while j < l do
-	begin
-		pint := @b[j];
-		plat := @b[j + 8];
-		plong := @b[j + 4];
-		if pint^ > 0 then
-		begin
-			sid := inttostr(pint^);
-			scoords := StringReplace(floattostr(plat^), ',', '.', [rfReplaceAll]) + ', ' + StringReplace(floattostr(plong^), ',', '.', [rfReplaceAll]);
-		end;
-		res.Append(sid + ' :: ' + scoords);
-		// res.Append(scoords);
-		j := j + 12;
-	end;
-
-	result := res;
-end;
-
-procedure show_tmp();
+procedure show_order_tarifs();
 var
 	sel : string;
-	i, j : integer;
-	res, list : TStringList;
 begin
 	cur_time := now();
 	with form_main do
 	begin
 		dataset_main.SelectSQL.Clear;
 		// sel := 'select ID, STATE, CODE, NAME from CREWS order by ID';
-		// sel := 'select ID, COORDS from CREWS_COORDS';
-		sel := 'select ID, MEASURE_START_TIME, MEASURE_END_TIME, COORDS from CREWS_COORDS WHERE MEASURE_START_TIME>''2011-10-03 14:57:50'' ORDER BY MEASURE_START_TIME ASC, ID ASC';
+		sel := 'select ID, COORDS from CREWS_COORDS where ID=3';
+		// sel := 'SELECT ID, MEASURE_START_TIME, MEASURE_END_TIME, COORDS FROM CREWS_COORDS WHERE MEASURE_START_TIME>''{Last_day_30}'' ORDER BY MEASURE_START_TIME ASC, ID ASC';
 		// sel := replace_day(sel, cur_time);
-		// sel := 'select CREWS.ID, CREWS.STATE, CREWS.IDENTIFIER as GpsId, CREWS.CODE, CREWS.NAME from CREWS where (CREWS.STATE=2 or CREWS.STATE=0) order by GpsId';
+		// sel := 'select CREWS.ID, CREWS.CODE, CREWS.NAME, CREWS_COORDS.COORDS from CREWS, CREWS_COORDS where CREWS.STATE=2 and CREWS_COORDS.ID=CREWS.ID';
 		// sel := 'select CREWS.CODE, CREWS.NAME, CREWS_COORDS.COORDS from CREWS, CREW_STATE, CREWS_COORDS where CREW_STATE.SYSTEMSTATE=2 and CREWS.ID=CREW_STATE.ID and CREWS_COORDS.ID=CREW_STATE.ID';
 		dataset_main.SelectSQL.Add(sel);
 		dataset_main.Open;
 		show_status('запрос произведён');
-		i := 0;
-		grid_crews.RowCount := 0;
-		grid_crews.ColCount := 1;
-		list := TStringList.Create;
-		while (not dataset_main.Eof) do
-		begin
-			res := coords_to_str(dataset_main.Fields[3]);
-			j := 0;
-			while (j < res.Count) do
-			begin
-				grid_crews.Cells[0, i] := res.Strings[j];
-				inc(j);
-				inc(i);
-				grid_crews.RowCount := i + 1;
-			end;
-			dataset_main.Next;
-		end;
-		grid_crews.RowCount := grid_crews.RowCount - 1;
-        list.Assign(grid_crews.Cols[0]);
-        list.Sorted := true;
-        grid_crews.Cols[0].Assign(list);
-		// grid_crews.Cols[0].Sorted := True;
+		// while not ds_main.Eof do begin
+		//
+		// end;
+
 	end;
 end;
 
@@ -154,14 +97,14 @@ procedure Tform_main.FormCreate(Sender : TObject);
 begin
 	with form_main do
 	begin
-		grid_crews.ColWidths[0] := 560; // 120;
+		grid_crews.ColWidths[0] := 120;
 		grid_crews.ColWidths[1] := 180;
 		grid_crews.ColWidths[2] := 570 - (120 + 180) - 5;
 	end;
 
 	if open_database() then
 	begin
-		show_tmp();
+		show_order_tarifs();
 	end;
 
 end;

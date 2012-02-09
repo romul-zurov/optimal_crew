@@ -117,9 +117,7 @@ begin
 			dataset_main.Next;
 		end;
 		grid_crews.RowCount := grid_crews.RowCount - 1;
-        list.Assign(grid_crews.Cols[0]);
-        list.Sorted := true;
-        grid_crews.Cols[0].Assign(list);
+        list := grid_crews.Cols[0];
 		// grid_crews.Cols[0].Sorted := True;
 	end;
 end;

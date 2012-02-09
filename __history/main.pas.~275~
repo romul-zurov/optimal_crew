@@ -84,7 +84,7 @@ procedure show_tmp();
 var
 	sel : string;
 	i, j : integer;
-	res, list : TStringList;
+	res : TStringList;
 begin
 	cur_time := now();
 	with form_main do
@@ -102,7 +102,6 @@ begin
 		i := 0;
 		grid_crews.RowCount := 0;
 		grid_crews.ColCount := 1;
-		list := TStringList.Create;
 		while (not dataset_main.Eof) do
 		begin
 			res := coords_to_str(dataset_main.Fields[3]);
@@ -117,10 +116,7 @@ begin
 			dataset_main.Next;
 		end;
 		grid_crews.RowCount := grid_crews.RowCount - 1;
-        list.Assign(grid_crews.Cols[0]);
-        list.Sorted := true;
-        grid_crews.Cols[0].Assign(list);
-		// grid_crews.Cols[0].Sorted := True;
+//		grid_crews.Cols[0].Sorted := True;
 	end;
 end;
 
@@ -154,7 +150,7 @@ procedure Tform_main.FormCreate(Sender : TObject);
 begin
 	with form_main do
 	begin
-		grid_crews.ColWidths[0] := 560; // 120;
+		grid_crews.ColWidths[0] := 560; //120;
 		grid_crews.ColWidths[1] := 180;
 		grid_crews.ColWidths[2] := 570 - (120 + 180) - 5;
 	end;
