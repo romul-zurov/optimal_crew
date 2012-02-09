@@ -43,6 +43,7 @@ begin
 	form_main.stbar_main.Panels[0].Text := status;
 end;
 
+<<<<<<< HEAD
 function coords_to_str(field : TField) : TStringList;
 var
 	nfields, j, l, l2 : integer;
@@ -85,16 +86,29 @@ var
 	sel : string;
 	i, j : integer;
 	res, list : TStringList;
+=======
+procedure show_order_tarifs();
+var
+	sel : string;
+>>>>>>> 4ebb61dd2e0a9c3fab2e4d7fc3b8b1bf80a519ce
 begin
 	cur_time := now();
 	with form_main do
 	begin
 		dataset_main.SelectSQL.Clear;
+<<<<<<< HEAD
 		// sel := 'select ID, STATE, CODE, NAME from CREWS order by ID';
 		// sel := 'select ID, COORDS from CREWS_COORDS';
 		sel := 'select ID, MEASURE_START_TIME, MEASURE_END_TIME, COORDS from CREWS_COORDS WHERE MEASURE_START_TIME>''2011-10-03 14:57:50'' ORDER BY MEASURE_START_TIME ASC, ID ASC';
 		// sel := replace_day(sel, cur_time);
 		// sel := 'select CREWS.ID, CREWS.STATE, CREWS.IDENTIFIER as GpsId, CREWS.CODE, CREWS.NAME from CREWS where (CREWS.STATE=2 or CREWS.STATE=0) order by GpsId';
+=======
+		sel := 'select ID, STATE, CODE, NAME from CREWS order by ID';
+		 sel := 'select ID, COORDS from CREWS_COORDS';// where ID between 3 and 25';
+		// sel := 'SELECT ID, MEASURE_START_TIME, MEASURE_END_TIME, COORDS FROM CREWS_COORDS WHERE MEASURE_START_TIME>''{Last_day_30}'' ORDER BY MEASURE_START_TIME ASC, ID ASC';
+		// sel := replace_day(sel, cur_time);
+		// sel := 'select CREWS.ID, CREWS.CODE, CREWS.NAME, CREWS_COORDS.COORDS from CREWS, CREWS_COORDS where CREWS.STATE=2 and CREWS_COORDS.ID=CREWS.ID';
+>>>>>>> 4ebb61dd2e0a9c3fab2e4d7fc3b8b1bf80a519ce
 		// sel := 'select CREWS.CODE, CREWS.NAME, CREWS_COORDS.COORDS from CREWS, CREW_STATE, CREWS_COORDS where CREW_STATE.SYSTEMSTATE=2 and CREWS.ID=CREW_STATE.ID and CREWS_COORDS.ID=CREW_STATE.ID';
 		dataset_main.SelectSQL.Add(sel);
 		dataset_main.Open;

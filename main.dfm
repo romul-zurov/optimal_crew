@@ -53,7 +53,11 @@ object form_main: Tform_main
     Left = 0
     Top = 96
     Width = 580
+<<<<<<< HEAD
     Height = 210
+=======
+    Height = 41
+>>>>>>> 4ebb61dd2e0a9c3fab2e4d7fc3b8b1bf80a519ce
     ColCount = 3
     Ctl3D = False
     FixedCols = 0
@@ -85,12 +89,19 @@ object form_main: Tform_main
       item
         Width = 50
       end>
+    ExplicitTop = 399
   end
   object DBGrid1: TDBGrid
     Left = 0
+<<<<<<< HEAD
     Top = 312
     Width = 580
     Height = 205
+=======
+    Top = 143
+    Width = 580
+    Height = 374
+>>>>>>> 4ebb61dd2e0a9c3fab2e4d7fc3b8b1bf80a519ce
     Align = alBottom
     DataSource = datasource_main
     TabOrder = 4

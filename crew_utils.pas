@@ -10,7 +10,10 @@ implementation
 
 uses StrUtils, DateUtils, SysUtils;
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 4ebb61dd2e0a9c3fab2e4d7fc3b8b1bf80a519ce
 function replace_day(const value : string; const MyTime : TDateTime) : string;
 var
 	p1, p2, n : integer;
