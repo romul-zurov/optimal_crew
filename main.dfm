@@ -3,7 +3,7 @@ object form_main: Tform_main
   Top = 0
   Caption = #1055#1086#1076#1073#1086#1088' '#1086#1087#1090#1080#1084#1072#1083#1100#1085#1086#1075#1086' '#1101#1082#1080#1087#1072#1078#1072' '#1040#1057'-'#1058#1072#1082#1089#1080
   ClientHeight = 536
-  ClientWidth = 580
+  ClientWidth = 978
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -49,15 +49,11 @@ object form_main: Tform_main
     Height = 13
     Caption = #1042#1088#1077#1084#1103' '#1076#1086' '#1087#1086#1076#1072#1095#1080':'
   end
-  object grid_crews: TStringGrid
+  object grid_crew: TStringGrid
     Left = 0
     Top = 96
-    Width = 580
-<<<<<<< HEAD
-    Height = 210
-=======
-    Height = 41
->>>>>>> 4ebb61dd2e0a9c3fab2e4d7fc3b8b1bf80a519ce
+    Width = 444
+    Height = 177
     ColCount = 3
     Ctl3D = False
     FixedCols = 0
@@ -83,25 +79,19 @@ object form_main: Tform_main
   object stbar_main: TStatusBar
     Left = 0
     Top = 517
-    Width = 580
+    Width = 978
     Height = 19
     Panels = <
       item
         Width = 50
       end>
-    ExplicitTop = 399
+    ExplicitWidth = 580
   end
   object DBGrid1: TDBGrid
     Left = 0
-<<<<<<< HEAD
-    Top = 312
-    Width = 580
-    Height = 205
-=======
-    Top = 143
-    Width = 580
-    Height = 374
->>>>>>> 4ebb61dd2e0a9c3fab2e4d7fc3b8b1bf80a519ce
+    Top = 456
+    Width = 978
+    Height = 61
     Align = alBottom
     DataSource = datasource_main
     TabOrder = 4
@@ -111,29 +101,58 @@ object form_main: Tform_main
     TitleFont.Name = 'Tahoma'
     TitleFont.Style = []
   end
+  object grid_gps: TStringGrid
+    Left = 0
+    Top = 285
+    Width = 978
+    Height = 171
+    Align = alBottom
+    ColCount = 3
+    Ctl3D = False
+    FixedCols = 0
+    RowCount = 1
+    FixedRows = 0
+    ParentCtl3D = False
+    TabOrder = 5
+    ExplicitTop = 279
+    ExplicitWidth = 740
+  end
+  object grid_order: TStringGrid
+    Left = 450
+    Top = 96
+    Width = 528
+    Height = 177
+    ColCount = 3
+    Ctl3D = False
+    FixedCols = 0
+    RowCount = 1
+    FixedRows = 0
+    ParentCtl3D = False
+    TabOrder = 6
+  end
   object db_main: TIBDatabase
     Params.Strings = (
       'user_name=SYSDBA'
       'password=masterkey'
       'lc_ctype=WIN1251')
     LoginPrompt = False
-    Left = 136
-    Top = 416
+    Left = 264
+    Top = 472
   end
   object ta_main: TIBTransaction
     DefaultDatabase = db_main
-    Left = 392
-    Top = 400
-  end
-  object dataset_main: TIBDataSet
-    Database = db_main
-    Transaction = ta_main
-    Left = 304
-    Top = 360
+    Left = 528
+    Top = 472
   end
   object datasource_main: TDataSource
-    DataSet = dataset_main
-    Left = 208
-    Top = 392
+    Left = 360
+    Top = 472
+  end
+  object ibquery_main: TIBQuery
+    Database = db_main
+    Transaction = ta_main
+    DataSource = datasource_main
+    Left = 464
+    Top = 472
   end
 end
