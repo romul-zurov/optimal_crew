@@ -52,7 +52,7 @@ object form_main: Tform_main
   object grid_crew: TStringGrid
     Left = 0
     Top = 96
-    Width = 444
+    Width = 513
     Height = 177
     ColCount = 3
     Ctl3D = False
@@ -65,14 +65,14 @@ object form_main: Tform_main
   object edit_zakaz4ik: TEdit
     Left = 88
     Top = 5
-    Width = 486
+    Width = 890
     Height = 21
     TabOrder = 1
   end
   object edit_adres: TEdit
     Left = 88
     Top = 37
-    Width = 486
+    Width = 890
     Height = 21
     TabOrder = 2
   end
@@ -85,14 +85,12 @@ object form_main: Tform_main
       item
         Width = 50
       end>
-    ExplicitWidth = 580
   end
   object DBGrid1: TDBGrid
     Left = 0
     Top = 456
     Width = 978
     Height = 61
-    Align = alBottom
     DataSource = datasource_main
     TabOrder = 4
     TitleFont.Charset = DEFAULT_CHARSET
@@ -102,11 +100,10 @@ object form_main: Tform_main
     TitleFont.Style = []
   end
   object grid_gps: TStringGrid
-    Left = 0
-    Top = 285
-    Width = 978
-    Height = 171
-    Align = alBottom
+    Left = 519
+    Top = 96
+    Width = 459
+    Height = 177
     ColCount = 3
     Ctl3D = False
     FixedCols = 0
@@ -114,13 +111,11 @@ object form_main: Tform_main
     FixedRows = 0
     ParentCtl3D = False
     TabOrder = 5
-    ExplicitTop = 279
-    ExplicitWidth = 740
   end
   object grid_order: TStringGrid
-    Left = 450
-    Top = 96
-    Width = 528
+    Left = 0
+    Top = 279
+    Width = 574
     Height = 177
     ColCount = 3
     Ctl3D = False
@@ -129,6 +124,19 @@ object form_main: Tform_main
     FixedRows = 0
     ParentCtl3D = False
     TabOrder = 6
+  end
+  object browser: TWebBrowser
+    Left = 632
+    Top = 279
+    Width = 300
+    Height = 150
+    TabOrder = 7
+    ControlData = {
+      4C000000021F0000810F00000000000000000000000000000000000000000000
+      000000004C000000000000000000000001000000E0D057007335CF11AE690800
+      2B2E126208000000000000004C0000000114020000000000C000000000000046
+      8000000000000000000000000000000000000000000000000000000000000000
+      00000000000000000100000000000000000000000000000000000000}
   end
   object db_main: TIBDatabase
     Params.Strings = (

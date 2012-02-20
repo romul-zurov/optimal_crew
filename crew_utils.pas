@@ -2,18 +2,16 @@ unit crew_utils;
 
 interface
 
+uses StrUtils, DateUtils, SysUtils, Classes;
+
 function replace_day(const value : string; const MyTime : TDateTime) : string;
 function replace_hour(const value : string; const MyTime : TDateTime) : string;
 function replace_minute(const value : string; const MyTime : TDateTime) : string;
 
+procedure RemoveDuplicates(const stringList : TStringList);
+
 implementation
 
-uses StrUtils, DateUtils, SysUtils;
-
-<<<<<<< HEAD
-
-=======
->>>>>>> 4ebb61dd2e0a9c3fab2e4d7fc3b8b1bf80a519ce
 function replace_day(const value : string; const MyTime : TDateTime) : string;
 var
 	p1, p2, n : integer;
@@ -110,6 +108,26 @@ begin
 	until (p1 = 0) or (p2 = 0) or (n <= 0);
 
 	result := res;
+end;
+
+procedure RemoveDuplicates(const stringList : TStringList);
+var
+	buffer : TStringList;
+	cnt : integer;
+begin
+	stringList.Sort;
+	buffer := TStringList.Create;
+	try
+		buffer.Sorted := True;
+		buffer.Duplicates := dupIgnore;
+		buffer.BeginUpdate;
+		for cnt := 0 to stringList.Count - 1 do
+			buffer.Add(stringList[cnt]);
+		buffer.EndUpdate;
+		stringList.Assign(buffer);
+	finally
+		FreeandNil(buffer);
+	end;
 end;
 
 end.

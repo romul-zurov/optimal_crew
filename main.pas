@@ -5,7 +5,7 @@ interface
 uses
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
 	Dialogs, Grids, StdCtrls, DB, IBDatabase, DBGrids, ComCtrls, IBCustomDataSet,
-	StrUtils, DateUtils, crew_utils, IBQuery;
+	StrUtils, DateUtils, crew_utils, IBQuery, OleCtrls, SHDocVw, EncdDecd;
 
 type
 	Tform_main = class(TForm)
@@ -25,6 +25,7 @@ type
 		ibquery_main : TIBQuery;
 		grid_gps : TStringGrid;
 		grid_order : TStringGrid;
+		browser : TWebBrowser;
 		procedure FormCreate(Sender : TObject);
 	private
 		{ Private declarations }
@@ -91,7 +92,8 @@ begin
 		if pint^ > 0 then
 		begin
 			sid := inttostr(pint^);
-			scoords := StringReplace(floattostr(plat^), ',', '.', [rfReplaceAll]) + ', ' + StringReplace(floattostr(plong^), ',', '.', [rfReplaceAll]);
+			scoords := StringReplace(floattostr(plat^), ',', '.', [rfReplaceAll]) + ', ' + StringReplace
+				(floattostr(plong^), ',', '.', [rfReplaceAll]);
 		end;
 		s := sid + '::      ' + sdate1 + ' -- ' + sdate2 + '        (' + scoords + ')';
 		res.Append(s);
@@ -155,48 +157,98 @@ begin
 	result := list;
 end;
 
-function get_crew_list() : TStringList;
+function get_crew_list(sdate : string) : TStringList;
+// извлекаем рабочие экипажи
 var
 	sel : string;
 begin
 	// sel := 'select CREWS.ID, CREWS.STATE, CREWS.IDENTIFIER as GpsId, CREWS.CODE, CREWS.NAME from CREWS where (CREWS.STATE=2 or CREWS.STATE=0) order by GpsId';
-	sel := 'select CREWS.IDENTIFIER as GpsId, CREWS.ID, CREWS.STATE, CREWS.CODE, CREWS.NAME from CREWS order by GpsId';
+	// sel := 'select CREWS.IDENTIFIER as GpsId, CREWS.ID, CREWS.STATE, CREWS.CODE, CREWS.NAME from CREWS order by GpsId';
+	sel := 'select CREWS.IDENTIFIER, CREWS_H.STATETIME, CREWS_H.TOSTATE, CREWS.NAME, CREWS.FINISHTIME' +
+		' from CREWS_H, CREWS where CREWS_H.STATETIME > ''' + sdate +
+		''' and (CREWS_H.TOSTATE = 1 or CREWS_H.TOSTATE = 3) and CREWS.ID = CREWS_H.CREWID order by CREWS_H.STATETIME desc';
 	result := get_sql_list(sel, false);
 end;
 
-function get_order_list() : TStringList;
+function get_order_list(sdate : string) : TStringList;
+// заказы занятых экипажей
 var
 	sel : string;
 begin
-	// sel := 'select CREWS.ID, CREWS.STATE, CREWS.IDENTIFIER as GpsId, CREWS.CODE, CREWS.NAME from CREWS where (CREWS.STATE=2 or CREWS.STATE=0) order by GpsId';
-	sel := 'select STARTTIME, ID, STATE, SOURCE, DESTINATION  from ORDERS order by STARTTIME DESC';
-	result := get_sql_list(sel, false);
+	sdate := '''' + sdate + '''';
+	// sel := 'select STARTTIME, STATE, SOURCE, STOPS_COUNT, STOPS, DESTINATION  from ORDERS where STOPS_COUNT > 0   order by STARTTIME DESC';
+	sel :=
+		'select CREWS.IDENTIFIER, CREWS.NAME, ORDERS.SOURCE, ORDERS.STOPS_COUNT, ORDERS.STOPS, ORDERS.DESTINATION'
+		+ ' from CREWS_H, CREWS, ORDERS' + ' where CREWS_H.STATETIME > ' + sdate + ' and ORDERS.STARTTIME > ' + sdate +
+		' and (CREWS_H.TOSTATE = 3) and (CREWS.ID = CREWS_H.CREWID) and (ORDERS.CREWID = CREWS_H.CREWID)';
+
+	result := get_sql_list(sel, true);
+end;
+
+function param64(s : AnsiString) : AnsiString;
+var ss : AnsiString;
+	p : Pointer;
+begin
+	p := Pointer(s);
+	ss := EncodeBase64(p, Length(s));
+	ss := StringReplace(ss, chr(10), '', [rfReplaceAll]);
+	ss := StringReplace(ss, chr(13), '', [rfReplaceAll]);
+	ss := StringReplace(ss, '+', ';', [rfReplaceAll]);
+	ss := StringReplace(ss, '=', '_', [rfReplaceAll]);
+	result := ss;
+end;
+
+function get_track_time(surl : AnsiString) : integer;
+type
+	t1251 = type AnsiString(1251);
+var cp1251 : t1251;
+	ss : TStringStream;
+	sw : widestring;
+begin
+	with form_main do
+	begin
+		cp1251 := surl;
+		ss := TStringStream.Create(surl, 1251);
+		// sw := ss.DataString;
+		sw := widestring(ss.Bytes);
+		browser.Navigate(sw);
+	end;
 end;
 
 procedure show_grid(list : TStringList; var grid : TStringGrid);
 begin
-	grid.ColCount := 1;
-	grid.RowCount := list.Count;
-	grid.ColWidths[0] := grid.Width;
+	grid.ColCount := 1; grid.RowCount := list.Count; grid.ColWidths[0] := grid.Width;
 	grid.Cols[0].Assign(list);
 end;
 
 procedure show_tmp();
-var
-	list_coord, list_crew, list_order : TStringList;
+const SDAY = '2011-10-03 00:00:00';
+var list_coord, list_crew, list_order : TStringList;
+	surl : AnsiString;
 begin
 	with form_main do
 	begin
-		list_coord := get_coord_list();
-		show_grid(list_coord, grid_gps);
-		list_crew := get_crew_list();
-		show_grid(list_crew, grid_crew);
-		list_order := get_order_list();
-		show_grid(list_order, grid_order);
-		// grid_gps.ColCount := 1;
-		// grid_gps.RowCount := list.Count;
-		// grid_gps.Cols[0].Assign(list);
+		list_coord := get_coord_list(); show_grid(list_coord, grid_gps);
+		list_crew := get_crew_list(SDAY);
+		// RemoveDuplicates(list_crew);
+		show_grid(list_crew, grid_crew); list_order := get_order_list(SDAY); show_grid(list_order, grid_order);
 
+		surl := 'http://robocab.ru/ac-taxi.php?param=' +
+			'Imh0dHA6Ly9hYy10YXhpLnJ1L29yZGVyL3BvaW50X2Zyb20lNUJvYmolNUQlNUIlNUQ9' +
+			'JTI2cG9pbnRfZnJvbSU1QmhvdXNlJTVEJTVCJTVEPSUyNnBvaW50X2Zyb20lNUJjb3JwJTVEJTVCJTVEPSUyNnBvaW50X2Zyb20lNUJ' +
+			'jb29yZHMlNUQlNUIlNUQ9MzAuMjYwMTMlMjUyQzU5LjkzNzk4NCUyNnBvaW50X2ludCU1Qm9iaiU1RCU1QiU1RD0lQzElRTAlRUIlRj' +
+			'IlRTglRTklRjElRUElRTAlRkYlMjAlRjMlRUIuJTI2cG9pbnRfaW50JTVCaG91c2UlNUQlNUIlNUQ9MjElMjZwb2ludF9pbnQlNUJjb' +
+			'3JwJTVEJTVCJTVEPTElMjZwb2ludF9pbnQlNUJjb29yZHMlNUQlNUIlNUQ9JTI2cG9pbnRfdG8lNUJvYmolNUQlNUIlNUQ9JUMwJUUy' +
+			'JUYyJUVFJUUyJUYxJUVBJUUwJUZGJTIwJUYzJUVCLiUyNnBvaW50X3RvJTVCaG91c2UlNUQlNUIlNUQ9MjElMjZwb2ludF90byU1QmN' +
+			'vcnAlNUQlNUIlNUQ9MSUyNnBvaW50X3RvJTVCY29vcmRzJTVEJTVCJTVEPSIgIjx0ZCBjb2xzcGFuPVwiMlwiIGlkPVwicmVjYWxjT3' +
+			'V0cHV0XCIgYWxpZ249XCJsZWZ0XCI;IiAiPC90ZD4i';
+		//
+		surl := 'http://ac-taxi.ru/order/point_from[obj][]=&point_from[house][]=&point_from[corp][]=' +
+			'&point_from[coords][]=30.26013%2C59.937984&point_int[obj][]=Балтийская ул.&point_int[house][]=21' +
+			'&point_int[corp][]=1&point_int[coords][]=&point_to[obj][]=Автовская ул.&point_to[house][]=21' +
+			'&point_to[corp][]=1&point_to[coords][]=';
+		edit_adres.Text := param64('"' + surl + '"');
+		get_track_time(surl);
 	end;
 end;
 
@@ -207,8 +259,8 @@ begin
 		with db_main do
 		begin
 			SQLDialect := 3;
-			// DatabaseName := 'localhost:D:\fbdb\tme.fdb';
-			DatabaseName := 'localhost:c:\Program Files\TMEnterpriseDemo\tme_demo_db.fdb';
+			DatabaseName := 'localhost:D:\fbdb\tme.fdb';
+			// DatabaseName := 'localhost:c:\Program Files\TMEnterpriseDemo\tme_demo_db.fdb';
 			// LoginPrompt := False;		{off window-prompt user and passwd}
 			// Params.Clear;				{see dfm.form_main.db_main.Params}
 			// Params.Add('user_name=SYSDBA');
@@ -216,24 +268,22 @@ begin
 			// Params.Add('lc_ctype=WIN1251');
 		end;
 		try
-			db_main.Connected := true;
-			show_status('успешное подключение к БД');
-			result := true;
+			db_main.Connected := true; show_status('успешное подключение к БД'); result := true;
 		except
 			show_status('ошибка при открытии БД');
-			result := False;
+			result := false;
 		end;
 	end;
 end;
 
 procedure Tform_main.FormCreate(Sender : TObject);
 begin
-	with form_main do
-	begin
-		grid_crew.ColWidths[0] := 560; // 120;
-		grid_crew.ColWidths[1] := 180;
-		grid_crew.ColWidths[2] := 570 - (120 + 180) - 5;
-	end;
+	// with form_main do
+	// begin
+	// grid_crew.ColWidths[0] := 560; // 120;
+	// grid_crew.ColWidths[1] := 180;
+	// grid_crew.ColWidths[2] := 570 - (120 + 180) - 5;
+	// end;
 
 	if open_database() then
 	begin

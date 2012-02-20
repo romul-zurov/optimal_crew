@@ -47,6 +47,7 @@
 				<Form>form_main</Form>
 			</DCCReference>
 			<DCCReference Include="crew_utils.pas"/>
+			<None Include="TODO.txt"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
