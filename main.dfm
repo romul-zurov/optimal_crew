@@ -2,8 +2,8 @@ object form_main: Tform_main
   Left = 0
   Top = 0
   Caption = #1055#1086#1076#1073#1086#1088' '#1086#1087#1090#1080#1084#1072#1083#1100#1085#1086#1075#1086' '#1101#1082#1080#1087#1072#1078#1072' '#1040#1057'-'#1058#1072#1082#1089#1080
-  ClientHeight = 536
-  ClientWidth = 978
+  ClientHeight = 524
+  ClientWidth = 968
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -52,7 +52,7 @@ object form_main: Tform_main
   object grid_crew: TStringGrid
     Left = 0
     Top = 96
-    Width = 513
+    Width = 464
     Height = 177
     ColCount = 3
     Ctl3D = False
@@ -78,13 +78,15 @@ object form_main: Tform_main
   end
   object stbar_main: TStatusBar
     Left = 0
-    Top = 517
-    Width = 978
+    Top = 505
+    Width = 968
     Height = 19
     Panels = <
       item
         Width = 50
       end>
+    ExplicitTop = 517
+    ExplicitWidth = 978
   end
   object DBGrid1: TDBGrid
     Left = 0
@@ -100,10 +102,10 @@ object form_main: Tform_main
     TitleFont.Style = []
   end
   object grid_gps: TStringGrid
-    Left = 519
+    Left = 470
     Top = 96
-    Width = 459
-    Height = 177
+    Width = 498
+    Height = 251
     ColCount = 3
     Ctl3D = False
     FixedCols = 0
@@ -115,7 +117,7 @@ object form_main: Tform_main
   object grid_order: TStringGrid
     Left = 0
     Top = 279
-    Width = 574
+    Width = 464
     Height = 177
     ColCount = 3
     Ctl3D = False
@@ -126,13 +128,13 @@ object form_main: Tform_main
     TabOrder = 6
   end
   object browser: TWebBrowser
-    Left = 632
-    Top = 279
-    Width = 300
-    Height = 150
+    Left = 470
+    Top = 353
+    Width = 498
+    Height = 97
     TabOrder = 7
     ControlData = {
-      4C000000021F0000810F00000000000000000000000000000000000000000000
+      4C00000078330000060A00000000000000000000000000000000000000000000
       000000004C000000000000000000000001000000E0D057007335CF11AE690800
       2B2E126208000000000000004C0000000114020000000000C000000000000046
       8000000000000000000000000000000000000000000000000000000000000000

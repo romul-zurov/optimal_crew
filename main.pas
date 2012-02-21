@@ -185,12 +185,13 @@ begin
 	result := get_sql_list(sel, true);
 end;
 
-function param64(s : AnsiString) : AnsiString;
-var ss : AnsiString;
+function param64(s : string) : string;
+var ss : RawByteString;
 	p : Pointer;
 begin
-	p := Pointer(s);
-	ss := EncodeBase64(p, Length(s));
+	ss := UTF8Encode(s);
+	p := Pointer(ss);
+	ss := EncodeBase64(p, Length(ss));
 	ss := StringReplace(ss, chr(10), '', [rfReplaceAll]);
 	ss := StringReplace(ss, chr(13), '', [rfReplaceAll]);
 	ss := StringReplace(ss, '+', ';', [rfReplaceAll]);
@@ -204,14 +205,20 @@ type
 var cp1251 : t1251;
 	ss : TStringStream;
 	sw : widestring;
+	sraw : RawByteString;
+	bb : TBytes;
+	sansi : AnsiString;
 begin
 	with form_main do
 	begin
-		cp1251 := surl;
-		ss := TStringStream.Create(surl, 1251);
-		// sw := ss.DataString;
-		sw := widestring(ss.Bytes);
-		browser.Navigate(sw);
+		// setlength(bb, length(surl) * sizeOf(Char));
+		// bb := TEncoding.Convert(TEncoding.Unicode, TEncoding.GetEncoding(1251), bb);
+		// sw := widestring(bb);
+		// sansi := stringOf(bb);
+		// sraw := UTF8Encode(surl);
+		// sraw := Utf8ToAnsi(sraw);
+		// edit_zakaz4ik.Text := sraw;
+		browser.Navigate(surl);
 	end;
 end;
 
@@ -224,7 +231,7 @@ end;
 procedure show_tmp();
 const SDAY = '2011-10-03 00:00:00';
 var list_coord, list_crew, list_order : TStringList;
-	surl : AnsiString;
+	surl : string;
 begin
 	with form_main do
 	begin
@@ -243,11 +250,18 @@ begin
 			'vcnAlNUQlNUIlNUQ9MSUyNnBvaW50X3RvJTVCY29vcmRzJTVEJTVCJTVEPSIgIjx0ZCBjb2xzcGFuPVwiMlwiIGlkPVwicmVjYWxjT3' +
 			'V0cHV0XCIgYWxpZ249XCJsZWZ0XCI;IiAiPC90ZD4i';
 		//
-		surl := 'http://ac-taxi.ru/order/point_from[obj][]=&point_from[house][]=&point_from[corp][]=' +
+		surl := '"http://ac-taxi.ru/order/point_from[obj][]=&point_from[house][]=&point_from[corp][]=' +
 			'&point_from[coords][]=30.26013%2C59.937984&point_int[obj][]=Балтийская ул.&point_int[house][]=21' +
 			'&point_int[corp][]=1&point_int[coords][]=&point_to[obj][]=Автовская ул.&point_to[house][]=21' +
-			'&point_to[corp][]=1&point_to[coords][]=';
-		edit_adres.Text := param64('"' + surl + '"');
+			'&point_to[corp][]=1&point_to[coords][]="' +
+		// ' "Время (с учетом пробок):" "."';
+			' "<td colspan=\"2\" id=\"recalcOutput\" align=\"left\">" "</td>"';
+		surl := 'http://ac-taxi.ru/order/?service=1&' +
+			'point_from[obj][]=Балтийская ул.&point_from[house][]=21&point_from[corp][]=1';
+		surl := '"' + surl + '"' + ' "DayGPSKoordinatPoAdresu" "foo"';
+		surl := param64(surl);
+		surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
+		edit_adres.Text := surl;
 		get_track_time(surl);
 	end;
 end;
