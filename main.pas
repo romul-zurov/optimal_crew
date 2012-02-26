@@ -5,7 +5,8 @@ interface
 uses
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
 	Dialogs, Grids, StdCtrls, DB, IBDatabase, DBGrids, ComCtrls, IBCustomDataSet,
-	StrUtils, DateUtils, crew_utils, IBQuery, OleCtrls, SHDocVw, EncdDecd;
+	StrUtils, DateUtils, crew_utils, IBQuery, OleCtrls, SHDocVw, EncdDecd,
+	MSHTML, ActiveX;
 
 type
 	Tform_main = class(TForm)
@@ -26,7 +27,9 @@ type
 		grid_gps : TStringGrid;
 		grid_order : TStringGrid;
 		browser : TWebBrowser;
+		Button1 : TButton;
 		procedure FormCreate(Sender : TObject);
+		procedure Button1Click(Sender : TObject);
 	private
 		{ Private declarations }
 	public
@@ -40,6 +43,25 @@ var
 implementation
 
 {$R *.dfm}
+
+function get_substr(value : string; sub1, sub2 : string) : string;
+var
+	p1, p2 : integer;
+	res, s : string;
+begin
+	res := value;
+	p1 := pos(sub1, res);
+	p2 := posex(sub2, res, p1);
+	if (p1 > 0) and (p2 > 0) then
+	begin
+		p1 := p1 + length(sub1);
+		s := copy(res, p1, p2 - p1);
+		res := s;
+	end
+	else
+		res := '';
+	result := res;
+end;
 
 procedure show_status(status : string);
 begin
@@ -191,7 +213,7 @@ var ss : RawByteString;
 begin
 	ss := UTF8Encode(s);
 	p := Pointer(ss);
-	ss := EncodeBase64(p, Length(ss));
+	ss := EncodeBase64(p, length(ss));
 	ss := StringReplace(ss, chr(10), '', [rfReplaceAll]);
 	ss := StringReplace(ss, chr(13), '', [rfReplaceAll]);
 	ss := StringReplace(ss, '+', ';', [rfReplaceAll]);
@@ -199,27 +221,63 @@ begin
 	result := ss;
 end;
 
-function get_track_time(surl : AnsiString) : integer;
-type
-	t1251 = type AnsiString(1251);
-var cp1251 : t1251;
-	ss : TStringStream;
-	sw : widestring;
-	sraw : RawByteString;
-	bb : TBytes;
-	sansi : AnsiString;
+function html_to_string(WB : TWebBrowser) : string;
+var
+	StringStream : TStringStream;
+	Stream : IStream;
+	PersistStream : IPersistStreamInit;
+	res : string;
+begin
+	res := 'error';
+	PersistStream := WB.Document as IPersistStreamInit;
+	StringStream := TStringStream.Create('');
+	Stream := TStreamAdapter.Create(StringStream, soReference) as IStream;
+	try
+		PersistStream.Save(Stream, true);
+		res := StringStream.DataString;
+	finally
+		StringStream.Free;
+	end;
+	res := get_substr(res, '&lt;&lt;&lt;', '&gt;&gt;&gt;');
+	result := res;
+end;
+
+function get_zapros(surl : string) : string;
+var
+	Doc : IHTMLDocument2;
+	s : string;
 begin
 	with form_main do
 	begin
-		// setlength(bb, length(surl) * sizeOf(Char));
-		// bb := TEncoding.Convert(TEncoding.Unicode, TEncoding.GetEncoding(1251), bb);
-		// sw := widestring(bb);
-		// sansi := stringOf(bb);
-		// sraw := UTF8Encode(surl);
-		// sraw := Utf8ToAnsi(sraw);
-		// edit_zakaz4ik.Text := sraw;
 		browser.Navigate(surl);
+		Doc := browser.Document as IHTMLDocument2;
+		while browser.ReadyState < READYSTATE_COMPLETE do
+			Application.ProcessMessages;
+		s := html_to_string(browser);
+		result := s; // 'Foo String';
 	end;
+end;
+
+function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
+var surl : string;
+begin
+	surl := 'http://ac-taxi.ru/order/?service=1&';
+	surl := surl + 'point_from[obj][]=' + ulica + '&';
+	surl := surl + 'point_from[house][]=21' + dom + '&';
+	surl := surl + 'point_from[corp][]=' + korpus;
+	surl := '"' + surl + '"' + ' "DayGPSKoordinatPoAdresu" "foo"';
+	surl := param64(surl);
+	surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
+
+	result := get_zapros(surl);
+end;
+
+function get_track_time(surl : AnsiString) : integer;
+begin
+	with form_main do
+	begin
+	end;
+	result := 0;
 end;
 
 procedure show_grid(list : TStringList; var grid : TStringGrid);
@@ -235,10 +293,9 @@ var list_coord, list_crew, list_order : TStringList;
 begin
 	with form_main do
 	begin
-		list_coord := get_coord_list(); show_grid(list_coord, grid_gps);
-		list_crew := get_crew_list(SDAY);
-		// RemoveDuplicates(list_crew);
-		show_grid(list_crew, grid_crew); list_order := get_order_list(SDAY); show_grid(list_order, grid_order);
+		// list_coord := get_coord_list(); show_grid(list_coord, grid_gps);
+		// list_crew := get_crew_list(SDAY); show_grid(list_crew, grid_crew);
+		// list_order := get_order_list(SDAY); show_grid(list_order, grid_order);
 
 		surl := 'http://robocab.ru/ac-taxi.php?param=' +
 			'Imh0dHA6Ly9hYy10YXhpLnJ1L29yZGVyL3BvaW50X2Zyb20lNUJvYmolNUQlNUIlNUQ9' +
@@ -262,7 +319,8 @@ begin
 		surl := param64(surl);
 		surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
 		edit_adres.Text := surl;
-		get_track_time(surl);
+		edit_zakaz4ik.Text := get_gps_coords_for_adres('Витебский пр.', '53', '3');
+		// get_track_time(surl);
 	end;
 end;
 
@@ -290,6 +348,11 @@ begin
 	end;
 end;
 
+procedure Tform_main.Button1Click(Sender : TObject);
+begin
+	show_tmp();
+end;
+
 procedure Tform_main.FormCreate(Sender : TObject);
 begin
 	// with form_main do
@@ -301,7 +364,7 @@ begin
 
 	if open_database() then
 	begin
-		show_tmp();
+		// show_tmp();
 	end;
 
 end;

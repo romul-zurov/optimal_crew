@@ -3,7 +3,7 @@ object form_main: Tform_main
   Top = 0
   Caption = #1055#1086#1076#1073#1086#1088' '#1086#1087#1090#1080#1084#1072#1083#1100#1085#1086#1075#1086' '#1101#1082#1080#1087#1072#1078#1072' '#1040#1057'-'#1058#1072#1082#1089#1080
   ClientHeight = 524
-  ClientWidth = 968
+  ClientWidth = 978
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -65,28 +65,27 @@ object form_main: Tform_main
   object edit_zakaz4ik: TEdit
     Left = 88
     Top = 5
-    Width = 890
+    Width = 777
     Height = 21
     TabOrder = 1
   end
   object edit_adres: TEdit
     Left = 88
     Top = 37
-    Width = 890
+    Width = 880
     Height = 21
     TabOrder = 2
   end
   object stbar_main: TStatusBar
     Left = 0
     Top = 505
-    Width = 968
+    Width = 978
     Height = 19
     Panels = <
       item
         Width = 50
       end>
-    ExplicitTop = 517
-    ExplicitWidth = 978
+    ExplicitWidth = 968
   end
   object DBGrid1: TDBGrid
     Left = 0
@@ -139,6 +138,15 @@ object form_main: Tform_main
       2B2E126208000000000000004C0000000114020000000000C000000000000046
       8000000000000000000000000000000000000000000000000000000000000000
       00000000000000000100000000000000000000000000000000000000}
+  end
+  object Button1: TButton
+    Left = 871
+    Top = 3
+    Width = 99
+    Height = 25
+    Caption = 'Go!'
+    TabOrder = 8
+    OnClick = Button1Click
   end
   object db_main: TIBDatabase
     Params.Strings = (
