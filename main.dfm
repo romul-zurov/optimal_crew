@@ -85,13 +85,12 @@ object form_main: Tform_main
       item
         Width = 50
       end>
-    ExplicitWidth = 968
   end
   object DBGrid1: TDBGrid
     Left = 0
     Top = 456
     Width = 978
-    Height = 61
+    Height = 49
     DataSource = datasource_main
     TabOrder = 4
     TitleFont.Charset = DEFAULT_CHARSET

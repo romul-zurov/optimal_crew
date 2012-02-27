@@ -44,25 +44,6 @@ implementation
 
 {$R *.dfm}
 
-function get_substr(value : string; sub1, sub2 : string) : string;
-var
-	p1, p2 : integer;
-	res, s : string;
-begin
-	res := value;
-	p1 := pos(sub1, res);
-	p2 := posex(sub2, res, p1);
-	if (p1 > 0) and (p2 > 0) then
-	begin
-		p1 := p1 + length(sub1);
-		s := copy(res, p1, p2 - p1);
-		res := s;
-	end
-	else
-		res := '';
-	result := res;
-end;
-
 procedure show_status(status : string);
 begin
 	form_main.stbar_main.Panels[0].Text := status;
@@ -261,9 +242,10 @@ end;
 function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
 var surl : string;
 begin
-	surl := 'http://ac-taxi.ru/order/?service=1&';
+	// surl := 'http://ac-taxi.ru/order?service=1&';
+	surl := 'http://test.robocab.ru/order?service=1&';
 	surl := surl + 'point_from[obj][]=' + ulica + '&';
-	surl := surl + 'point_from[house][]=21' + dom + '&';
+	surl := surl + 'point_from[house][]=' + dom + '&';
 	surl := surl + 'point_from[corp][]=' + korpus;
 	surl := '"' + surl + '"' + ' "DayGPSKoordinatPoAdresu" "foo"';
 	surl := param64(surl);
@@ -289,38 +271,19 @@ end;
 procedure show_tmp();
 const SDAY = '2011-10-03 00:00:00';
 var list_coord, list_crew, list_order : TStringList;
-	surl : string;
+	surl, sc1, sc2 : string;
 begin
 	with form_main do
 	begin
 		// list_coord := get_coord_list(); show_grid(list_coord, grid_gps);
 		// list_crew := get_crew_list(SDAY); show_grid(list_crew, grid_crew);
 		// list_order := get_order_list(SDAY); show_grid(list_order, grid_order);
-
-		surl := 'http://robocab.ru/ac-taxi.php?param=' +
-			'Imh0dHA6Ly9hYy10YXhpLnJ1L29yZGVyL3BvaW50X2Zyb20lNUJvYmolNUQlNUIlNUQ9' +
-			'JTI2cG9pbnRfZnJvbSU1QmhvdXNlJTVEJTVCJTVEPSUyNnBvaW50X2Zyb20lNUJjb3JwJTVEJTVCJTVEPSUyNnBvaW50X2Zyb20lNUJ' +
-			'jb29yZHMlNUQlNUIlNUQ9MzAuMjYwMTMlMjUyQzU5LjkzNzk4NCUyNnBvaW50X2ludCU1Qm9iaiU1RCU1QiU1RD0lQzElRTAlRUIlRj' +
-			'IlRTglRTklRjElRUElRTAlRkYlMjAlRjMlRUIuJTI2cG9pbnRfaW50JTVCaG91c2UlNUQlNUIlNUQ9MjElMjZwb2ludF9pbnQlNUJjb' +
-			'3JwJTVEJTVCJTVEPTElMjZwb2ludF9pbnQlNUJjb29yZHMlNUQlNUIlNUQ9JTI2cG9pbnRfdG8lNUJvYmolNUQlNUIlNUQ9JUMwJUUy' +
-			'JUYyJUVFJUUyJUYxJUVBJUUwJUZGJTIwJUYzJUVCLiUyNnBvaW50X3RvJTVCaG91c2UlNUQlNUIlNUQ9MjElMjZwb2ludF90byU1QmN' +
-			'vcnAlNUQlNUIlNUQ9MSUyNnBvaW50X3RvJTVCY29vcmRzJTVEJTVCJTVEPSIgIjx0ZCBjb2xzcGFuPVwiMlwiIGlkPVwicmVjYWxjT3' +
-			'V0cHV0XCIgYWxpZ249XCJsZWZ0XCI;IiAiPC90ZD4i';
-		//
-		surl := '"http://ac-taxi.ru/order/point_from[obj][]=&point_from[house][]=&point_from[corp][]=' +
-			'&point_from[coords][]=30.26013%2C59.937984&point_int[obj][]=Балтийская ул.&point_int[house][]=21' +
-			'&point_int[corp][]=1&point_int[coords][]=&point_to[obj][]=Автовская ул.&point_to[house][]=21' +
-			'&point_to[corp][]=1&point_to[coords][]="' +
-		// ' "Время (с учетом пробок):" "."';
-			' "<td colspan=\"2\" id=\"recalcOutput\" align=\"left\">" "</td>"';
-		surl := 'http://ac-taxi.ru/order/?service=1&' +
-			'point_from[obj][]=Балтийская ул.&point_from[house][]=21&point_from[corp][]=1';
-		surl := '"' + surl + '"' + ' "DayGPSKoordinatPoAdresu" "foo"';
-		surl := param64(surl);
-		surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
-		edit_adres.Text := surl;
-		edit_zakaz4ik.Text := get_gps_coords_for_adres('Витебский пр.', '53', '3');
-		// get_track_time(surl);
+		sc1 := get_gps_coords_for_adres('ВИТЕБСКИЙ ПРОСП.', '53', '3');
+		// sc1 := '30.362589,59.848299';
+		sc2 := get_gps_coords_for_adres('МОСКОВСКИЙ ПРОСП.', '194', '');
+		// sc2 := '30.363829,59.848945';
+		edit_zakaz4ik.Text := sc1 + ' :: ' + sc2;
+		edit_adres.Text := floattostr(get_dist_from_coord(sc1, sc2));
 	end;
 end;
 
@@ -350,6 +313,7 @@ end;
 
 procedure Tform_main.Button1Click(Sender : TObject);
 begin
+	form_main.edit_zakaz4ik.Text := '';
 	show_tmp();
 end;
 
