@@ -5,8 +5,8 @@ interface
 uses
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
 	Dialogs, Grids, StdCtrls, DB, IBDatabase, DBGrids, ComCtrls, IBCustomDataSet,
-	StrUtils, DateUtils, crew_utils, IBQuery, OleCtrls, SHDocVw, EncdDecd,
-	MSHTML, ActiveX;
+	StrUtils, DateUtils, IBQuery, OleCtrls, SHDocVw, MSHTML, ActiveX,
+	crew, crew_utils;
 
 type
 	Tform_main = class(TForm)
@@ -39,6 +39,7 @@ type
 var
 	form_main : Tform_main;
 	cur_time : TDateTime;
+	crew_list : TCrewList;
 
 implementation
 
@@ -49,7 +50,7 @@ begin
 	form_main.stbar_main.Panels[0].Text := status;
 end;
 
-function sql_select(sel : string) : integer;
+function sql_select(sel : string) : Integer;
 begin
 	with form_main do
 	begin
@@ -71,13 +72,14 @@ end;
 function coords_to_str(fields : TFields) : TStringList;
 var
 	field : TField; // main file
-	j, l : integer;
+	j, l, id : Integer;
 	// s, s2, d : string;
 	b : TBytes;
-	pint : ^integer;
+	pint : ^Integer;
 	plat, plong : ^single;
 	s, sdate1, sdate2, sid, scoords : string;
 	res : TStringList;
+	crew : TCrew;
 begin
 	res := TStringList.Create;
 	sdate1 := fields[1].AsString;
@@ -95,12 +97,21 @@ begin
 		if pint^ > 0 then
 		begin
 			sid := inttostr(pint^);
-			scoords := StringReplace(floattostr(plat^), ',', '.', [rfReplaceAll]) + ', ' + StringReplace
+			scoords := StringReplace(floattostr(plat^), ',', '.', [rfReplaceAll]) + ',' + StringReplace
 				(floattostr(plong^), ',', '.', [rfReplaceAll]);
 		end;
-		s := sid + '::      ' + sdate1 + ' -- ' + sdate2 + '        (' + scoords + ')';
+		s := sid + '|' + date_to_full(sdate2) + '|(' + scoords + ')';
 		res.Append(s);
 		j := j + 12;
+
+		// !!! ---
+		if crew_list.isGpsIdInList(StrToInt(sid)) then
+			crew := TCrew(crew_list.findByGpsId(StrToInt(sid)))
+		else
+			crew := TCrew(crew_list.Append(StrToInt(sid)));
+		crew.coords.Append(scoords);
+        crew.coords_times.Append(date_to_full(sdate2));
+		// !!!---
 	end;
 	result := res;
 end;
@@ -108,7 +119,7 @@ end;
 function get_coord_list() : TStringList;
 var
 	sel : string;
-	j : integer;
+	j : Integer;
 	coords, list : TStringList;
 begin
 	cur_time := now();
@@ -188,20 +199,6 @@ begin
 	result := get_sql_list(sel, true);
 end;
 
-function param64(s : string) : string;
-var ss : RawByteString;
-	p : Pointer;
-begin
-	ss := UTF8Encode(s);
-	p := Pointer(ss);
-	ss := EncodeBase64(p, length(ss));
-	ss := StringReplace(ss, chr(10), '', [rfReplaceAll]);
-	ss := StringReplace(ss, chr(13), '', [rfReplaceAll]);
-	ss := StringReplace(ss, '+', ';', [rfReplaceAll]);
-	ss := StringReplace(ss, '=', '_', [rfReplaceAll]);
-	result := ss;
-end;
-
 function html_to_string(WB : TWebBrowser) : string;
 var
 	StringStream : TStringStream;
@@ -254,7 +251,7 @@ begin
 	result := get_zapros(surl);
 end;
 
-function get_track_time(surl : AnsiString) : integer;
+function get_track_time(surl : AnsiString) : Integer;
 begin
 	with form_main do
 	begin
@@ -270,20 +267,36 @@ end;
 
 procedure show_tmp();
 const SDAY = '2011-10-03 00:00:00';
-var list_coord, list_crew, list_order : TStringList;
+var list_coord, list_crew, list_order, list_tmp : TStringList;
 	surl, sc1, sc2 : string;
+	i : Integer;
+	pcrew : PTCrew;
+	crew : TCrew;
+
 begin
 	with form_main do
 	begin
-		// list_coord := get_coord_list(); show_grid(list_coord, grid_gps);
+		list_coord := get_coord_list(); show_grid(list_coord, grid_gps);
+		edit_adres.Text := inttostr(crew_list.Crews.Count);
+
+		list_tmp := TStringList.Create();
+		// for i := 0 to crew_list.Crews.Count - 1 do
+		for pcrew in crew_list.Crews do
+		begin
+			crew := TCrew(pcrew);
+			list_tmp.Append(inttostr(crew.gpsID) + ' ' + crew.coord);
+		end;
+		show_grid(list_tmp, grid_order);
+
 		// list_crew := get_crew_list(SDAY); show_grid(list_crew, grid_crew);
 		// list_order := get_order_list(SDAY); show_grid(list_order, grid_order);
-		sc1 := get_gps_coords_for_adres('¬»“≈¡— »… œ–Œ—œ.', '53', '3');
+
+		// sc1 := get_gps_coords_for_adres('¬»“≈¡— »… œ–Œ—œ.', '53', '3');
+		// sc2 := get_gps_coords_for_adres('ÃŒ— Œ¬— »… œ–Œ—œ.', '194', '');
 		// sc1 := '30.362589,59.848299';
-		sc2 := get_gps_coords_for_adres('ÃŒ— Œ¬— »… œ–Œ—œ.', '194', '');
 		// sc2 := '30.363829,59.848945';
-		edit_zakaz4ik.Text := sc1 + ' :: ' + sc2;
-		edit_adres.Text := floattostr(get_dist_from_coord(sc1, sc2));
+		// edit_zakaz4ik.Text := sc1 + ' :: ' + sc2;
+		// edit_adres.Text := floattostr(get_dist_from_coord(sc1, sc2));
 	end;
 end;
 
@@ -325,6 +338,8 @@ begin
 	// grid_crew.ColWidths[1] := 180;
 	// grid_crew.ColWidths[2] := 570 - (120 + 180) - 5;
 	// end;
+
+	crew_list := TCrewList.Create();
 
 	if open_database() then
 	begin

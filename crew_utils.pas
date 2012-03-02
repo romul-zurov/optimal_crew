@@ -2,7 +2,7 @@ unit crew_utils;
 
 interface
 
-uses StrUtils, DateUtils, SysUtils, Classes;
+uses StrUtils, DateUtils, SysUtils, Classes, EncdDecd;
 
 function replace_day(const value : string; const MyTime : TDateTime) : string;
 function replace_hour(const value : string; const MyTime : TDateTime) : string;
@@ -11,10 +11,41 @@ function replace_minute(const value : string; const MyTime : TDateTime) : string
 function dotStrtoFloat(s : string) : double;
 function get_dist_from_coord(scoord1, scoord2 : string) : double;
 
+function param64(s : string) : string;
+function date_to_full(date : string) : string;
 function get_substr(value : string; sub1, sub2 : string) : string;
 procedure RemoveDuplicates(const stringList : TStringList);
 
 implementation
+
+function param64(s : string) : string;
+var ss : RawByteString;
+	p : Pointer;
+begin
+	ss := UTF8Encode(s);
+	p := Pointer(ss);
+	ss := EncodeBase64(p, length(ss));
+	ss := StringReplace(ss, chr(10), '', [rfReplaceAll]);
+	ss := StringReplace(ss, chr(13), '', [rfReplaceAll]);
+	ss := StringReplace(ss, '+', ';', [rfReplaceAll]);
+	ss := StringReplace(ss, '=', '_', [rfReplaceAll]);
+	result := ss;
+end;
+
+function date_to_full(date : string) : string;
+var y, m, d, h, n, s : string;
+begin
+	date := ReplaceStr(date, ' ', '');
+	date := ReplaceStr(date, '.', '');
+	date := ReplaceStr(date, ':', '');
+	d := copy(date, 1, 2);
+	m := copy(date, 3, 2);
+	y := copy(date, 5, 4);
+	h := copy(date, 9, 2);
+	n := copy(date, 11, 2);
+	s := copy(date, 13, 2);
+	result := y + '.' + m + '.' + d + ' ' + h + ':' + n + ':' + s;
+end;
 
 function dotStrtoFloat(s : string) : double;
 begin
@@ -44,7 +75,7 @@ function get_dist_from_coord(scoord1, scoord2 : string) : double;
 		// #вычисления длины большого круга
 		y := sqrt(sqr(cl2 * sdelta) + sqr(cl1 * sl2 - sl1 * cl2 * cdelta));
 		x := sl1 * sl2 + cl1 * cl2 * cdelta;
-		ad := arctan(y/x);
+		ad := arctan(y / x);
 		dist := ad * RAD;
 		result := dist;
 		// result := (1852.0 * 60.0) * sqrt(sqr(long2 - long1) + sqr(lat2 - lat1));
@@ -54,10 +85,14 @@ function get_dist_from_coord(scoord1, scoord2 : string) : double;
 	var slat, slong : string;
 	begin
 		result := false;
+		sc := ReplaceStr(sc, ' ', '');
+		slong := get_substr(sc, '', ','); slat := get_substr(sc, ',', '');
 		try
-			slong := get_substr(sc, '', ','); slat := get_substr(sc, ',', ''); long := dotStrtoFloat(slong);
-			lat := dotStrtoFloat(slat); result := true;
-		finally
+			long := dotStrtoFloat(slong);
+			lat := dotStrtoFloat(slat);
+			result := true;
+		except
+			exit();
 		end;
 	end;
 

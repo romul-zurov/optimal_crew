@@ -3,7 +3,8 @@ program optimal_crew;
 uses
   Forms,
   main in 'main.pas' {form_main},
-  crew_utils in 'crew_utils.pas';
+  crew_utils in 'crew_utils.pas',
+  crew in 'crew.pas';
 
 {$R *.res}
 
