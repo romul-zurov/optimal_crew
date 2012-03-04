@@ -69,7 +69,36 @@ begin
 	result := 0;
 end;
 
-function coords_to_str(fields : TFields) : TStringList;
+function ret_crews_stringlist(clist : TCrewList) : TSTringList;
+	procedure add_s(var s : string; subs : string);
+	begin
+		s := s + '|' + subs;
+	end;
+
+var res : TSTringList;
+	pp, ps : Pointer;
+	s, sc : string;
+begin
+	res := TSTringList.Create();
+	for pp in clist.Crews do
+	begin
+		with clist.crew(pp) do
+		begin
+			s := IntToStr(CrewId);
+			add_s(s, IntToStr(GpsId)); add_s(s, IntToStr(State));
+			add_s(s, Code); add_s(s, name);
+			add_s(s, Coord);
+			add_s(s, FloatToStr(dist)); add_s(s, IntToStr(Time));
+			for sc in coords do
+				add_s(s, sc);
+
+			res.Append(s);
+		end;
+	end;
+	result := res;
+end;
+
+function coords_to_str(fields : TFields; var clist : TCrewList) : TSTringList;
 var
 	field : TField; // main file
 	j, l, id : Integer;
@@ -78,10 +107,12 @@ var
 	pint : ^Integer;
 	plat, plong : ^single;
 	s, sdate1, sdate2, sid, scoords : string;
-	res : TStringList;
+	res : TSTringList;
 	crew : TCrew;
+	pp : Pointer;
+
 begin
-	res := TStringList.Create;
+	res := TSTringList.Create;
 	sdate1 := fields[1].AsString;
 	sdate2 := fields[2].AsString;
 	field := fields[3];
@@ -96,31 +127,33 @@ begin
 		plong := @b[j + 4];
 		if pint^ > 0 then
 		begin
-			sid := inttostr(pint^);
-			scoords := StringReplace(floattostr(plat^), ',', '.', [rfReplaceAll]) + ',' + StringReplace
-				(floattostr(plong^), ',', '.', [rfReplaceAll]);
+			sid := IntToStr(pint^);
+			scoords := StringReplace(FloatToStr(plat^), ',', '.', [rfReplaceAll])
+				+ ',' + StringReplace(FloatToStr(plong^), ',', '.', [rfReplaceAll]);
 		end;
 		s := sid + '|' + date_to_full(sdate2) + '|(' + scoords + ')';
 		res.Append(s);
 		j := j + 12;
 
 		// !!! ---
-		if crew_list.isGpsIdInList(StrToInt(sid)) then
-			crew := TCrew(crew_list.findByGpsId(StrToInt(sid)))
+		// if crew_list.isGpsIdInList(StrToInt(sid)) then
+		pp := clist.findByGpsId(StrToInt(sid));
+		if pp = nil then
+			crew := clist.crew(crew_list.Append(StrToInt(sid)))
 		else
-			crew := TCrew(crew_list.Append(StrToInt(sid)));
+			crew := clist.crew(pp);
 		crew.coords.Append(scoords);
-        crew.coords_times.Append(date_to_full(sdate2));
+		crew.coords_times.Append(date_to_full(sdate2));
 		// !!!---
 	end;
 	result := res;
 end;
 
-function get_coord_list() : TStringList;
+function get_coord_list(var clist : TCrewList) : TSTringList;
 var
 	sel : string;
 	j : Integer;
-	coords, list : TStringList;
+	coords, slist : TSTringList;
 begin
 	cur_time := now();
 	sel := 'select ID, MEASURE_START_TIME, MEASURE_END_TIME, COORDS from CREWS_COORDS where MEASURE_START_TIME>''2011-10-03 14:57:50'' order by MEASURE_START_TIME ASC, ID ASC';
@@ -128,33 +161,33 @@ begin
 	sql_select(sel);
 	with form_main do
 	begin
-		list := TStringList.Create;
+		slist := TSTringList.Create;
 		while (not ibquery_main.Eof) do
 		begin
-			coords := coords_to_str(ibquery_main.fields);
+			coords := coords_to_str(ibquery_main.fields, clist);
 			j := 0;
 			while (j < coords.Count) do
 			begin
-				list.Append(coords.Strings[j]);
+				slist.Append(coords.Strings[j]);
 				inc(j);
 			end;
 			ibquery_main.Next;
 		end;
-		list.Sorted := true;
+		slist.Sorted := true;
 	end;
-	result := list;
+	result := slist;
 end;
 
-function get_sql_list(sel : string; sort_flag : boolean) : TStringList;
+function get_sql_list(sel : string; sort_flag : boolean) : TSTringList;
 var
 	res : string;
-	list : TStringList;
+	list : TSTringList;
 	field : TField;
 begin
 	sql_select(sel);
 	with form_main do
 	begin
-		list := TStringList.Create;
+		list := TSTringList.Create;
 		while (not ibquery_main.Eof) do
 		begin
 			res := '';
@@ -171,20 +204,35 @@ begin
 	result := list;
 end;
 
-function get_crew_list(sdate : string) : TStringList;
+function get_crew_list(sdate : string; var clist : TCrewList) : TSTringList;
 // извлекаем рабочие экипажи
 var
-	sel : string;
+	sel, s, sid : string;
+	res, sl : TSTringList;
+	id, GpsId : Integer;
 begin
+	sdate := '''' + sdate + '''';
 	// sel := 'select CREWS.ID, CREWS.STATE, CREWS.IDENTIFIER as GpsId, CREWS.CODE, CREWS.NAME from CREWS where (CREWS.STATE=2 or CREWS.STATE=0) order by GpsId';
 	// sel := 'select CREWS.IDENTIFIER as GpsId, CREWS.ID, CREWS.STATE, CREWS.CODE, CREWS.NAME from CREWS order by GpsId';
-	sel := 'select CREWS.IDENTIFIER, CREWS_H.STATETIME, CREWS_H.TOSTATE, CREWS.NAME, CREWS.FINISHTIME' +
-		' from CREWS_H, CREWS where CREWS_H.STATETIME > ''' + sdate +
-		''' and (CREWS_H.TOSTATE = 1 or CREWS_H.TOSTATE = 3) and CREWS.ID = CREWS_H.CREWID order by CREWS_H.STATETIME desc';
-	result := get_sql_list(sel, false);
+
+	sel := 'select CREWS.IDENTIFIER, CREWS.ID, CREWS_H.TOSTATE, CREWS.CODE, CREWS.NAME' +
+		' from CREWS_H, CREWS where' + ' CREWS_H.STATETIME > ' + sdate +
+		' and (CREWS_H.TOSTATE = 1 or CREWS_H.TOSTATE = 3) ';
+	sel := sel + ' and CREWS.IDENTIFIER in (' + clist.get_gpsid_list_as_string() + ') ';
+	sel := sel + ' and CREWS_H.CREWID = CREWS.ID ' + ' order by CREWS_H.STATETIME desc';
+
+	// !!
+	sel :=
+		'select CREWS.IDENTIFIER, CREWS.ID, CREWS.CODE, CREWS.NAME from CREWS where '
+		+ ' CREWS.IDENTIFIER in (' + clist.get_gpsid_list_as_string() + ') ';
+	form_main.edit_zakaz4ik.Text := sel;
+	res := get_sql_list(sel, false);
+	clist.set_crewId_by_gpsId(res);
+
+	result := res;
 end;
 
-function get_order_list(sdate : string) : TStringList;
+function get_order_list(sdate : string) : TSTringList;
 // заказы занятых экипажей
 var
 	sel : string;
@@ -193,7 +241,8 @@ begin
 	// sel := 'select STARTTIME, STATE, SOURCE, STOPS_COUNT, STOPS, DESTINATION  from ORDERS where STOPS_COUNT > 0   order by STARTTIME DESC';
 	sel :=
 		'select CREWS.IDENTIFIER, CREWS.NAME, ORDERS.SOURCE, ORDERS.STOPS_COUNT, ORDERS.STOPS, ORDERS.DESTINATION'
-		+ ' from CREWS_H, CREWS, ORDERS' + ' where CREWS_H.STATETIME > ' + sdate + ' and ORDERS.STARTTIME > ' + sdate +
+		+ ' from CREWS_H, CREWS, ORDERS' + ' where CREWS_H.STATETIME > ' + sdate +
+		' and ORDERS.STARTTIME > ' + sdate +
 		' and (CREWS_H.TOSTATE = 3) and (CREWS.ID = CREWS_H.CREWID) and (ORDERS.CREWID = CREWS_H.CREWID)';
 
 	result := get_sql_list(sel, true);
@@ -259,7 +308,7 @@ begin
 	result := 0;
 end;
 
-procedure show_grid(list : TStringList; var grid : TStringGrid);
+procedure show_grid(list : TSTringList; var grid : TStringGrid);
 begin
 	grid.ColCount := 1; grid.RowCount := list.Count; grid.ColWidths[0] := grid.Width;
 	grid.Cols[0].Assign(list);
@@ -267,28 +316,23 @@ end;
 
 procedure show_tmp();
 const SDAY = '2011-10-03 00:00:00';
-var list_coord, list_crew, list_order, list_tmp : TStringList;
+var list_coord, list_crew, list_order, list_tmp : TSTringList;
 	surl, sc1, sc2 : string;
 	i : Integer;
-	pcrew : PTCrew;
-	crew : TCrew;
+	pp : Pointer;
 
 begin
 	with form_main do
 	begin
-		list_coord := get_coord_list(); show_grid(list_coord, grid_gps);
-		edit_adres.Text := inttostr(crew_list.Crews.Count);
+		list_coord := get_coord_list(crew_list);
+		show_grid(list_coord, grid_gps);
 
-		list_tmp := TStringList.Create();
-		// for i := 0 to crew_list.Crews.Count - 1 do
-		for pcrew in crew_list.Crews do
-		begin
-			crew := TCrew(pcrew);
-			list_tmp.Append(inttostr(crew.gpsID) + ' ' + crew.coord);
-		end;
-		show_grid(list_tmp, grid_order);
+		edit_adres.Text := IntToStr(crew_list.Crews.Count);
 
-		// list_crew := get_crew_list(SDAY); show_grid(list_crew, grid_crew);
+		list_crew := get_crew_list(SDAY, crew_list); show_grid(list_crew, grid_crew);
+
+		list_tmp := ret_crews_stringlist(crew_list); show_grid(list_tmp, grid_order);
+
 		// list_order := get_order_list(SDAY); show_grid(list_order, grid_order);
 
 		// sc1 := get_gps_coords_for_adres('ВИТЕБСКИЙ ПРОСП.', '53', '3');
@@ -326,7 +370,6 @@ end;
 
 procedure Tform_main.Button1Click(Sender : TObject);
 begin
-	form_main.edit_zakaz4ik.Text := '';
 	show_tmp();
 end;
 
