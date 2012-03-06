@@ -336,8 +336,8 @@ var list_coord, list_crew, list_order, list_tmp : TSTringList;
 begin
 	with form_main do
 	begin
-
-		мюояюрэ пюяв╗р бпелемх люпьпсрю дн юо !;
+		янпрхпнбйю яохяйю щйхоюфеи он пюяярнъмхч дн юо х янярнъмхч!
+		// мюояюрэ пюяв╗р бпелемх люпьпсрю дн юо !;
 
 		list_coord := get_coord_list(crew_list);
 		show_grid(list_coord, grid_gps);
