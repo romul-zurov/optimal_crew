@@ -92,7 +92,6 @@ begin
 			add_s(s, Code); add_s(s, name);
 			for sc in coords do
 				add_s(s, sc);
-                  ÍÀÏÑÀÒÜ ĞÀÑ×¨Ò ĞÀÑÑÒÎßÍÈÅ È ÂĞÅÌÅÍÈ ÄÎ ÀÏ!
 			res.Append(s);
 		end;
 	end;
@@ -337,6 +336,9 @@ var list_coord, list_crew, list_order, list_tmp : TSTringList;
 begin
 	with form_main do
 	begin
+
+		ÍÀÏÑÀÒÜ ĞÀÑ×¨Ò ÂĞÅÌÅÍÈ ÌÀĞØĞÓÒÀ ÄÎ ÀÏ !;
+
 		list_coord := get_coord_list(crew_list);
 		show_grid(list_coord, grid_gps);
 
@@ -345,6 +347,9 @@ begin
 		list_crew := get_crew_list(SDAY, crew_list); show_grid(list_crew, grid_crew);
 
 		list_tmp := ret_crews_stringlist(crew_list); show_grid(list_tmp, grid_order);
+
+		// if crew_list.crewByGpsId(9).is_crew_was_in_coord('30.3088703155518,59.9947509765625') then
+		// edit_zakaz4ik.Text := 'ASDFGHJKL!';
 
 		// list_order := get_order_list(SDAY); show_grid(list_order, grid_order);
 

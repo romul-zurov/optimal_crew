@@ -2,7 +2,7 @@ unit crew_utils;
 
 interface
 
-uses StrUtils, DateUtils, SysUtils, Classes, EncdDecd;
+uses StrUtils, DateUtils, SysUtils, Classes, EncdDecd, Math;
 
 function replace_day(const value : string; const MyTime : TDateTime) : string;
 function replace_hour(const value : string; const MyTime : TDateTime) : string;
@@ -11,12 +11,24 @@ function replace_minute(const value : string; const MyTime : TDateTime) : string
 function dotStrtoFloat(s : string) : double;
 function get_dist_from_coord(scoord1, scoord2 : string) : double;
 
+function reverseStringList(var list : TStringList) : Integer;
 function param64(s : string) : string;
 function date_to_full(date : string) : string;
 function get_substr(value : string; sub1, sub2 : string) : string;
 procedure RemoveDuplicates(const stringList : TStringList);
 
 implementation
+
+function reverseStringList(var list : TStringList) : Integer;
+var i, c : Integer;
+begin
+	c := list.Count;
+	if c <= 0 then
+		exit(-1);
+	for i := 0 to (c div 2) - 1 do
+		list.Exchange(i, c - 1 -i);
+	exit(0);
+end;
 
 function param64(s : string) : string;
 var ss : RawByteString;
@@ -77,7 +89,7 @@ function get_dist_from_coord(scoord1, scoord2 : string) : double;
 		x := sl1 * sl2 + cl1 * cl2 * cdelta;
 		ad := arctan(y / x);
 		dist := ad * RAD;
-		result := dist;
+		result := abs(dist);
 		// result := (1852.0 * 60.0) * sqrt(sqr(long2 - long1) + sqr(lat2 - lat1));
 	end;
 
@@ -105,7 +117,7 @@ begin
 end;
 
 function get_substr(value : string; sub1, sub2 : string) : string;
-var p1, p2 : integer; res, s : string;
+var p1, p2 : Integer; res, s : string;
 begin
 	res := value;
 
@@ -114,7 +126,7 @@ begin
 	else
 		p1 := pos(sub1, res);
 	if sub2 = '' then
-		p2 := length(res)
+		p2 := length(res) + 1
 	else
 		p2 := posex(sub2, res, p1);
 
@@ -128,7 +140,7 @@ begin
 end;
 
 function replace_day(const value : string; const MyTime : TDateTime) : string;
-var p1, p2, n : integer;
+var p1, p2, n : Integer;
 	res, s, s2 : string;
 
 begin
@@ -158,7 +170,7 @@ begin
 end;
 
 function replace_hour(const value : string; const MyTime : TDateTime) : string;
-var p1, p2, n : integer;
+var p1, p2, n : Integer;
 	res, s, s2 : string;
 begin
 	res := value;
@@ -187,7 +199,7 @@ begin
 end;
 
 function replace_minute(const value : string; const MyTime : TDateTime) : string;
-var p1, p2, n : integer;
+var p1, p2, n : Integer;
 	res, s, s2 : string;
 
 begin
@@ -217,7 +229,7 @@ begin
 end;
 
 procedure RemoveDuplicates(const stringList : TStringList);
-var buffer : TStringList; cnt : integer;
+var buffer : TStringList; cnt : Integer;
 begin
 	stringList.Sort; buffer := TStringList.Create;
 	try

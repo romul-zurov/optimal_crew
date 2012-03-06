@@ -18,7 +18,10 @@ type
 		coords_times : TStringList; // gps-òğåê çà âûáğàííûé ïğîìåæóòîê âğåìåíè;
 		constructor Create(GpsId : Integer);
 		function set_current_coord() : Integer;
+		function sort_coords_by_time_desc() : Integer;
 		function append_coords(coord : string; time : string) : Integer;
+		function is_crew_was_in_coord(coord : string) : boolean;
+		procedure calc_dist(coord : string);
 	end;
 
 type
@@ -44,6 +47,7 @@ type
 		function delete_all_none_crewId() : Integer;
 		function set_crewId_by_gpsId(list : TStringList) : Integer;
 		function set_current_crews_coord() : Integer;
+		// function sort_crews_coords_by_time_desc() : Integer;
 	private
 		function findById(ID : Integer; GPS : boolean) : Pointer;
 		function get_id_list_as_string(GPS : boolean) : string;
@@ -61,6 +65,12 @@ begin
 	exit(0);
 end;
 
+procedure TCrew.calc_dist(coord : string);
+begin
+	if (length(self.coord) > 0) then
+		self.dist := get_dist_from_coord(coord, self.coord);
+end;
+
 constructor TCrew.Create(GpsId : Integer);
 begin
 	inherited Create;
@@ -76,7 +86,42 @@ begin
 	time := -1; // âğåìÿ ïîäúåçäà ê ÀÏ â ìèíóòàõ;
 end;
 
+function TCrew.is_crew_was_in_coord(coord : string) : boolean;
+const RADIUS = 100.0;
+var cc : string;
+	d : double;
+begin
+	for cc in self.coords do
+	begin
+		d := get_dist_from_coord(coord, cc);
+		if (d >= 0) and (d < RADIUS) then
+			exit(True);
+	end;
+	exit(false);
+end;
+
 function TCrew.set_current_coord() : Integer;
+var sl : TStringList;
+	s : string;
+	crew : TCrew;
+	count, i : Integer;
+begin
+	// count := IfThen(self.coords.count < self.coords_times.count, self.coords.count, self.coords_times.count);
+	// if (count <= 0) then
+	// exit(0);
+	// sl := TStringList.Create();
+	// for i := 0 to (count - 1) do
+	// sl.Append(self.coords_times.Strings[i] + '|' + self.coords.Strings[i]);
+	// sl.Sorted := True;
+	// self.coord := get_substr(sl.Strings[sl.count - 1], '|', '');
+	// FreeAndNil(sl);
+	if self.sort_coords_by_time_desc() < 0 then
+		exit(-1);
+	self.coord := self.coords.Strings[0];
+	exit(0);
+end;
+
+function TCrew.sort_coords_by_time_desc : Integer;
 var sl : TStringList;
 	s : string;
 	crew : TCrew;
@@ -84,12 +129,20 @@ var sl : TStringList;
 begin
 	count := IfThen(self.coords.count < self.coords_times.count, self.coords.count, self.coords_times.count);
 	if (count <= 0) then
-		exit(0);
+		exit(-1);
 	sl := TStringList.Create();
 	for i := 0 to (count - 1) do
 		sl.Append(self.coords_times.Strings[i] + '|' + self.coords.Strings[i]);
 	sl.Sorted := True;
-	self.coord := get_substr(sl.Strings[sl.Count -1], '|', '');
+	sl.Duplicates := dupIgnore;
+	reverseStringList(sl);
+	self.coords.Clear();
+	self.coords_times.Clear();
+	for s in sl do
+	begin
+		self.coords_times.Append(get_substr(s, '', '|'));
+		self.coords.Append(get_substr(s, '|', ''));
+	end;
 	FreeAndNil(sl);
 	exit(0);
 end;

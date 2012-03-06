@@ -105,7 +105,7 @@ object form_main: Tform_main
     Width = 978
     Height = 49
     DataSource = datasource_main
-    TabOrder = 4
+    TabOrder = 3
     TitleFont.Charset = DEFAULT_CHARSET
     TitleFont.Color = clWindowText
     TitleFont.Height = -11
@@ -123,7 +123,7 @@ object form_main: Tform_main
     RowCount = 1
     FixedRows = 0
     ParentCtl3D = False
-    TabOrder = 5
+    TabOrder = 4
   end
   object grid_order: TStringGrid
     Left = 0
@@ -136,7 +136,7 @@ object form_main: Tform_main
     RowCount = 1
     FixedRows = 0
     ParentCtl3D = False
-    TabOrder = 6
+    TabOrder = 5
   end
   object Button1: TButton
     Left = 871
