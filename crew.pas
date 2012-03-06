@@ -2,7 +2,7 @@ unit crew;
 
 interface
 
-uses Classes, SysUtils;
+uses crew_utils, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX;
 
 type
 	TCrew = class(TObject)
@@ -17,6 +17,8 @@ type
 		coords : TStringList; // gps-трек за выбранный промежуток времени;
 		coords_times : TStringList; // gps-трек за выбранный промежуток времени;
 		constructor Create(GpsId : Integer);
+		function set_current_coord() : Integer;
+		function append_coords(coord : string; time : string) : Integer;
 	end;
 
 type
@@ -25,6 +27,8 @@ type
 type
 	TCrewList = class(TObject)
 		Crews : TList;
+		AdresPodachi : string;
+		ap_gps : string;
 		constructor Create();
 		function crew(p : Pointer) : TCrew;
 		function crewByGpsId(GpsId : Integer) : TCrew;
@@ -34,17 +38,28 @@ type
 		function isGpsIdInList(ID : Integer) : boolean;
 		function findByCrewId(ID : Integer) : Pointer;
 		function findByGpsId(ID : Integer) : Pointer;
-		function findById(ID : Integer; GPS : boolean) : Pointer;
-		function get_id_list_as_string(GPS : boolean) : string;
+
 		function get_gpsid_list_as_string() : string;
 		function get_crewid_list_as_string() : string;
 		function delete_all_none_crewId() : Integer;
 		function set_crewId_by_gpsId(list : TStringList) : Integer;
+		function set_current_crews_coord() : Integer;
+	private
+		function findById(ID : Integer; GPS : boolean) : Pointer;
+		function get_id_list_as_string(GPS : boolean) : string;
+
 	end;
 
 implementation
 
 { TCrew }
+
+function TCrew.append_coords(coord, time : string) : Integer;
+begin
+	self.coords.Append(coord);
+	self.coords_times.Append(time);
+	exit(0);
+end;
 
 constructor TCrew.Create(GpsId : Integer);
 begin
@@ -61,6 +76,24 @@ begin
 	time := -1; // время подъезда к АП в минутах;
 end;
 
+function TCrew.set_current_coord() : Integer;
+var sl : TStringList;
+	s : string;
+	crew : TCrew;
+	count, i : Integer;
+begin
+	count := IfThen(self.coords.count < self.coords_times.count, self.coords.count, self.coords_times.count);
+	if (count <= 0) then
+		exit(0);
+	sl := TStringList.Create();
+	for i := 0 to (count - 1) do
+		sl.Append(self.coords_times.Strings[i] + '|' + self.coords.Strings[i]);
+	sl.Sorted := True;
+	self.coord := get_substr(sl.Strings[sl.Count -1], '|', '');
+	FreeAndNil(sl);
+	exit(0);
+end;
+
 { TCrewList }
 
 function TCrewList.Append(GpsId : Integer) : Pointer;
@@ -70,7 +103,7 @@ begin
 	result := Pointer(self.Crews[i]);
 end;
 
-constructor TCrewList.Create;
+constructor TCrewList.Create();
 begin
 	inherited Create;
 	self.Crews := TList.Create();
@@ -110,7 +143,7 @@ end;
 
 function TCrewList.findByGpsId(ID : Integer) : Pointer;
 begin
-	result := self.findById(ID, true);
+	result := self.findById(ID, True);
 end;
 
 function TCrewList.findById(ID : Integer; GPS : boolean) : Pointer;
@@ -137,7 +170,7 @@ end;
 
 function TCrewList.get_gpsid_list_as_string : string;
 begin
-	result := self.get_id_list_as_string(true);
+	result := self.get_id_list_as_string(True);
 end;
 
 function TCrewList.get_id_list_as_string(GPS : boolean) : string;
@@ -161,7 +194,7 @@ end;
 
 function TCrewList.isGpsIdInList(ID : Integer) : boolean;
 begin
-	result := self.isCrewInList(ID, true);
+	result := self.isCrewInList(ID, True);
 end;
 
 function TCrewList.set_crewId_by_gpsId(list : TStringList) : Integer;
@@ -185,22 +218,26 @@ begin
 	result := 0;
 end;
 
+function TCrewList.set_current_crews_coord : Integer;
+var pp : Pointer;
+begin
+	for pp in self.Crews do
+		self.crew(pp).set_current_coord();
+	exit(0);
+end;
+
 function TCrewList.isCrewInList(ID : Integer; GPS : boolean) : boolean;
 var
 	crew : TCrew;
-	pcrew : PTCrew;
+	pp : Pointer;
 begin
-	result := false;
-	for pcrew in self.Crews do
+	for pp in self.Crews do
 	begin
-		crew := TCrew(pcrew);
-		// if crew.CrewID = ID then
+		crew := self.crew(pp);
 		if ((not GPS) and (crew.CrewID = ID)) or (GPS and (crew.GpsId = ID)) then
-		begin
-			result := true;
-			exit();
-		end;
+			exit(True);
 	end;
+	exit(false);
 end;
 
 end.

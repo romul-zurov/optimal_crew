@@ -49,6 +49,19 @@ object form_main: Tform_main
     Height = 13
     Caption = #1042#1088#1077#1084#1103' '#1076#1086' '#1087#1086#1076#1072#1095#1080':'
   end
+  object browser: TWebBrowser
+    Left = 424
+    Top = 112
+    Width = 457
+    Height = 145
+    TabOrder = 7
+    ControlData = {
+      4C0000003B2F0000FC0E00000000000000000000000000000000000000000000
+      000000004C000000000000000000000001000000E0D057007335CF11AE690800
+      2B2E126208000000000000004C0000000114020000000000C000000000000046
+      8000000000000000000000000000000000000000000000000000000000000000
+      00000000000000000100000000000000000000000000000000000000}
+  end
   object grid_crew: TStringGrid
     Left = 0
     Top = 96
@@ -100,10 +113,10 @@ object form_main: Tform_main
     TitleFont.Style = []
   end
   object grid_gps: TStringGrid
-    Left = 470
+    Left = 536
     Top = 96
-    Width = 498
-    Height = 251
+    Width = 434
+    Height = 177
     ColCount = 3
     Ctl3D = False
     FixedCols = 0
@@ -115,7 +128,7 @@ object form_main: Tform_main
   object grid_order: TStringGrid
     Left = 0
     Top = 279
-    Width = 464
+    Width = 970
     Height = 177
     ColCount = 3
     Ctl3D = False
@@ -124,19 +137,6 @@ object form_main: Tform_main
     FixedRows = 0
     ParentCtl3D = False
     TabOrder = 6
-  end
-  object browser: TWebBrowser
-    Left = 470
-    Top = 353
-    Width = 498
-    Height = 97
-    TabOrder = 7
-    ControlData = {
-      4C00000078330000060A00000000000000000000000000000000000000000000
-      000000004C000000000000000000000001000000E0D057007335CF11AE690800
-      2B2E126208000000000000004C0000000114020000000000C000000000000046
-      8000000000000000000000000000000000000000000000000000000000000000
-      00000000000000000100000000000000000000000000000000000000}
   end
   object Button1: TButton
     Left = 871

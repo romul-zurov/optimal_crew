@@ -85,13 +85,14 @@ begin
 		with clist.crew(pp) do
 		begin
 			s := IntToStr(CrewId);
-			add_s(s, IntToStr(GpsId)); add_s(s, IntToStr(State));
-			add_s(s, Code); add_s(s, name);
+			add_s(s, IntToStr(GpsId));
+			add_s(s, IntToStr(State));
 			add_s(s, Coord);
 			add_s(s, FloatToStr(dist)); add_s(s, IntToStr(Time));
+			add_s(s, Code); add_s(s, name);
 			for sc in coords do
 				add_s(s, sc);
-
+                  ÍÀÏÑÀÒÜ ÐÀÑ×¨Ò ÐÀÑÑÒÎßÍÈÅ È ÂÐÅÌÅÍÈ ÄÎ ÀÏ!
 			res.Append(s);
 		end;
 	end;
@@ -106,7 +107,7 @@ var
 	b : TBytes;
 	pint : ^Integer;
 	plat, plong : ^single;
-	s, sdate1, sdate2, sid, scoords : string;
+	s, sdate1, sdate2, sgpsid, scoords : string;
 	res : TSTringList;
 	crew : TCrew;
 	pp : Pointer;
@@ -127,23 +128,22 @@ begin
 		plong := @b[j + 4];
 		if pint^ > 0 then
 		begin
-			sid := IntToStr(pint^);
-			scoords := StringReplace(FloatToStr(plat^), ',', '.', [rfReplaceAll])
-				+ ',' + StringReplace(FloatToStr(plong^), ',', '.', [rfReplaceAll]);
+			sgpsid := IntToStr(pint^);
+			scoords := StringReplace(FloatToStr(plat^), ',', '.', [rfReplaceAll]) + ',' + StringReplace
+				(FloatToStr(plong^), ',', '.', [rfReplaceAll]);
 		end;
-		s := sid + '|' + date_to_full(sdate2) + '|(' + scoords + ')';
+		s := sgpsid + '|' + date_to_full(sdate2) + '|(' + scoords + ')';
 		res.Append(s);
 		j := j + 12;
 
 		// !!! ---
-		// if crew_list.isGpsIdInList(StrToInt(sid)) then
-		pp := clist.findByGpsId(StrToInt(sid));
+		// if crew_list.isGpsgpsidInList(StrToInt(sgpsid)) then
+		pp := clist.findByGpsId(StrToInt(sgpsid));
 		if pp = nil then
-			crew := clist.crew(crew_list.Append(StrToInt(sid)))
+			crew := clist.crew(crew_list.Append(StrToInt(sgpsid)))
 		else
 			crew := clist.crew(pp);
-		crew.coords.Append(scoords);
-		crew.coords_times.Append(date_to_full(sdate2));
+		crew.append_coords(scoords, date_to_full(sdate2));
 		// !!!---
 	end;
 	result := res;
@@ -175,7 +175,8 @@ begin
 		end;
 		slist.Sorted := true;
 	end;
-	result := slist;
+	clist.set_current_crews_coord();
+	exit(slist);
 end;
 
 function get_sql_list(sel : string; sort_flag : boolean) : TSTringList;
@@ -286,18 +287,30 @@ begin
 end;
 
 function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
-var surl : string;
-begin
-	// surl := 'http://ac-taxi.ru/order?service=1&';
-	surl := 'http://test.robocab.ru/order?service=1&';
-	surl := surl + 'point_from[obj][]=' + ulica + '&';
-	surl := surl + 'point_from[house][]=' + dom + '&';
-	surl := surl + 'point_from[corp][]=' + korpus;
-	surl := '"' + surl + '"' + ' "DayGPSKoordinatPoAdresu" "foo"';
-	surl := param64(surl);
-	surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
+	function get_coords() : string;
+	var surl : string;
+	begin
+		surl := 'http://test.robocab.ru/order?service=1&';
+		surl := surl + 'point_from[obj][]=' + ulica + '&';
+		surl := surl + 'point_from[house][]=' + dom + '&';
+		surl := surl + 'point_from[corp][]=' + korpus + '&';
+		surl := surl + 'point_to[obj][]=' + ulica + '&';
+		surl := surl + 'point_to[house][]=' + dom + '&';
+		surl := surl + 'point_to[corp][]=' + korpus + '&';
 
-	result := get_zapros(surl);
+		surl := '"' + surl + '"' + ' "DayGPSKoordinatPoAdresu" "foo"';
+		surl := param64(surl);
+		surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
+
+		result := get_zapros(surl);
+	end;
+
+var surl, res : string;
+begin
+	res := get_coords();
+	if pos('Error', res) > 0 then
+		res := '';
+	result := res;
 end;
 
 function get_track_time(surl : AnsiString) : Integer;
