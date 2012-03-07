@@ -87,8 +87,9 @@ begin
 			s := IntToStr(CrewId);
 			add_s(s, IntToStr(GpsId));
 			add_s(s, IntToStr(State));
+			add_s(s, FloatToStr(dist / 1000.0));
+            add_s(s, IntToStr(Time));
 			add_s(s, Coord);
-			add_s(s, FloatToStr(dist)); add_s(s, IntToStr(Time));
 			add_s(s, Code); add_s(s, name);
 			for sc in coords do
 				add_s(s, sc);
@@ -148,7 +149,7 @@ begin
 	result := res;
 end;
 
-function get_coord_list(var clist : TCrewList) : TSTringList;
+function get_coord_list(var clist : TCrewList; Coord : string) : TSTringList;
 var
 	sel : string;
 	j : Integer;
@@ -175,6 +176,7 @@ begin
 		slist.Sorted := true;
 	end;
 	clist.set_current_crews_coord();
+	clist.set_crews_dist(Coord);
 	exit(slist);
 end;
 
@@ -195,6 +197,8 @@ begin
 			begin
 				res := res + field.AsString + '|';
 			end;
+			if res[length(res)] = '|' then
+				delete(res, length(res), 1);
 			list.Append(res);
 			ibquery_main.Next;
 		end;
@@ -205,7 +209,13 @@ begin
 end;
 
 function get_crew_list(sdate : string; var clist : TCrewList) : TSTringList;
-// èçâëåêàåì ğàáî÷èå ıêèïàæè
+// èçâëåêàåì ıêèïàæè ïî gps_id
+	function get_list(sz : string) : TSTringList;
+	begin
+		form_main.edit_zakaz4ik.Text := sz;
+		exit(get_sql_list(sz, false));
+	end;
+
 var
 	sel, s, sid : string;
 	res, sl : TSTringList;
@@ -225,10 +235,13 @@ begin
 	sel :=
 		'select CREWS.IDENTIFIER, CREWS.ID, CREWS.CODE, CREWS.NAME from CREWS where '
 		+ ' CREWS.IDENTIFIER in (' + clist.get_gpsid_list_as_string() + ') ';
-	form_main.edit_zakaz4ik.Text := sel;
-	res := get_sql_list(sel, false);
+	res := get_list(sel);
 	clist.set_crewId_by_gpsId(res);
-
+	sel := 'select CREWS.ID, CREWS_H.TOSTATE from CREWS, CREWS_H where ' + ' CREWS.ID in (' +
+		clist.get_crewid_list_as_string() + ') ' + ' and CREWS_H.STATETIME > ' + sdate +
+		' and CREWS_H.CREWID = CREWS.ID ';
+	res := get_list(sel);
+	clist.set_crews_state_by_crewId(res);
 	result := res;
 end;
 
@@ -237,6 +250,7 @@ function get_order_list(sdate : string) : TSTringList;
 var
 	sel : string;
 begin
+	// ÏÅĞÅÏÈÑÀÒÜ!
 	sdate := '''' + sdate + '''';
 	// sel := 'select STARTTIME, STATE, SOURCE, STOPS_COUNT, STOPS, DESTINATION  from ORDERS where STOPS_COUNT > 0   order by STARTTIME DESC';
 	sel :=
@@ -336,10 +350,10 @@ var list_coord, list_crew, list_order, list_tmp : TSTringList;
 begin
 	with form_main do
 	begin
-		ÑÎĞÒÈĞÎÂÊÀ ÑÏÈÑÊÀ İÊÈÏÀÆÅÉ ÏÎ ĞÀÑÑÒÎßÍÈŞ ÄÎ ÀÏ È ÑÎÑÒÎßÍÈŞ!
+		// ÑÎĞÒÈĞÎÂÊÀ ÑÏÈÑÊÀ İÊÈÏÀÆÅÉ ÏÎ ĞÀÑÑÒÎßÍÈŞ ÄÎ ÀÏ È ÑÎÑÒÎßÍÈŞ !;
 		// ÍÀÏÑÀÒÜ ĞÀÑ×¨Ò ÂĞÅÌÅÍÈ ÌÀĞØĞÓÒÀ ÄÎ ÀÏ !;
 
-		list_coord := get_coord_list(crew_list);
+		list_coord := get_coord_list(crew_list, '30.375401,59.90293');
 		show_grid(list_coord, grid_gps);
 
 		edit_adres.Text := IntToStr(crew_list.Crews.Count);

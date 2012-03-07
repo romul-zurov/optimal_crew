@@ -35,6 +35,7 @@ type
 		constructor Create();
 		function crew(p : Pointer) : TCrew;
 		function crewByGpsId(GpsId : Integer) : TCrew;
+		function crewByCrewId(CrewID : Integer) : TCrew;
 		function Append(GpsId : Integer) : Pointer; // add new crew to list by CREW_GPS_ID
 		function isCrewInList(ID : Integer; GPS : boolean) : boolean;
 		function isCrewIdInList(ID : Integer) : boolean;
@@ -46,15 +47,30 @@ type
 		function get_crewid_list_as_string() : string;
 		function delete_all_none_crewId() : Integer;
 		function set_crewId_by_gpsId(list : TStringList) : Integer;
+		function set_crews_state_by_crewId(list : TStringList) : Integer;
 		function set_current_crews_coord() : Integer;
-		// function sort_crews_coords_by_time_desc() : Integer;
+		function set_crews_dist(coord : string) : Integer;
 	private
 		function findById(ID : Integer; GPS : boolean) : Pointer;
 		function get_id_list_as_string(GPS : boolean) : string;
-
+		function del_all_non_work_crews() : Integer;
+		function sort_crews_by_state_and_dist() : Integer;
+		function sort_state_dist(p1, p2 : Pointer) : Integer;
 	end;
 
 implementation
+
+function sort_state_dist(p1, p2 : Pointer) : Integer;
+var s1, s2 : Integer;
+	d1, d2 : double;
+	c1, c2 : TCrew;
+begin
+	c1 := TCrew(p1); c2 := TCrew(p2);
+	d1 := c1.dist; d2 := c2.dist;
+	s1 := c1.State; s2 := c2.State;
+	if (s1 < s2) then
+		exit(-1);
+end;
 
 { TCrew }
 
@@ -172,6 +188,14 @@ begin
 		result := nil;
 end;
 
+function TCrewList.crewByCrewId(CrewID : Integer) : TCrew;
+begin
+	if self.isCrewIdInList(CrewID) then
+		result := TCrew(self.findByCrewId(CrewID))
+	else
+		result := nil;
+end;
+
 function TCrewList.crewByGpsId(GpsId : Integer) : TCrew;
 begin
 	if self.isGpsIdInList(GpsId) then
@@ -186,7 +210,18 @@ begin
 	for pp in self.Crews do
 		if (self.crew(pp).CrewID = -1) then
 			self.Crews.Delete(self.Crews.IndexOf(pp));
-	result := 0;
+	exit(0);
+end;
+
+function TCrewList.del_all_non_work_crews : Integer;
+var pp : Pointer;
+begin
+	for pp in self.Crews do
+		if self.crew(pp).State in [1, 3] then
+			pass
+		else
+			self.Crews.Delete(self.Crews.IndexOf(pp));
+	exit(0);
 end;
 
 function TCrewList.findByCrewId(ID : Integer) : Pointer;
@@ -268,7 +303,30 @@ begin
 	end;
 	self.delete_all_none_crewId();
 	FreeAndNil(sl);
-	result := 0;
+	exit(0);
+end;
+
+function TCrewList.set_crews_dist(coord : string) : Integer;
+var pp : Pointer;
+begin
+	for pp in self.Crews do
+		self.crew(pp).calc_dist(coord);
+	exit(0);
+end;
+
+function TCrewList.set_crews_state_by_crewId(list : TStringList) : Integer;
+var
+	s, sid, sstate : string;
+begin
+	for s in list do
+	begin
+		sid := get_substr(s, '', '|');
+		sstate := get_substr(s, '|', '');
+		self.crewByCrewId(StrToInt(sid)).State := StrToInt(sstate);
+	end;
+	self.del_all_non_work_crews(); self.del_all_non_work_crews(); // мистика, но так работает :-/
+	self.sort_crews_by_state_and_dist();
+	exit(0);
 end;
 
 function TCrewList.set_current_crews_coord : Integer;
@@ -276,6 +334,40 @@ var pp : Pointer;
 begin
 	for pp in self.Crews do
 		self.crew(pp).set_current_coord();
+	exit(0);
+end;
+
+function TCrewList.sort_crews_by_state_and_dist : Integer;
+var sl : TStringList;
+	s, sid, sdist, sstate : string;
+	crew : TCrew;
+	pp : Pointer;
+	ncr : TList;
+	ID : Integer;
+begin
+	// sl := TStringList.Create();
+	// for pp in self.Crews do
+	// begin
+	// crew := self.crew(pp);
+	// sid := IntToStr(crew.CrewID);
+	// sdist := FloatToStr(crew.dist);
+	// sstate := IntToStr(crew.State);
+	// s := sstate + '|' + sdist + '||' + sid;
+	// sl.Append(s);
+	// end;
+	// sl.Sorted := True;
+	// ncr := TList.Create();
+	// for s in sl do
+	// begin
+	// ID := StrToInt(get_substr(s, '||', ''));
+	// pp := self.findByCrewId(ID);
+	// ncr.Add(pp);
+	// end;
+	// self.Crews.Assign(ncr);
+	//
+	// FreeAndNil(ncr); // ?
+	// FreeAndNil(sl);
+	self.Crews.Sort(sort_state_dist);
 	exit(0);
 end;
 

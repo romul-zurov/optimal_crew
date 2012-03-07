@@ -4,6 +4,8 @@ interface
 
 uses StrUtils, DateUtils, SysUtils, Classes, EncdDecd, Math;
 
+procedure pass;
+
 function replace_day(const value : string; const MyTime : TDateTime) : string;
 function replace_hour(const value : string; const MyTime : TDateTime) : string;
 function replace_minute(const value : string; const MyTime : TDateTime) : string;
@@ -19,6 +21,10 @@ procedure RemoveDuplicates(const stringList : TStringList);
 
 implementation
 
+procedure pass;
+begin
+end;
+
 function reverseStringList(var list : TStringList) : Integer;
 var i, c : Integer;
 begin
@@ -26,7 +32,7 @@ begin
 	if c <= 0 then
 		exit(-1);
 	for i := 0 to (c div 2) - 1 do
-		list.Exchange(i, c - 1 -i);
+		list.Exchange(i, c - 1 - i);
 	exit(0);
 end;
 
