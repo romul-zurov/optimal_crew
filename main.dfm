@@ -16,7 +16,7 @@ object form_main: Tform_main
   TextHeight = 13
   object Label1: TLabel
     Left = 8
-    Top = 40
+    Top = 53
     Width = 75
     Height = 13
     Caption = #1040#1076#1088#1077#1089' '#1087#1086#1076#1072#1095#1080':'
@@ -49,9 +49,37 @@ object form_main: Tform_main
     Height = 13
     Caption = #1042#1088#1077#1084#1103' '#1076#1086' '#1087#1086#1076#1072#1095#1080':'
   end
+  object Label6: TLabel
+    Left = 97
+    Top = 32
+    Width = 35
+    Height = 13
+    Caption = #1059#1083#1080#1094#1072':'
+  end
+  object Label7: TLabel
+    Left = 479
+    Top = 32
+    Width = 24
+    Height = 13
+    Caption = #1044#1086#1084':'
+  end
+  object Label8: TLabel
+    Left = 543
+    Top = 32
+    Width = 40
+    Height = 13
+    Caption = #1050#1086#1088#1087#1091#1089':'
+  end
+  object Label9: TLabel
+    Left = 647
+    Top = 32
+    Width = 90
+    Height = 13
+    Caption = 'GPS-'#1082#1086#1086#1088#1076#1080#1085#1072#1090#1099':'
+  end
   object browser: TWebBrowser
-    Left = 424
-    Top = 112
+    Left = 344
+    Top = 337
     Width = 457
     Height = 145
     TabOrder = 7
@@ -62,12 +90,12 @@ object form_main: Tform_main
       8000000000000000000000000000000000000000000000000000000000000000
       00000000000000000100000000000000000000000000000000000000}
   end
-  object grid_crew: TStringGrid
+  object grid_crews: TStringGrid
     Left = 0
     Top = 96
-    Width = 464
-    Height = 177
-    ColCount = 3
+    Width = 978
+    Height = 220
+    ColCount = 4
     Ctl3D = False
     FixedCols = 0
     RowCount = 1
@@ -82,10 +110,10 @@ object form_main: Tform_main
     Height = 21
     TabOrder = 1
   end
-  object edit_adres: TEdit
-    Left = 88
-    Top = 37
-    Width = 880
+  object edit_ap_street: TEdit
+    Left = 89
+    Top = 50
+    Width = 376
     Height = 21
     TabOrder = 2
   end
@@ -101,9 +129,9 @@ object form_main: Tform_main
   end
   object DBGrid1: TDBGrid
     Left = 0
-    Top = 456
+    Top = 488
     Width = 978
-    Height = 49
+    Height = 17
     DataSource = datasource_main
     TabOrder = 3
     TitleFont.Charset = DEFAULT_CHARSET
@@ -111,11 +139,12 @@ object form_main: Tform_main
     TitleFont.Height = -11
     TitleFont.Name = 'Tahoma'
     TitleFont.Style = []
+    Visible = False
   end
   object grid_gps: TStringGrid
-    Left = 536
-    Top = 96
-    Width = 434
+    Left = 639
+    Top = 322
+    Width = 339
     Height = 177
     ColCount = 3
     Ctl3D = False
@@ -127,8 +156,8 @@ object form_main: Tform_main
   end
   object grid_order: TStringGrid
     Left = 0
-    Top = 279
-    Width = 970
+    Top = 322
+    Width = 593
     Height = 177
     ColCount = 3
     Ctl3D = False
@@ -146,6 +175,27 @@ object form_main: Tform_main
     Caption = 'Go!'
     TabOrder = 8
     OnClick = Button1Click
+  end
+  object edit_ap_house: TEdit
+    Left = 471
+    Top = 50
+    Width = 58
+    Height = 21
+    TabOrder = 9
+  end
+  object edit_ap_korpus: TEdit
+    Left = 535
+    Top = 50
+    Width = 58
+    Height = 21
+    TabOrder = 10
+  end
+  object edit_ap_gps: TEdit
+    Left = 639
+    Top = 50
+    Width = 226
+    Height = 21
+    TabOrder = 11
   end
   object db_main: TIBDatabase
     Params.Strings = (

@@ -4,15 +4,22 @@ interface
 
 uses crew_utils, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX;
 
+const CREW_SVOBODEN = 1;
+
+const CREW_NAZAKAZE = 3;
+
+function sort_crews_by_state_dist(p1, p2 : Pointer) : Integer;
+
 type
 	TCrew = class(TObject)
 		CrewID : Integer;
 		GpsId : Integer;
 		State : Integer; // состояние: 1 - свободен, 3 - на заказе;
+		state_as_string : string;
 		Code : string;
 		name : string;
 		coord : string; // текущая (самая свежая) координата GPS
-		dist : double; // расстояние до адреса подачи (АП)
+		dist : double; // расстояние до адреса подачи (АП) радиальное, по прямой;
 		time : Integer; // время подъезда к АП в минутах;
 		coords : TStringList; // gps-трек за выбранный промежуток времени;
 		coords_times : TStringList; // gps-трек за выбранный промежуток времени;
@@ -30,7 +37,9 @@ type
 type
 	TCrewList = class(TObject)
 		Crews : TList;
-		AdresPodachi : string;
+		ap_street : string;
+		ap_house : string;
+		ap_korpus : string;
 		ap_gps : string;
 		constructor Create();
 		function crew(p : Pointer) : TCrew;
@@ -54,13 +63,12 @@ type
 		function findById(ID : Integer; GPS : boolean) : Pointer;
 		function get_id_list_as_string(GPS : boolean) : string;
 		function del_all_non_work_crews() : Integer;
-		function sort_crews_by_state_and_dist() : Integer;
-		function sort_state_dist(p1, p2 : Pointer) : Integer;
+		procedure set_crews_state_as_string();
 	end;
 
 implementation
 
-function sort_state_dist(p1, p2 : Pointer) : Integer;
+function sort_crews_by_state_dist(p1, p2 : Pointer) : Integer;
 var s1, s2 : Integer;
 	d1, d2 : double;
 	c1, c2 : TCrew;
@@ -69,7 +77,15 @@ begin
 	d1 := c1.dist; d2 := c2.dist;
 	s1 := c1.State; s2 := c2.State;
 	if (s1 < s2) then
-		exit(-1);
+		exit(-1)
+	else if (s1 > s2) then
+		exit(1)
+	else if (d1 < d2) then // if state1 == state2
+		exit(-1)
+	else if (d1 > d2) then
+		exit(1)
+	else
+		exit(0);
 end;
 
 { TCrew }
@@ -97,6 +113,7 @@ begin
 	self.State := -1; // состояние: 1 - свободен, 3 - на заказе;
 	Code := '';
 	name := '';
+	state_as_string := '';
 	coord := ''; // текущая (самая свежая) координата GPS
 	dist := -1.0; // расстояние до адреса подачи (АП)
 	time := -1; // время подъезда к АП в минутах;
@@ -314,18 +331,30 @@ begin
 	exit(0);
 end;
 
+procedure TCrewList.set_crews_state_as_string;
+var pp : Pointer;
+begin
+	for pp in self.Crews do
+		if self.crew(pp).State = 1 then
+			self.crew(pp).state_as_string := 'Свободен'
+		else
+			self.crew(pp).state_as_string := 'На заказе';
+end;
+
 function TCrewList.set_crews_state_by_crewId(list : TStringList) : Integer;
 var
 	s, sid, sstate : string;
+	crew : TCrew;
 begin
 	for s in list do
 	begin
 		sid := get_substr(s, '', '|');
 		sstate := get_substr(s, '|', '');
-		self.crewByCrewId(StrToInt(sid)).State := StrToInt(sstate);
+		crew := self.crewByCrewId(StrToInt(sid));
+		crew.State := StrToInt(sstate);
 	end;
 	self.del_all_non_work_crews(); self.del_all_non_work_crews(); // мистика, но так работает :-/
-	self.sort_crews_by_state_and_dist();
+	self.set_crews_state_as_string();
 	exit(0);
 end;
 
@@ -334,40 +363,6 @@ var pp : Pointer;
 begin
 	for pp in self.Crews do
 		self.crew(pp).set_current_coord();
-	exit(0);
-end;
-
-function TCrewList.sort_crews_by_state_and_dist : Integer;
-var sl : TStringList;
-	s, sid, sdist, sstate : string;
-	crew : TCrew;
-	pp : Pointer;
-	ncr : TList;
-	ID : Integer;
-begin
-	// sl := TStringList.Create();
-	// for pp in self.Crews do
-	// begin
-	// crew := self.crew(pp);
-	// sid := IntToStr(crew.CrewID);
-	// sdist := FloatToStr(crew.dist);
-	// sstate := IntToStr(crew.State);
-	// s := sstate + '|' + sdist + '||' + sid;
-	// sl.Append(s);
-	// end;
-	// sl.Sorted := True;
-	// ncr := TList.Create();
-	// for s in sl do
-	// begin
-	// ID := StrToInt(get_substr(s, '||', ''));
-	// pp := self.findByCrewId(ID);
-	// ncr.Add(pp);
-	// end;
-	// self.Crews.Assign(ncr);
-	//
-	// FreeAndNil(ncr); // ?
-	// FreeAndNil(sl);
-	self.Crews.Sort(sort_state_dist);
 	exit(0);
 end;
 

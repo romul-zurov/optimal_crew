@@ -10,11 +10,11 @@ uses
 
 type
 	Tform_main = class(TForm)
-		grid_crew : TStringGrid;
+		grid_crews : TStringGrid;
 		Label1 : TLabel;
 		Label2 : TLabel;
 		edit_zakaz4ik : TEdit;
-		edit_adres : TEdit;
+		edit_ap_street : TEdit;
 		Label3 : TLabel;
 		Label5 : TLabel;
 		Label4 : TLabel;
@@ -28,6 +28,13 @@ type
 		grid_order : TStringGrid;
 		browser : TWebBrowser;
 		Button1 : TButton;
+		Label6 : TLabel;
+		edit_ap_house : TEdit;
+		Label7 : TLabel;
+		edit_ap_korpus : TEdit;
+		Label8 : TLabel;
+		edit_ap_gps : TEdit;
+		Label9 : TLabel;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 	private
@@ -69,7 +76,7 @@ begin
 	result := 0;
 end;
 
-function ret_crews_stringlist(clist : TCrewList) : TSTringList;
+function ret_crews_stringlist(var clist : TCrewList) : TSTringList;
 	procedure add_s(var s : string; subs : string);
 	begin
 		s := s + '|' + subs;
@@ -88,7 +95,7 @@ begin
 			add_s(s, IntToStr(GpsId));
 			add_s(s, IntToStr(State));
 			add_s(s, FloatToStr(dist / 1000.0));
-            add_s(s, IntToStr(Time));
+			add_s(s, IntToStr(Time));
 			add_s(s, Coord);
 			add_s(s, Code); add_s(s, name);
 			for sc in coords do
@@ -242,6 +249,7 @@ begin
 		' and CREWS_H.CREWID = CREWS.ID ';
 	res := get_list(sel);
 	clist.set_crews_state_by_crewId(res);
+	clist.Crews.Sort(sort_crews_by_state_dist);
 	result := res;
 end;
 
@@ -334,7 +342,29 @@ begin
 	result := 0;
 end;
 
-procedure show_grid(list : TSTringList; var grid : TStringGrid);
+procedure show_result_crews_grid(var list : TCrewList);
+var pp : Pointer;
+	r : Integer;
+	crew : TCrew;
+begin
+	with form_main do
+	begin
+		grid_crews.RowCount := 0;
+		r := 0;
+		for pp in list.Crews do
+		begin
+			crew := list.crew(pp);
+			grid_crews.RowCount := r + 1;
+			grid_crews.Cells[0, r] := crew.name;
+			grid_crews.Cells[1, r] := IntToStr(crew.Time);
+			grid_crews.Cells[2, r] := FloatToStrF(crew.dist / 1000.0, ffFixed, 3, 3);
+			grid_crews.Cells[3, r] := crew.state_as_string;
+			inc(r);
+		end;
+	end;
+end;
+
+procedure show_grid(var list : TSTringList; var grid : TStringGrid);
 begin
 	grid.ColCount := 1; grid.RowCount := list.Count; grid.ColWidths[0] := grid.Width;
 	grid.Cols[0].Assign(list);
@@ -343,24 +373,29 @@ end;
 procedure show_tmp();
 const SDAY = '2011-10-03 00:00:00';
 var list_coord, list_crew, list_order, list_tmp : TSTringList;
-	surl, sc1, sc2 : string;
+	surl, sc1, sc2, ap_coord : string;
 	i : Integer;
 	pp : Pointer;
 
 begin
 	with form_main do
 	begin
-		// —Œ–“»–Œ¬ ¿ —œ»— ¿ › »œ¿∆≈… œŒ –¿——“ŒﬂÕ»ﬁ ƒŒ ¿œ » —Œ—“ŒﬂÕ»ﬁ !;
+
 		// Õ¿œ—¿“‹ –¿—◊®“ ¬–≈Ã≈Õ» Ã¿–ÿ–”“¿ ƒŒ ¿œ !;
 
-		list_coord := get_coord_list(crew_list, '30.375401,59.90293');
+		// 30.628900,60.031448       - crew 55
+		// 30.375401,59.90293 - Ò‡ÏÓÈÎÓ‚ÓÈ 7
+		ap_coord := edit_ap_gps.Text;
+		list_coord := get_coord_list(crew_list, ap_coord);
 		show_grid(list_coord, grid_gps);
 
-		edit_adres.Text := IntToStr(crew_list.Crews.Count);
+		// edit_adres.Text := IntToStr(crew_list.Crews.Count);
 
-		list_crew := get_crew_list(SDAY, crew_list); show_grid(list_crew, grid_crew);
+		list_crew := get_crew_list(SDAY, crew_list);
+		// show_grid(list_crew, grid_crews);
 
 		list_tmp := ret_crews_stringlist(crew_list); show_grid(list_tmp, grid_order);
+		show_result_crews_grid(crew_list);
 
 		// if crew_list.crewByGpsId(9).is_crew_was_in_coord('30.3088703155518,59.9947509765625') then
 		// edit_zakaz4ik.Text := 'ASDFGHJKL!';
@@ -407,15 +442,20 @@ end;
 
 procedure Tform_main.FormCreate(Sender : TObject);
 begin
-	// with form_main do
-	// begin
-	// grid_crew.ColWidths[0] := 560; // 120;
-	// grid_crew.ColWidths[1] := 180;
-	// grid_crew.ColWidths[2] := 570 - (120 + 180) - 5;
-	// end;
+	with form_main do
+	begin
+		grid_crews.ColWidths[0] := 360; // 120;
+		grid_crews.ColWidths[1] := 180;
+        grid_crews.ColWidths[2] := 180;
+		grid_crews.ColWidths[3] := 280;
+		edit_ap_street.Text := '—‡ÏÓÈÎÓ‚ÓÈ ÛÎ.';
+		edit_ap_house.Text := '7';
+		edit_ap_korpus.Text := '';
+		edit_ap_gps.Text := '30.375401,59.90293';
+	end;
+	// form_main.DBGrid1.Hide();
 
 	crew_list := TCrewList.Create();
-
 	if open_database() then
 	begin
 		// show_tmp();
