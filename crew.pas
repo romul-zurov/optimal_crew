@@ -11,6 +11,15 @@ const CREW_NAZAKAZE = 3;
 function sort_crews_by_state_dist(p1, p2 : Pointer) : Integer;
 
 type
+	TAdres = class(TObject)
+		street : string;
+		house : string;
+		korpus : string;
+		gps : string;
+		constructor Create(street, house, korpus, gps : string);
+	end;
+
+type
 	TCrew = class(TObject)
 		CrewID : Integer;
 		GpsId : Integer;
@@ -21,6 +30,7 @@ type
 		coord : string; // текущая (самая свежая) координата GPS
 		dist : double; // расстояние до адреса подачи (АП) радиальное, по прямой;
 		time : Integer; // время подъезда к АП в минутах;
+		time_as_string : string;
 		coords : TStringList; // gps-трек за выбранный промежуток времени;
 		coords_times : TStringList; // gps-трек за выбранный промежуток времени;
 		constructor Create(GpsId : Integer);
@@ -46,7 +56,7 @@ type
 		function crewByGpsId(GpsId : Integer) : TCrew;
 		function crewByCrewId(CrewID : Integer) : TCrew;
 		function Append(GpsId : Integer) : Pointer; // add new crew to list by CREW_GPS_ID
-		function isCrewInList(ID : Integer; GPS : boolean) : boolean;
+		function isCrewInList(ID : Integer; gps : boolean) : boolean;
 		function isCrewIdInList(ID : Integer) : boolean;
 		function isGpsIdInList(ID : Integer) : boolean;
 		function findByCrewId(ID : Integer) : Pointer;
@@ -60,8 +70,8 @@ type
 		function set_current_crews_coord() : Integer;
 		function set_crews_dist(coord : string) : Integer;
 	private
-		function findById(ID : Integer; GPS : boolean) : Pointer;
-		function get_id_list_as_string(GPS : boolean) : string;
+		function findById(ID : Integer; gps : boolean) : Pointer;
+		function get_id_list_as_string(gps : boolean) : string;
 		function del_all_non_work_crews() : Integer;
 		procedure set_crews_state_as_string();
 	end;
@@ -251,7 +261,7 @@ begin
 	result := self.findById(ID, True);
 end;
 
-function TCrewList.findById(ID : Integer; GPS : boolean) : Pointer;
+function TCrewList.findById(ID : Integer; gps : boolean) : Pointer;
 var
 	crew : TCrew;
 	pcrew : PTCrew;
@@ -260,7 +270,7 @@ begin
 	for pcrew in self.Crews do
 	begin
 		crew := TCrew(pcrew);
-		if ((not GPS) and (crew.CrewID = ID)) or (GPS and (crew.GpsId = ID)) then
+		if ((not gps) and (crew.CrewID = ID)) or (gps and (crew.GpsId = ID)) then
 		begin
 			result := pcrew;
 			exit();
@@ -278,13 +288,13 @@ begin
 	result := self.get_id_list_as_string(True);
 end;
 
-function TCrewList.get_id_list_as_string(GPS : boolean) : string;
+function TCrewList.get_id_list_as_string(gps : boolean) : string;
 var s : string;
 	pp : Pointer;
 begin
 	s := '';
 	for pp in self.Crews do
-		if GPS then
+		if gps then
 			s := s + ',' + IntToStr(self.crew(pp).GpsId)
 		else
 			s := s + ',' + IntToStr(self.crew(pp).CrewID);
@@ -366,7 +376,7 @@ begin
 	exit(0);
 end;
 
-function TCrewList.isCrewInList(ID : Integer; GPS : boolean) : boolean;
+function TCrewList.isCrewInList(ID : Integer; gps : boolean) : boolean;
 var
 	crew : TCrew;
 	pp : Pointer;
@@ -374,10 +384,21 @@ begin
 	for pp in self.Crews do
 	begin
 		crew := self.crew(pp);
-		if ((not GPS) and (crew.CrewID = ID)) or (GPS and (crew.GpsId = ID)) then
+		if ((not gps) and (crew.CrewID = ID)) or (gps and (crew.GpsId = ID)) then
 			exit(True);
 	end;
 	exit(false);
+end;
+
+{ TAdres }
+
+constructor TAdres.Create(street, house, korpus, gps : string);
+begin
+	inherited Create;
+	self.street := street;
+	self.house := house;
+	self.korpus := korpus;
+	self.gps := gps;
 end;
 
 end.

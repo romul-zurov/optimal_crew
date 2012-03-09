@@ -47,6 +47,7 @@ var
 	form_main : Tform_main;
 	cur_time : TDateTime;
 	crew_list : TCrewList;
+	ac_taxi_url : string;
 
 implementation
 
@@ -307,11 +308,64 @@ begin
 	end;
 end;
 
+function get_crew_way_time(var points : TList) : Integer;
+	procedure add_s(var s : string; s1, s2, s3, s4 : string; num : Integer);
+	var ss : string;
+	begin
+		case num of
+			0 :
+				ss := 'from';
+			1 :
+				ss := 'int';
+			-1 :
+				ss := 'to';
+		end;
+		s := s + 'point_' + ss + '[obj][]=' + s1 + '&';
+		s := s + 'point_' + ss + '[house][]=' + s2 + '&';
+		s := s + 'point_' + ss + '[corp][]=' + s3 + '&';
+		s := s + 'point_' + ss + '[coords][]=' + s4 + '&';
+	end;
+
+var i, c, n, t : Integer;
+	a : TAdres;
+	surl, res : string;
+begin
+	c := points.Count;
+	if c < 2 then
+		exit(-1);
+	surl := ac_taxi_url + 'order?service=1&';
+	for i := 0 to c - 1 do
+	begin
+		if i = 0 then
+			n := 0
+		else if i = (c - 1) then
+			n := -1
+		else
+			n := 1;
+		a := TAdres(points.Items[i]);
+		add_s(surl, a.street, a.house, a.korpus, a.gps, n);
+	end;
+	surl := '"' + surl + '"' + ' "id=\"recalcOutput\" align=\"left\">" "</td>"';
+	surl := param64(surl);
+	surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
+	res := get_zapros(surl);
+
+	// ------
+	form_main.edit_zakaz4ik.Text := res;
+	res := get_substr(res, 'Время (с учетом пробок): ', ' мин.');
+	try
+		t := StrToInt(res);
+		exit(t);
+	except
+		exit(-1);
+	end;
+end;
+
 function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
 	function get_coords() : string;
 	var surl : string;
 	begin
-		surl := 'http://test.robocab.ru/order?service=1&';
+		surl := ac_taxi_url + 'order?service=1&';
 		surl := surl + 'point_from[obj][]=' + ulica + '&';
 		surl := surl + 'point_from[house][]=' + dom + '&';
 		surl := surl + 'point_from[corp][]=' + korpus + '&';
@@ -376,15 +430,17 @@ var list_coord, list_crew, list_order, list_tmp : TSTringList;
 	surl, sc1, sc2, ap_coord : string;
 	i : Integer;
 	pp : Pointer;
+	a1, a2 : TAdres;
+	alist : TList;
 
 begin
 	with form_main do
 	begin
 
 		// НАПСАТЬ РАСЧЁТ ВРЕМЕНИ МАРШРУТА ДО АП !;
-
 		// 30.628900,60.031448       - crew 55
 		// 30.375401,59.90293 - самойловой 7
+
 		ap_coord := edit_ap_gps.Text;
 		list_coord := get_coord_list(crew_list, ap_coord);
 		show_grid(list_coord, grid_gps);
@@ -396,6 +452,18 @@ begin
 
 		list_tmp := ret_crews_stringlist(crew_list); show_grid(list_tmp, grid_order);
 		show_result_crews_grid(crew_list);
+
+		edit_zakaz4ik.Text := get_gps_coords_for_adres(edit_ap_street.Text, edit_ap_house.Text,
+			edit_ap_korpus.Text);
+
+		// !!
+		a1 := TAdres.Create('Витебский проспект', '53', '3', '30.362589,59.848299');
+		a2 := TAdres.Create('улица Самойловой', '7', '', '30.375401,59.90293');
+		alist := TList.Create();
+		alist.Add(Pointer(a1));
+		alist.Add(Pointer(a2));
+		show_status(IntToStr(get_crew_way_time(alist)));
+
 
 		// if crew_list.crewByGpsId(9).is_crew_was_in_coord('30.3088703155518,59.9947509765625') then
 		// edit_zakaz4ik.Text := 'ASDFGHJKL!';
@@ -442,16 +510,17 @@ end;
 
 procedure Tform_main.FormCreate(Sender : TObject);
 begin
+	ac_taxi_url := 'http://test.robocab.ru/';
 	with form_main do
 	begin
 		grid_crews.ColWidths[0] := 360; // 120;
 		grid_crews.ColWidths[1] := 180;
-        grid_crews.ColWidths[2] := 180;
+		grid_crews.ColWidths[2] := 180;
 		grid_crews.ColWidths[3] := 280;
 		edit_ap_street.Text := 'Самойловой ул.';
 		edit_ap_house.Text := '7';
 		edit_ap_korpus.Text := '';
-		edit_ap_gps.Text := '30.375401,59.90293';
+		edit_ap_gps.Text := '30.375004,59.902483';
 	end;
 	// form_main.DBGrid1.Hide();
 
