@@ -9,6 +9,7 @@ const CREW_SVOBODEN = 1;
 const CREW_NAZAKAZE = 3;
 
 function sort_crews_by_state_dist(p1, p2 : Pointer) : Integer;
+function sort_crews_by_time(p1, p2 : Pointer) : Integer;
 
 type
 	TAdres = class(TObject)
@@ -17,6 +18,8 @@ type
 		korpus : string;
 		gps : string;
 		constructor Create(street, house, korpus, gps : string);
+		procedure setAdres(street, house, korpus, gps : string);
+		procedure Clear();
 	end;
 
 type
@@ -69,6 +72,7 @@ type
 		function set_crews_state_by_crewId(list : TStringList) : Integer;
 		function set_current_crews_coord() : Integer;
 		function set_crews_dist(coord : string) : Integer;
+		function set_ap(street, house, korpus, gps : string) : integer;
 	private
 		function findById(ID : Integer; gps : boolean) : Pointer;
 		function get_id_list_as_string(gps : boolean) : string;
@@ -77,6 +81,20 @@ type
 	end;
 
 implementation
+
+function sort_crews_by_time(p1, p2 : Pointer) : Integer;
+var t1, t2 : Integer;
+	c1, c2 : TCrew;
+begin
+	c1 := TCrew(p1); c2 := TCrew(p2);
+	t1 := c1.time; t2 := c2.time;
+	if (t1 < t2) then
+		exit(-1)
+	else if (t1 > t2) then
+		exit(1)
+	else
+		exit(0);
+end;
 
 function sort_crews_by_state_dist(p1, p2 : Pointer) : Integer;
 var s1, s2 : Integer;
@@ -312,6 +330,14 @@ begin
 	result := self.isCrewInList(ID, True);
 end;
 
+function TCrewList.set_ap(street, house, korpus, gps: string): integer;
+begin
+	self.ap_street := street;
+	self.ap_house := house;
+	self.ap_korpus := korpus;
+	self.ap_gps := gps;
+end;
+
 function TCrewList.set_crewId_by_gpsId(list : TStringList) : Integer;
 var sl : TStringList;
 	s : string;
@@ -392,9 +418,25 @@ end;
 
 { TAdres }
 
+procedure TAdres.Clear;
+begin
+	self.street := '';
+	self.house := '';
+	self.korpus := '';
+	self.gps := '';
+end;
+
 constructor TAdres.Create(street, house, korpus, gps : string);
 begin
 	inherited Create;
+	self.street := street;
+	self.house := house;
+	self.korpus := korpus;
+	self.gps := gps;
+end;
+
+procedure TAdres.setAdres(street, house, korpus, gps : string);
+begin
 	self.street := street;
 	self.house := house;
 	self.korpus := korpus;

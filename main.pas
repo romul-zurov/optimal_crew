@@ -46,7 +46,7 @@ type
 var
 	form_main : Tform_main;
 	cur_time : TDateTime;
-	crew_list : TCrewList;
+	crew_list, res_crew_list : TCrewList;
 	ac_taxi_url : string;
 
 implementation
@@ -157,9 +157,10 @@ begin
 	result := res;
 end;
 
-function get_coord_list(var clist : TCrewList; Coord : string) : TSTringList;
+function get_coord_list(var clist : TCrewList) : TSTringList;
 var
 	sel : string;
+//    Coord : string;
 	j : Integer;
 	coords, slist : TSTringList;
 begin
@@ -184,7 +185,7 @@ begin
 		slist.Sorted := true;
 	end;
 	clist.set_current_crews_coord();
-	clist.set_crews_dist(Coord);
+	clist.set_crews_dist(clist.ap_gps);
 	exit(slist);
 end;
 
@@ -345,20 +346,23 @@ begin
 		a := TAdres(points.Items[i]);
 		add_s(surl, a.street, a.house, a.korpus, a.gps, n);
 	end;
-	surl := '"' + surl + '"' + ' "id=\"recalcOutput\" align=\"left\">" "</td>"';
+	surl := '"' + surl + '"' + ' "id=\"recalcOutput\" align=\"left\">" "</td>" "WAIT10"';
+	form_main.edit_zakaz4ik.Text := surl;
 	surl := param64(surl);
 	surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
 	res := get_zapros(surl);
 
 	// ------
-	form_main.edit_zakaz4ik.Text := res;
+	show_status(res);
 	res := get_substr(res, 'Время (с учетом пробок): ', ' мин.');
-	try
-		t := StrToInt(res);
-		exit(t);
-	except
-		exit(-1);
-	end;
+	if (length(res) > 0) and (pos('Error', res) < 1) then
+		try
+			t := StrToInt(res);
+			exit(t);
+		except
+			exit(-1);
+		end;
+	exit(-1);
 end;
 
 function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
@@ -408,6 +412,9 @@ begin
 		for pp in list.Crews do
 		begin
 			crew := list.crew(pp);
+			if crew.Time < 0 then
+				Continue;
+
 			grid_crews.RowCount := r + 1;
 			grid_crews.Cells[0, r] := crew.name;
 			grid_crews.Cells[1, r] := IntToStr(crew.Time);
@@ -415,6 +422,39 @@ begin
 			grid_crews.Cells[3, r] := crew.state_as_string;
 			inc(r);
 		end;
+	end;
+end;
+
+procedure get_crews_times(var clist : TCrewList; var rlist : TCrewList);
+var a1, a2 : TAdres;
+	alist : TList;
+	pp : Pointer;
+	t : Integer;
+begin
+	// !!
+	a1 := TAdres.Create('', '', '', '');
+	with clist do
+		a2 := TAdres.Create(ap_street, ap_house, ap_korpus, ap_gps);
+	alist := TList.Create();
+	alist.Add(Pointer(a1));
+	alist.Add(Pointer(a2));
+	// show_status(IntToStr(get_crew_way_time(alist)));
+
+	rlist.Crews.Clear();
+	for pp in crew_list.Crews do
+	begin
+		a1.Clear();
+		// a2.Clear();
+		a1.setAdres('улица Самойловой', '7', '', crew_list.crew(pp).Coord); //
+		alist.Clear();
+		alist.Add(Pointer(a1));
+		alist.Add(Pointer(a2));
+		t := get_crew_way_time(alist);
+		if (t >= 0) then
+		begin
+			crew_list.crew(pp).Time := t;
+		end;
+		show_result_crews_grid(crew_list);
 	end;
 end;
 
@@ -428,21 +468,27 @@ procedure show_tmp();
 const SDAY = '2011-10-03 00:00:00';
 var list_coord, list_crew, list_order, list_tmp : TSTringList;
 	surl, sc1, sc2, ap_coord : string;
-	i : Integer;
+	i, t : Integer;
 	pp : Pointer;
-	a1, a2 : TAdres;
-	alist : TList;
-
 begin
 	with form_main do
 	begin
 
-		// НАПСАТЬ РАСЧЁТ ВРЕМЕНИ МАРШРУТА ДО АП !;
+         разделить рабочий и результирующий список!;
+         результирующий список фильтровать по времени подачи!;
+         повтороный запрос времени для Error-запросов!;
+         асинхронные запросы!;
+         два grid-списка: рабочие экипажи и просчитанные!;
+         статусы!;
+
+
+
 		// 30.628900,60.031448       - crew 55
+		// 30.362589,59.848299
 		// 30.375401,59.90293 - самойловой 7
 
-		ap_coord := edit_ap_gps.Text;
-		list_coord := get_coord_list(crew_list, ap_coord);
+		crew_list.set_ap(edit_ap_street.Text, edit_ap_house.Text, edit_ap_korpus.Text, edit_ap_gps.Text);
+		list_coord := get_coord_list(crew_list);
 		show_grid(list_coord, grid_gps);
 
 		// edit_adres.Text := IntToStr(crew_list.Crews.Count);
@@ -456,14 +502,7 @@ begin
 		edit_zakaz4ik.Text := get_gps_coords_for_adres(edit_ap_street.Text, edit_ap_house.Text,
 			edit_ap_korpus.Text);
 
-		// !!
-		a1 := TAdres.Create('Витебский проспект', '53', '3', '30.362589,59.848299');
-		a2 := TAdres.Create('улица Самойловой', '7', '', '30.375401,59.90293');
-		alist := TList.Create();
-		alist.Add(Pointer(a1));
-		alist.Add(Pointer(a2));
-		show_status(IntToStr(get_crew_way_time(alist)));
-
+		get_crews_times(crew_list, res_crew_list);
 
 		// if crew_list.crewByGpsId(9).is_crew_was_in_coord('30.3088703155518,59.9947509765625') then
 		// edit_zakaz4ik.Text := 'ASDFGHJKL!';
@@ -517,14 +556,15 @@ begin
 		grid_crews.ColWidths[1] := 180;
 		grid_crews.ColWidths[2] := 180;
 		grid_crews.ColWidths[3] := 280;
-		edit_ap_street.Text := 'Самойловой ул.';
+		edit_ap_street.Text := 'улица Самойловой';
 		edit_ap_house.Text := '7';
 		edit_ap_korpus.Text := '';
-		edit_ap_gps.Text := '30.375004,59.902483';
+		edit_ap_gps.Text := '30.375401,59.90293';
 	end;
 	// form_main.DBGrid1.Hide();
 
 	crew_list := TCrewList.Create();
+	res_crew_list := TCrewList.Create();
 	if open_database() then
 	begin
 		// show_tmp();
