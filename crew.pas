@@ -69,10 +69,10 @@ type
 		function get_crewid_list_as_string() : string;
 		function delete_all_none_crewId() : Integer;
 		function set_crewId_by_gpsId(list : TStringList) : Integer;
-		function set_crews_state_by_crewId(list : TStringList) : Integer;
+		function set_crews_state_by_crewId(var list : TStringList) : Integer;
 		function set_current_crews_coord() : Integer;
 		function set_crews_dist(coord : string) : Integer;
-		function set_ap(street, house, korpus, gps : string) : integer;
+		function set_ap(street, house, korpus, gps : string) : Integer;
 	private
 		function findById(ID : Integer; gps : boolean) : Pointer;
 		function get_id_list_as_string(gps : boolean) : string;
@@ -162,8 +162,17 @@ begin
 end;
 
 function TCrew.set_current_coord() : Integer;
+	function s_2_6(sc : string) : string;
+	var n : double;
+	begin
+		n := dotStrtoFloat(sc);
+		sc := FloatToStrF(n, ffFixed, 8, 6);
+		sc := StringReplace(sc, ',', '.', [rfReplaceAll]);
+		exit(sc);
+	end;
+
 var sl : TStringList;
-	s : string;
+	s, s1, s2 : string;
 	crew : TCrew;
 	count, i : Integer;
 begin
@@ -178,7 +187,11 @@ begin
 	// FreeAndNil(sl);
 	if self.sort_coords_by_time_desc() < 0 then
 		exit(-1);
-	self.coord := self.coords.Strings[0];
+	s := self.coords.Strings[0];
+	s1 := get_substr(s, '', ',');
+	s2 := get_substr(s, ',', '');
+	s := s_2_6(s1) + ',' + s_2_6(s2);
+	self.coord := s;
 	exit(0);
 end;
 
@@ -330,7 +343,7 @@ begin
 	result := self.isCrewInList(ID, True);
 end;
 
-function TCrewList.set_ap(street, house, korpus, gps: string): integer;
+function TCrewList.set_ap(street, house, korpus, gps : string) : Integer;
 begin
 	self.ap_street := street;
 	self.ap_house := house;
@@ -377,7 +390,7 @@ begin
 			self.crew(pp).state_as_string := 'На заказе';
 end;
 
-function TCrewList.set_crews_state_by_crewId(list : TStringList) : Integer;
+function TCrewList.set_crews_state_by_crewId(var list : TStringList) : Integer;
 var
 	s, sid, sstate : string;
 	crew : TCrew;
@@ -387,7 +400,8 @@ begin
 		sid := get_substr(s, '', '|');
 		sstate := get_substr(s, '|', '');
 		crew := self.crewByCrewId(StrToInt(sid));
-		crew.State := StrToInt(sstate);
+		if crew.State = -1 then
+			crew.State := StrToInt(sstate);
 	end;
 	self.del_all_non_work_crews(); self.del_all_non_work_crews(); // мистика, но так работает :-/
 	self.set_crews_state_as_string();

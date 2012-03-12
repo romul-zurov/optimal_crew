@@ -77,19 +77,6 @@ object form_main: Tform_main
     Height = 13
     Caption = 'GPS-'#1082#1086#1086#1088#1076#1080#1085#1072#1090#1099':'
   end
-  object browser: TWebBrowser
-    Left = 344
-    Top = 337
-    Width = 457
-    Height = 145
-    TabOrder = 7
-    ControlData = {
-      4C0000003B2F0000FC0E00000000000000000000000000000000000000000000
-      000000004C000000000000000000000001000000E0D057007335CF11AE690800
-      2B2E126208000000000000004C0000000114020000000000C000000000000046
-      8000000000000000000000000000000000000000000000000000000000000000
-      00000000000000000100000000000000000000000000000000000000}
-  end
   object grid_crews: TStringGrid
     Left = 0
     Top = 96
@@ -111,9 +98,9 @@ object form_main: Tform_main
     TabOrder = 1
   end
   object edit_ap_street: TEdit
-    Left = 89
+    Left = 88
     Top = 50
-    Width = 376
+    Width = 377
     Height = 21
     TabOrder = 2
   end
@@ -142,9 +129,9 @@ object form_main: Tform_main
     Visible = False
   end
   object grid_gps: TStringGrid
-    Left = 639
+    Left = 776
     Top = 322
-    Width = 339
+    Width = 202
     Height = 177
     ColCount = 3
     Ctl3D = False
@@ -157,7 +144,7 @@ object form_main: Tform_main
   object grid_order: TStringGrid
     Left = 0
     Top = 322
-    Width = 593
+    Width = 665
     Height = 177
     ColCount = 3
     Ctl3D = False
@@ -196,6 +183,19 @@ object form_main: Tform_main
     Width = 226
     Height = 21
     TabOrder = 11
+  end
+  object browser: TWebBrowser
+    Left = 471
+    Top = 77
+    Width = 482
+    Height = 422
+    TabOrder = 7
+    ControlData = {
+      4C000000D13100009D2B00000000000000000000000000000000000000000000
+      000000004C000000000000000000000001000000E0D057007335CF11AE690800
+      2B2E126208000000000000004C0000000114020000000000C000000000000046
+      8000000000000000000000000000000000000000000000000000000000000000
+      00000000000000000100000000000000000000000000000000000000}
   end
   object db_main: TIBDatabase
     Params.Strings = (

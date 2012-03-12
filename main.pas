@@ -157,15 +157,17 @@ begin
 	result := res;
 end;
 
-function get_coord_list(var clist : TCrewList) : TSTringList;
+function get_coord_list(const SCTIME : string; var clist : TCrewList) : TSTringList;
 var
 	sel : string;
-//    Coord : string;
+	// Coord : string;
 	j : Integer;
 	coords, slist : TSTringList;
 begin
 	cur_time := now();
-	sel := 'select ID, MEASURE_START_TIME, MEASURE_END_TIME, COORDS from CREWS_COORDS where MEASURE_START_TIME>''2011-10-03 14:57:50'' order by MEASURE_START_TIME ASC, ID ASC';
+	sel :=
+		'select ID, MEASURE_START_TIME, MEASURE_END_TIME, COORDS from CREWS_COORDS where MEASURE_START_TIME>''' +
+		SCTIME + ''' order by MEASURE_START_TIME ASC, ID ASC';
 	// sel := 'select ID, MEASURE_START_TIME, MEASURE_END_TIME, COORDS from CREWS_COORDS order by MEASURE_START_TIME ASC, ID ASC';
 	sql_select(sel);
 	with form_main do
@@ -248,7 +250,7 @@ begin
 	clist.set_crewId_by_gpsId(res);
 	sel := 'select CREWS.ID, CREWS_H.TOSTATE from CREWS, CREWS_H where ' + ' CREWS.ID in (' +
 		clist.get_crewid_list_as_string() + ') ' + ' and CREWS_H.STATETIME > ' + sdate +
-		' and CREWS_H.CREWID = CREWS.ID ';
+		' and CREWS_H.CREWID = CREWS.ID ' + ' order by CREWS_H.STATETIME desc';
 	res := get_list(sel);
 	clist.set_crews_state_by_crewId(res);
 	clist.Crews.Sort(sort_crews_by_state_dist);
@@ -279,7 +281,7 @@ var
 	PersistStream : IPersistStreamInit;
 	res : string;
 begin
-	res := 'error';
+	res := 'Error';
 	PersistStream := WB.Document as IPersistStreamInit;
 	StringStream := TStringStream.Create('');
 	Stream := TStreamAdapter.Create(StringStream, soReference) as IStream;
@@ -291,6 +293,22 @@ begin
 	end;
 	res := get_substr(res, '&lt;&lt;&lt;', '&gt;&gt;&gt;');
 	result := res;
+end;
+
+function get_zapros_2(surl : string) : string;
+var
+	Doc : IHTMLDocument2;
+	s : string;
+	browser : TWebBrowser;
+begin
+	browser := TWebBrowser.Create(form_main);
+	browser.Navigate(surl);
+	Doc := browser.Document as IHTMLDocument2;
+	while browser.ReadyState < READYSTATE_COMPLETE do
+		Application.ProcessMessages;
+	s := html_to_string(browser);
+	result := s; // 'Foo String';
+	browser.Free();
 end;
 
 function get_zapros(surl : string) : string;
@@ -334,7 +352,7 @@ begin
 	c := points.Count;
 	if c < 2 then
 		exit(-1);
-	surl := ac_taxi_url + 'order?service=1&';
+	surl := ac_taxi_url + 'order/i_generate_address=1&service=0&';
 	for i := 0 to c - 1 do
 	begin
 		if i = 0 then
@@ -346,7 +364,8 @@ begin
 		a := TAdres(points.Items[i]);
 		add_s(surl, a.street, a.house, a.korpus, a.gps, n);
 	end;
-	surl := '"' + surl + '"' + ' "id=\"recalcOutput\" align=\"left\">" "</td>" "WAIT10"';
+	// surl := '"' + surl + '"' + ' "id=\"recalcOutput\" align=\"left\">" "</td>"';
+	surl := '"' + surl + '"' + ' "DayVremyaPuti" "</td>"';
 	form_main.edit_zakaz4ik.Text := surl;
 	surl := param64(surl);
 	surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
@@ -369,7 +388,7 @@ function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
 	function get_coords() : string;
 	var surl : string;
 	begin
-		surl := ac_taxi_url + 'order?service=1&';
+		surl := ac_taxi_url + 'order/i_generate_address=1&service=0&';
 		surl := surl + 'point_from[obj][]=' + ulica + '&';
 		surl := surl + 'point_from[house][]=' + dom + '&';
 		surl := surl + 'point_from[corp][]=' + korpus + '&';
@@ -388,11 +407,11 @@ var surl, res : string;
 begin
 	res := get_coords();
 	if pos('Error', res) > 0 then
-		res := '';
+		res := 'Error';
 	result := res;
 end;
 
-function get_track_time(surl : AnsiString) : Integer;
+function get_track_time(surl : string) : Integer;
 begin
 	with form_main do
 	begin
@@ -416,16 +435,30 @@ begin
 				Continue;
 
 			grid_crews.RowCount := r + 1;
-			grid_crews.Cells[0, r] := crew.name;
+			// grid_crews.Cells[0, r] := crew.name;
+			grid_crews.Cells[0, r] := IntToStr(crew.CrewId);
 			grid_crews.Cells[1, r] := IntToStr(crew.Time);
-			grid_crews.Cells[2, r] := FloatToStrF(crew.dist / 1000.0, ffFixed, 3, 3);
+			grid_crews.Cells[2, r] := FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
 			grid_crews.Cells[3, r] := crew.state_as_string;
 			inc(r);
 		end;
 	end;
 end;
 
-procedure get_crews_times(var clist : TCrewList; var rlist : TCrewList);
+procedure get_show_crews_times(var clist : TCrewList; var rlist : TCrewList);
+	procedure copy_list();
+	var cr : TCrew;
+		pp : Pointer;
+	begin
+		rlist.Crews.Clear;
+		for pp in clist.Crews do
+		begin
+			cr := clist.crew(pp);
+			if cr.Time >= 0 then
+				rlist.Crews.Add(Pointer(cr));
+		end;
+	end;
+
 var a1, a2 : TAdres;
 	alist : TList;
 	pp : Pointer;
@@ -441,21 +474,29 @@ begin
 	// show_status(IntToStr(get_crew_way_time(alist)));
 
 	rlist.Crews.Clear();
-	for pp in crew_list.Crews do
-	begin
-		a1.Clear();
-		// a2.Clear();
-		a1.setAdres('улица Самойловой', '7', '', crew_list.crew(pp).Coord); //
-		alist.Clear();
-		alist.Add(Pointer(a1));
-		alist.Add(Pointer(a2));
-		t := get_crew_way_time(alist);
-		if (t >= 0) then
-		begin
-			crew_list.crew(pp).Time := t;
-		end;
-		show_result_crews_grid(crew_list);
-	end;
+
+	while (clist.Crews.Count > rlist.Crews.Count) do
+		for pp in clist.Crews do
+			if (clist.crew(pp).Time < 0) then
+			begin
+				a1.Clear();
+				// a2.Clear();
+				a1.setAdres('', '', '', crew_list.crew(pp).Coord); //
+				alist.Clear();
+				alist.Add(Pointer(a1));
+				alist.Add(Pointer(a2));
+				show_status('запрос времени для экипажа ' + IntToStr(clist.crew(pp).CrewId));
+				t := get_crew_way_time(alist);
+				if (t < 0) then
+					t := get_crew_way_time(alist);
+				if (t >= 0) then
+				begin
+					crew_list.crew(pp).Time := t;
+					copy_list();
+					rlist.Crews.Sort(sort_crews_by_time);
+					show_result_crews_grid(rlist);
+				end;
+			end;
 end;
 
 procedure show_grid(var list : TSTringList; var grid : TStringGrid);
@@ -466,6 +507,7 @@ end;
 
 procedure show_tmp();
 const SDAY = '2011-10-03 00:00:00';
+const SCOORDTIME = '2011-10-03 14:57:50';
 var list_coord, list_crew, list_order, list_tmp : TSTringList;
 	surl, sc1, sc2, ap_coord : string;
 	i, t : Integer;
@@ -474,12 +516,10 @@ begin
 	with form_main do
 	begin
 
-         разделить рабочий и результирующий список!;
-         результирующий список фильтровать по времени подачи!;
-         повтороный запрос времени для Error-запросов!;
-         асинхронные запросы!;
-         два grid-списка: рабочие экипажи и просчитанные!;
-         статусы!;
+		// повтороный запрос времени для Error - запросов !;
+		// асинхронные запросы ??!;
+		// два grid - списка : рабочие экипажи и просчитанные !;
+		// статусы !;
 
 
 
@@ -488,7 +528,7 @@ begin
 		// 30.375401,59.90293 - самойловой 7
 
 		crew_list.set_ap(edit_ap_street.Text, edit_ap_house.Text, edit_ap_korpus.Text, edit_ap_gps.Text);
-		list_coord := get_coord_list(crew_list);
+		list_coord := get_coord_list(SCOORDTIME, crew_list);
 		show_grid(list_coord, grid_gps);
 
 		// edit_adres.Text := IntToStr(crew_list.Crews.Count);
@@ -496,13 +536,14 @@ begin
 		list_crew := get_crew_list(SDAY, crew_list);
 		// show_grid(list_crew, grid_crews);
 
-		list_tmp := ret_crews_stringlist(crew_list); show_grid(list_tmp, grid_order);
-		show_result_crews_grid(crew_list);
+		list_tmp := ret_crews_stringlist(crew_list);
+		show_grid(list_tmp, grid_order);
+		// show_result_crews_grid(crew_list);
 
-		edit_zakaz4ik.Text := get_gps_coords_for_adres(edit_ap_street.Text, edit_ap_house.Text,
-			edit_ap_korpus.Text);
+		// edit_zakaz4ik.Text := get_gps_coords_for_adres(edit_ap_street.Text, edit_ap_house.Text,
+		// edit_ap_korpus.Text);
 
-		get_crews_times(crew_list, res_crew_list);
+		get_show_crews_times(crew_list, res_crew_list);
 
 		// if crew_list.crewByGpsId(9).is_crew_was_in_coord('30.3088703155518,59.9947509765625') then
 		// edit_zakaz4ik.Text := 'ASDFGHJKL!';
@@ -559,7 +600,7 @@ begin
 		edit_ap_street.Text := 'улица Самойловой';
 		edit_ap_house.Text := '7';
 		edit_ap_korpus.Text := '';
-		edit_ap_gps.Text := '30.375401,59.90293';
+		edit_ap_gps.Text := '30.375401,59.902930';
 	end;
 	// form_main.DBGrid1.Hide();
 
