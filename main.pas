@@ -5,7 +5,7 @@ interface
 uses
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
 	Dialogs, Grids, StdCtrls, DB, IBDatabase, DBGrids, ComCtrls, IBCustomDataSet,
-	StrUtils, DateUtils, IBQuery, OleCtrls, SHDocVw, MSHTML, ActiveX,
+	StrUtils, DateUtils, IBQuery, OleCtrls, SHDocVw, MSHTML, ActiveX, IniFiles,
 	crew, crew_utils;
 
 type
@@ -35,8 +35,11 @@ type
 		Label8 : TLabel;
 		edit_ap_gps : TEdit;
 		Label9 : TLabel;
+		cb_real_base : TCheckBox;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
+		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
+		procedure FormClose(Sender : TObject; var Action : TCloseAction);
 	private
 		{ Private declarations }
 	public
@@ -48,6 +51,7 @@ var
 	cur_time : TDateTime;
 	crew_list, res_crew_list : TCrewList;
 	ac_taxi_url : string;
+	Complete_Flag : boolean;
 
 implementation
 
@@ -295,22 +299,6 @@ begin
 	result := res;
 end;
 
-function get_zapros_2(surl : string) : string;
-var
-	Doc : IHTMLDocument2;
-	s : string;
-	browser : TWebBrowser;
-begin
-	browser := TWebBrowser.Create(form_main);
-	browser.Navigate(surl);
-	Doc := browser.Document as IHTMLDocument2;
-	while browser.ReadyState < READYSTATE_COMPLETE do
-		Application.ProcessMessages;
-	s := html_to_string(browser);
-	result := s; // 'Foo String';
-	browser.Free();
-end;
-
 function get_zapros(surl : string) : string;
 var
 	Doc : IHTMLDocument2;
@@ -319,9 +307,13 @@ begin
 	with form_main do
 	begin
 		browser.Navigate(surl);
+		Complete_Flag := false;
 		Doc := browser.Document as IHTMLDocument2;
 		while browser.ReadyState < READYSTATE_COMPLETE do
 			Application.ProcessMessages;
+		// while not browser.OnDocumentComplete do
+		// pass;
+		// Complete_Flag := false;
 		s := html_to_string(browser);
 		result := s; // 'Foo String';
 	end;
@@ -435,8 +427,8 @@ begin
 				Continue;
 
 			grid_crews.RowCount := r + 1;
-			// grid_crews.Cells[0, r] := crew.name;
-			grid_crews.Cells[0, r] := IntToStr(crew.CrewId);
+			grid_crews.Cells[0, r] := crew.name;
+			// grid_crews.Cells[0, r] := IntToStr(crew.CrewId);
 			grid_crews.Cells[1, r] := IntToStr(crew.Time);
 			grid_crews.Cells[2, r] := FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
 			grid_crews.Cells[3, r] := crew.state_as_string;
@@ -475,28 +467,29 @@ begin
 
 	rlist.Crews.Clear();
 
-	while (clist.Crews.Count > rlist.Crews.Count) do
-		for pp in clist.Crews do
-			if (clist.crew(pp).Time < 0) then
-			begin
-				a1.Clear();
-				// a2.Clear();
-				a1.setAdres('', '', '', crew_list.crew(pp).Coord); //
-				alist.Clear();
-				alist.Add(Pointer(a1));
-				alist.Add(Pointer(a2));
-				show_status('запрос времени для экипажа ' + IntToStr(clist.crew(pp).CrewId));
+	// while (clist.Crews.Count > rlist.Crews.Count) do
+	for pp in clist.Crews do
+		if (clist.crew(pp).Time < 0) and (clist.crew(pp).State = 1) then
+		begin
+			// sleep(1000);           // не помогло :(
+			a1.Clear();
+			// a2.Clear();
+			a1.setAdres('', '', '', crew_list.crew(pp).Coord); //
+			alist.Clear();
+			alist.Add(Pointer(a1));
+			alist.Add(Pointer(a2));
+			show_status('запрос времени для экипажа ' + IntToStr(clist.crew(pp).CrewId));
+			t := get_crew_way_time(alist);
+			if (t < 0) then
 				t := get_crew_way_time(alist);
-				if (t < 0) then
-					t := get_crew_way_time(alist);
-				if (t >= 0) then
-				begin
-					crew_list.crew(pp).Time := t;
-					copy_list();
-					rlist.Crews.Sort(sort_crews_by_time);
-					show_result_crews_grid(rlist);
-				end;
+			if (t >= 0) then
+			begin
+				crew_list.crew(pp).Time := t;
+				copy_list();
+				rlist.Crews.Sort(sort_crews_by_time);
+				show_result_crews_grid(rlist);
 			end;
+		end;
 end;
 
 procedure show_grid(var list : TSTringList; var grid : TStringGrid);
@@ -506,13 +499,12 @@ begin
 end;
 
 procedure show_tmp();
-const SDAY = '2011-10-03 00:00:00';
-const SCOORDTIME = '2011-10-03 14:57:50';
 var list_coord, list_crew, list_order, list_tmp : TSTringList;
-	surl, sc1, sc2, ap_coord : string;
+	surl, sc1, sc2, ap_coord, SDAY, SCOORDTIME : string;
 	i, t : Integer;
 	pp : Pointer;
 begin
+	cur_time := now();
 	with form_main do
 	begin
 
@@ -527,6 +519,19 @@ begin
 		// 30.362589,59.848299
 		// 30.375401,59.90293 - самойловой 7
 
+		SDAY := '2011-10-03 00:00:00'; // for back-up base
+		SCOORDTIME := '2011-10-03 14:57:50'; // for back-up base
+
+		if cb_real_base.Checked then
+		begin
+
+			SCOORDTIME := replace_minute('{Last_minute_10}', cur_time); // for real database
+			SDAY := replace_hour('{Last_hour_2}', cur_time); // for real database
+		end;
+
+		edit_ap_gps.Text := get_gps_coords_for_adres(edit_ap_street.Text, edit_ap_house.Text,
+			edit_ap_korpus.Text);
+
 		crew_list.set_ap(edit_ap_street.Text, edit_ap_house.Text, edit_ap_korpus.Text, edit_ap_gps.Text);
 		list_coord := get_coord_list(SCOORDTIME, crew_list);
 		show_grid(list_coord, grid_gps);
@@ -540,9 +545,7 @@ begin
 		show_grid(list_tmp, grid_order);
 		// show_result_crews_grid(crew_list);
 
-		// edit_zakaz4ik.Text := get_gps_coords_for_adres(edit_ap_street.Text, edit_ap_house.Text,
-		// edit_ap_korpus.Text);
-
+		// !---
 		get_show_crews_times(crew_list, res_crew_list);
 
 		// if crew_list.crewByGpsId(9).is_crew_was_in_coord('30.3088703155518,59.9947509765625') then
@@ -560,19 +563,38 @@ begin
 end;
 
 function open_database() : boolean;
+var MyPath, base, user, password : string;
+	FIniFile : TIniFile;
 begin
+	try
+		MyPath := ExtractFilePath(Application.ExeName);
+		// read configure
+		if fileexists(MyPath + 'config.ini') then
+		begin
+			show_status('reading conf.ini');
+			FIniFile := TIniFile.Create(MyPath + 'config.ini');
+			try
+				base := FIniFile.ReadString('Base', 'Path', '');
+				user := FIniFile.ReadString('Base', 'User', '');
+				password := FIniFile.ReadString('Base', 'Password', '');
+			finally
+			end;
+		end;
+	finally
+	end;
+
 	with form_main do
 	begin
 		with db_main do
 		begin
 			SQLDialect := 3;
-			DatabaseName := 'localhost:D:\fbdb\tme.fdb';
+			DatabaseName := base; // 'localhost:D:\fbdb\tme.fdb';
 			// DatabaseName := 'localhost:c:\Program Files\TMEnterpriseDemo\tme_demo_db.fdb';
-			// LoginPrompt := False;		{off window-prompt user and passwd}
-			// Params.Clear;				{see dfm.form_main.db_main.Params}
-			// Params.Add('user_name=SYSDBA');
-			// Params.Add('password=masterkey');
-			// Params.Add('lc_ctype=WIN1251');
+			LoginPrompt := false; { off window-prompt user and passwd }
+			Params.Clear; { see dfm.form_main.db_main.Params }
+			Params.Add('user_name=' + user);
+			Params.Add('password=' + password);
+			Params.Add('lc_ctype=WIN1251');
 		end;
 		try
 			db_main.Connected := true; show_status('успешное подключение к БД'); result := true;
@@ -583,9 +605,21 @@ begin
 	end;
 end;
 
+procedure Tform_main.browserDocumentComplete(ASender : TObject; const pDisp : IDispatch;
+	var URL : OleVariant);
+begin
+	show_status('html request completed');
+	Complete_Flag := true;
+end;
+
 procedure Tform_main.Button1Click(Sender : TObject);
 begin
 	show_tmp();
+end;
+
+procedure Tform_main.FormClose(Sender : TObject; var Action : TCloseAction);
+begin
+	halt(0);
 end;
 
 procedure Tform_main.FormCreate(Sender : TObject);
@@ -593,6 +627,7 @@ begin
 	ac_taxi_url := 'http://test.robocab.ru/';
 	with form_main do
 	begin
+		cb_real_base.Checked := true; // work with real base, not back-up
 		grid_crews.ColWidths[0] := 360; // 120;
 		grid_crews.ColWidths[1] := 180;
 		grid_crews.ColWidths[2] := 180;
@@ -600,7 +635,7 @@ begin
 		edit_ap_street.Text := 'улица Самойловой';
 		edit_ap_house.Text := '7';
 		edit_ap_korpus.Text := '';
-		edit_ap_gps.Text := '30.375401,59.902930';
+		// edit_ap_gps.Text := '30.375401,59.902930';
 	end;
 	// form_main.DBGrid1.Hide();
 

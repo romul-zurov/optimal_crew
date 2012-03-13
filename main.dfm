@@ -11,6 +11,7 @@ object form_main: Tform_main
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnClose = FormClose
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
@@ -36,14 +37,14 @@ object form_main: Tform_main
     Caption = #1069#1082#1080#1087#1072#1078':'
   end
   object Label5: TLabel
-    Left = 320
+    Left = 581
     Top = 77
     Width = 124
     Height = 13
     Caption = #1055#1091#1090#1100' '#1076#1086' '#1072#1076#1088#1077#1089#1072' '#1087#1086#1076#1072#1095#1080':'
   end
   object Label4: TLabel
-    Left = 136
+    Left = 439
     Top = 77
     Width = 90
     Height = 13
@@ -144,7 +145,7 @@ object form_main: Tform_main
   object grid_order: TStringGrid
     Left = 0
     Top = 322
-    Width = 665
+    Width = 529
     Height = 177
     ColCount = 3
     Ctl3D = False
@@ -185,23 +186,28 @@ object form_main: Tform_main
     TabOrder = 11
   end
   object browser: TWebBrowser
-    Left = 471
-    Top = 77
-    Width = 482
-    Height = 422
+    Left = 543
+    Top = 344
+    Width = 410
+    Height = 155
     TabOrder = 7
+    OnDocumentComplete = browserDocumentComplete
     ControlData = {
-      4C000000D13100009D2B00000000000000000000000000000000000000000000
+      4C000000602A0000051000000000000000000000000000000000000000000000
       000000004C000000000000000000000001000000E0D057007335CF11AE690800
       2B2E126208000000000000004C0000000114020000000000C000000000000046
       8000000000000000000000000000000000000000000000000000000000000000
       00000000000000000100000000000000000000000000000000000000}
   end
+  object cb_real_base: TCheckBox
+    Left = 873
+    Top = 52
+    Width = 97
+    Height = 17
+    Caption = 'cb_real_base'
+    TabOrder = 12
+  end
   object db_main: TIBDatabase
-    Params.Strings = (
-      'user_name=SYSDBA'
-      'password=masterkey'
-      'lc_ctype=WIN1251')
     LoginPrompt = False
     Left = 264
     Top = 472
