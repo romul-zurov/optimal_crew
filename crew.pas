@@ -31,9 +31,11 @@ type
 		Code : string;
 		name : string;
 		coord : string; // текущая (самая свежая) координата GPS
-		dist : double; // расстояние до адреса подачи (АП) радиальное, по прямой;
+		dist : double; // расстояние до адреса подачи (АП) радиальное, по прямой, метров;
+		dist_way : double; // длина маршрута до АП, км;
+		dist_way_as_string : string; // то же;
 		time : Integer; // время подъезда к АП в минутах;
-		time_as_string : string;
+		time_as_string : string; // оно же в виде часы-минуты;
 		coords : TStringList; // gps-трек за выбранный промежуток времени;
 		coords_times : TStringList; // gps-трек за выбранный промежуток времени;
 		constructor Create(GpsId : Integer);
@@ -73,6 +75,7 @@ type
 		function set_current_crews_coord() : Integer;
 		function set_crews_dist(coord : string) : Integer;
 		function set_ap(street, house, korpus, gps : string) : Integer;
+		function clear_crew_list() : Integer;
 	private
 		function findById(ID : Integer; gps : boolean) : Pointer;
 		function get_id_list_as_string(gps : boolean) : string;
@@ -228,6 +231,12 @@ var i : Integer;
 begin
 	i := self.Crews.Add(TCrew.Create(GpsId));
 	result := Pointer(self.Crews[i]);
+end;
+
+function TCrewList.clear_crew_list : Integer;
+begin
+	self.Crews.Clear();
+	exit(0);
 end;
 
 constructor TCrewList.Create();

@@ -5,7 +5,7 @@ interface
 uses
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
 	Dialogs, Grids, StdCtrls, DB, IBDatabase, DBGrids, ComCtrls, IBCustomDataSet,
-	StrUtils, DateUtils, IBQuery, OleCtrls, SHDocVw, MSHTML, ActiveX, IniFiles,
+	StrUtils, DateUtils, IBQuery, OleCtrls, SHDocVw, MSHTML, ActiveX, IniFiles, WinInet,
 	crew, crew_utils;
 
 type
@@ -39,6 +39,7 @@ type
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
+		procedure cb_real_baseClick(Sender : TObject);
 		procedure FormClose(Sender : TObject; var Action : TCloseAction);
 	private
 		{ Private declarations }
@@ -52,6 +53,7 @@ var
 	crew_list, res_crew_list : TCrewList;
 	ac_taxi_url : string;
 	Complete_Flag : boolean;
+	DEBUG : boolean;
 
 implementation
 
@@ -300,6 +302,37 @@ begin
 end;
 
 function get_zapros(surl : string) : string;
+var Form : TForm;
+	browser : TWebBrowser;
+	s : string;
+begin
+	Form := TForm.Create(nil);
+	browser := TWebBrowser.Create(nil);
+	try
+		InternetSetOption(nil, INTERNET_OPTION_END_BROWSER_SESSION, nil, 0); // end IE session
+		sleep(900);
+		TWinControl(browser).Parent := Form;
+		browser.Silent := true;
+		browser.Align := alClient;
+		Form.Width := 400;
+		Form.Height := 100;
+		Form.Show;
+		if not DEBUG then
+			Form.Hide;
+		browser.Navigate(surl);
+		while browser.ReadyState < READYSTATE_COMPLETE do
+			Application.ProcessMessages;
+		s := html_to_string(browser);
+		if DEBUG then
+			sleep(3000);
+	finally
+		browser.Free;
+		Form.Free;
+	end;
+	exit(s); // 'Foo String';
+end;
+
+function get_zapros_old(surl : string) : string;
 var
 	Doc : IHTMLDocument2;
 	s : string;
@@ -344,7 +377,7 @@ begin
 	c := points.Count;
 	if c < 2 then
 		exit(-1);
-	surl := ac_taxi_url + 'order/i_generate_address=1&service=0&';
+	surl := ac_taxi_url + 'order?i_generate_address=1&service=0&';
 	for i := 0 to c - 1 do
 	begin
 		if i = 0 then
@@ -380,7 +413,7 @@ function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
 	function get_coords() : string;
 	var surl : string;
 	begin
-		surl := ac_taxi_url + 'order/i_generate_address=1&service=0&';
+		surl := ac_taxi_url + 'order?i_generate_address=1&service=0&';
 		surl := surl + 'point_from[obj][]=' + ulica + '&';
 		surl := surl + 'point_from[house][]=' + dom + '&';
 		surl := surl + 'point_from[corp][]=' + korpus + '&';
@@ -427,7 +460,7 @@ begin
 				Continue;
 
 			grid_crews.RowCount := r + 1;
-			grid_crews.Cells[0, r] := crew.name;
+			grid_crews.Cells[0, r] := IntToStr(crew.CrewId) + ' | ' + crew.name;
 			// grid_crews.Cells[0, r] := IntToStr(crew.CrewId);
 			grid_crews.Cells[1, r] := IntToStr(crew.Time);
 			grid_crews.Cells[2, r] := FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
@@ -466,30 +499,26 @@ begin
 	// show_status(IntToStr(get_crew_way_time(alist)));
 
 	rlist.Crews.Clear();
-
-	// while (clist.Crews.Count > rlist.Crews.Count) do
-	for pp in clist.Crews do
-		if (clist.crew(pp).Time < 0) and (clist.crew(pp).State = 1) then
-		begin
-			// sleep(1000);           // не помогло :(
-			a1.Clear();
-			// a2.Clear();
-			a1.setAdres('', '', '', crew_list.crew(pp).Coord); //
-			alist.Clear();
-			alist.Add(Pointer(a1));
-			alist.Add(Pointer(a2));
-			show_status('запрос времени для экипажа ' + IntToStr(clist.crew(pp).CrewId));
-			t := get_crew_way_time(alist);
-			if (t < 0) then
-				t := get_crew_way_time(alist);
-			if (t >= 0) then
+	while (clist.Crews.Count > rlist.Crews.Count) do
+		for pp in clist.Crews do
+			if (clist.crew(pp).Time < 0) { and (clist.crew(pp).State = 1) } then
 			begin
-				crew_list.crew(pp).Time := t;
-				copy_list();
-				rlist.Crews.Sort(sort_crews_by_time);
-				show_result_crews_grid(rlist);
+				a1.Clear();
+				// a2.Clear();
+				a1.setAdres('', '', '', crew_list.crew(pp).Coord);
+				alist.Clear();
+				alist.Add(Pointer(a1));
+				alist.Add(Pointer(a2));
+				show_status('запрос времени для экипажа ' + IntToStr(clist.crew(pp).CrewId));
+				t := get_crew_way_time(alist);
+				if (t >= 0) then
+				begin
+					crew_list.crew(pp).Time := t;
+					copy_list();
+					rlist.Crews.Sort(sort_crews_by_time);
+					show_result_crews_grid(rlist);
+				end;
 			end;
-		end;
 end;
 
 procedure show_grid(var list : TSTringList; var grid : TStringGrid);
@@ -505,28 +534,28 @@ var list_coord, list_crew, list_order, list_tmp : TSTringList;
 	pp : Pointer;
 begin
 	cur_time := now();
+	crew_list.clear_crew_list();
 	with form_main do
 	begin
 
-		// повтороный запрос времени для Error - запросов !;
+		// длина маршрута в список!
 		// асинхронные запросы ??!;
 		// два grid - списка : рабочие экипажи и просчитанные !;
 		// статусы !;
 
-
-
 		// 30.628900,60.031448       - crew 55
 		// 30.362589,59.848299
 		// 30.375401,59.90293 - самойловой 7
+
+		grid_crews.RowCount := 0; // clear grid
 
 		SDAY := '2011-10-03 00:00:00'; // for back-up base
 		SCOORDTIME := '2011-10-03 14:57:50'; // for back-up base
 
 		if cb_real_base.Checked then
 		begin
-
-			SCOORDTIME := replace_minute('{Last_minute_10}', cur_time); // for real database
-			SDAY := replace_hour('{Last_hour_2}', cur_time); // for real database
+			SCOORDTIME := replace_minute('{Last_minute_30}', cur_time); // for real database
+			SDAY := replace_hour('{Last_hour_4}', cur_time); // for real database
 		end;
 
 		edit_ap_gps.Text := get_gps_coords_for_adres(edit_ap_street.Text, edit_ap_house.Text,
@@ -547,6 +576,7 @@ begin
 
 		// !---
 		get_show_crews_times(crew_list, res_crew_list);
+		show_status('Request of crew times complete.');
 
 		// if crew_list.crewByGpsId(9).is_crew_was_in_coord('30.3088703155518,59.9947509765625') then
 		// edit_zakaz4ik.Text := 'ASDFGHJKL!';
@@ -615,6 +645,11 @@ end;
 procedure Tform_main.Button1Click(Sender : TObject);
 begin
 	show_tmp();
+end;
+
+procedure Tform_main.cb_real_baseClick(Sender : TObject);
+begin
+	DEBUG := not form_main.cb_real_base.Checked;
 end;
 
 procedure Tform_main.FormClose(Sender : TObject; var Action : TCloseAction);

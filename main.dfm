@@ -204,8 +204,9 @@ object form_main: Tform_main
     Top = 52
     Width = 97
     Height = 17
-    Caption = 'cb_real_base'
+    Caption = 'Release'
     TabOrder = 12
+    OnClick = cb_real_baseClick
   end
   object db_main: TIBDatabase
     LoginPrompt = False
