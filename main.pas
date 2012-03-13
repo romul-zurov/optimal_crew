@@ -310,7 +310,7 @@ begin
 	browser := TWebBrowser.Create(nil);
 	try
 		InternetSetOption(nil, INTERNET_OPTION_END_BROWSER_SESSION, nil, 0); // end IE session
-		sleep(900);
+//		sleep(900);
 		TWinControl(browser).Parent := Form;
 		browser.Silent := true;
 		browser.Align := alClient;
@@ -324,7 +324,7 @@ begin
 			Application.ProcessMessages;
 		s := html_to_string(browser);
 		if DEBUG then
-			sleep(3000);
+			sleep(1000);
 	finally
 		browser.Free;
 		Form.Free;
