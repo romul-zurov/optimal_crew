@@ -239,19 +239,20 @@ var
 	id, GpsId : Integer;
 begin
 	sdate := '''' + sdate + '''';
-	// sel := 'select CREWS.ID, CREWS.STATE, CREWS.IDENTIFIER as GpsId, CREWS.CODE, CREWS.NAME from CREWS where (CREWS.STATE=2 or CREWS.STATE=0) order by GpsId';
-	// sel := 'select CREWS.IDENTIFIER as GpsId, CREWS.ID, CREWS.STATE, CREWS.CODE, CREWS.NAME from CREWS order by GpsId';
 
-	sel := 'select CREWS.IDENTIFIER, CREWS.ID, CREWS_H.TOSTATE, CREWS.CODE, CREWS.NAME' +
-		' from CREWS_H, CREWS where' + ' CREWS_H.STATETIME > ' + sdate +
-		' and (CREWS_H.TOSTATE = 1 or CREWS_H.TOSTATE = 3) ';
-	sel := sel + ' and CREWS.IDENTIFIER in (' + clist.get_gpsid_list_as_string() + ') ';
-	sel := sel + ' and CREWS_H.CREWID = CREWS.ID ' + ' order by CREWS_H.STATETIME desc';
+	{
+	  sel := 'select CREWS.IDENTIFIER, CREWS.ID, CREWS_H.TOSTATE, CREWS.CODE, CREWS.NAME' +
+	  ' from CREWS_H, CREWS where' + ' CREWS_H.STATETIME > ' + sdate +
+	  ' and (CREWS_H.TOSTATE = 1 or CREWS_H.TOSTATE = 3) ';
+	  sel := sel + ' and CREWS.IDENTIFIER in (' + clist.get_gpsid_list_as_string() + ') ';
+	  sel := sel + ' and CREWS_H.CREWID = CREWS.ID ' + ' order by CREWS_H.STATETIME desc';
+	  }
 
 	// !!
 	sel :=
 		'select CREWS.IDENTIFIER, CREWS.ID, CREWS.CODE, CREWS.NAME from CREWS where '
-		+ ' CREWS.IDENTIFIER in (' + clist.get_gpsid_list_as_string() + ') ';
+		+ ' CREWS.IDENTIFIER in (' + clist.get_gpsid_list_as_string() + ') ' +
+		' and LEFT(CREWS.CODE, 1) !=''Э'' '; // отбрасываем эвакуаторы;
 	res := get_list(sel);
 	clist.set_crewId_by_gpsId(res);
 	sel := 'select CREWS.ID, CREWS_H.TOSTATE from CREWS, CREWS_H where ' + ' CREWS.ID in (' +
@@ -263,7 +264,7 @@ begin
 	result := res;
 end;
 
-function get_order_list(sdate : string) : TSTringList;
+function get_order_list(sdate : string; var clist : TCrewList) : TSTringList;
 // заказы занятых экипажей
 var
 	sel : string;
@@ -272,10 +273,10 @@ begin
 	sdate := '''' + sdate + '''';
 	// sel := 'select STARTTIME, STATE, SOURCE, STOPS_COUNT, STOPS, DESTINATION  from ORDERS where STOPS_COUNT > 0   order by STARTTIME DESC';
 	sel :=
-		'select CREWS.IDENTIFIER, CREWS.NAME, ORDERS.SOURCE, ORDERS.STOPS_COUNT, ORDERS.STOPS, ORDERS.DESTINATION'
-		+ ' from CREWS_H, CREWS, ORDERS' + ' where CREWS_H.STATETIME > ' + sdate +
-		' and ORDERS.STARTTIME > ' + sdate +
-		' and (CREWS_H.TOSTATE = 3) and (CREWS.ID = CREWS_H.CREWID) and (ORDERS.CREWID = CREWS_H.CREWID)';
+		'select CREWS.ID, ORDERS.SOURCE, ORDERS.STOPS_COUNT, ORDERS.STOPS, ORDERS.DESTINATION '
+		+ ' from CREWS, ORDERS ' + ' where  ' + ' CREWS.ID in (' + clist.get_crewid_list_as_string() + ') ' +
+		' and (ORDERS.CREWID = CREWS.ID) ';
+//         +'and (ORDERS.FINISHTIME is NULL) ';
 
 	result := get_sql_list(sel, true);
 end;
@@ -310,7 +311,7 @@ begin
 	browser := TWebBrowser.Create(nil);
 	try
 		InternetSetOption(nil, INTERNET_OPTION_END_BROWSER_SESSION, nil, 0); // end IE session
-//		sleep(900);
+		// sleep(900);
 		TWinControl(browser).Parent := Form;
 		browser.Silent := true;
 		browser.Align := alClient;
@@ -538,14 +539,15 @@ begin
 	with form_main do
 	begin
 
-		// длина маршрута в список!
-		// асинхронные запросы ??!;
-		// два grid - списка : рабочие экипажи и просчитанные !;
-		// статусы !;
-
 		// 30.628900,60.031448       - crew 55
 		// 30.362589,59.848299
 		// 30.375401,59.90293 - самойловой 7
+
+		// маршрут для " занятых " экипажей;
+		// ID    SOURCE                       DESTINATION         STARTTIME            FINISHTIME
+		// 143 | АКАДЕМИКА ЛЕБЕДЕВА УЛ., 6 | КОРОЛЕВА ПРОСП., 34 | 03.10.2011 14:22:44 | <null>     |
+		// STATE_TIME           SOURCE_TIME          CREW_ACCEPT_TIME     GPRS_STATE_TIME
+		// | 03.10.2011 14:48:57 | 03.10.2011 14:42:26 | 03.10.2011 14:22:44 | 03.10.2011 14:48:57 |
 
 		grid_crews.RowCount := 0; // clear grid
 
@@ -558,8 +560,9 @@ begin
 			SDAY := replace_hour('{Last_hour_4}', cur_time); // for real database
 		end;
 
-		edit_ap_gps.Text := get_gps_coords_for_adres(edit_ap_street.Text, edit_ap_house.Text,
-			edit_ap_korpus.Text);
+		if edit_ap_gps.Text = '' then
+			edit_ap_gps.Text := get_gps_coords_for_adres(edit_ap_street.Text, edit_ap_house.Text,
+				edit_ap_korpus.Text);
 
 		crew_list.set_ap(edit_ap_street.Text, edit_ap_house.Text, edit_ap_korpus.Text, edit_ap_gps.Text);
 		list_coord := get_coord_list(SCOORDTIME, crew_list);
@@ -574,9 +577,12 @@ begin
 		show_grid(list_tmp, grid_order);
 		// show_result_crews_grid(crew_list);
 
+		get_order_list(SDAY, crew_list);
+		show_grid(list_crew, grid_crews);
+
 		// !---
-		get_show_crews_times(crew_list, res_crew_list);
-		show_status('Request of crew times complete.');
+		// get_show_crews_times(crew_list, res_crew_list);
+		// show_status('Request of crew times complete.');
 
 		// if crew_list.crewByGpsId(9).is_crew_was_in_coord('30.3088703155518,59.9947509765625') then
 		// edit_zakaz4ik.Text := 'ASDFGHJKL!';
@@ -670,7 +676,7 @@ begin
 		edit_ap_street.Text := 'улица Самойловой';
 		edit_ap_house.Text := '7';
 		edit_ap_korpus.Text := '';
-		// edit_ap_gps.Text := '30.375401,59.902930';
+		edit_ap_gps.Text := '30.375401,59.902930';
 	end;
 	// form_main.DBGrid1.Hide();
 
