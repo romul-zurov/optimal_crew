@@ -208,6 +208,15 @@ object form_main: Tform_main
     TabOrder = 12
     OnClick = cb_real_baseClick
   end
+  object Memo1: TMemo
+    Left = 544
+    Top = 328
+    Width = 409
+    Height = 137
+    Lines.Strings = (
+      'Memo1')
+    TabOrder = 13
+  end
   object db_main: TIBDatabase
     LoginPrompt = False
     Left = 264

@@ -36,6 +36,7 @@ type
 		edit_ap_gps : TEdit;
 		Label9 : TLabel;
 		cb_real_base : TCheckBox;
+		Memo1 : TMemo;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -250,16 +251,20 @@ begin
 
 	// !!
 	sel :=
-		'select CREWS.IDENTIFIER, CREWS.ID, CREWS.CODE, CREWS.NAME from CREWS where '
-		+ ' CREWS.IDENTIFIER in (' + clist.get_gpsid_list_as_string() + ') ' +
-		' and LEFT(CREWS.CODE, 1) !=''Э'' '; // отбрасываем эвакуаторы;
+		'select CREWS.IDENTIFIER, CREWS.ID, CREWS.CODE, CREWS.NAME, CREWS.STATE from CREWS where '
+		+ ' CREWS.IDENTIFIER in (' + clist.get_gpsid_list_as_string() + ') '
+	// только экипажи из crews по gpsId
+		+ ' and CREWS.STATE in (1,3) ' // в состоянии "свободен" и "на заказе", согласно таблице CREW_STATE
+		+ ' and LEFT(CREWS.CODE, 1) !=''Э'' '; // отбрасываем эвакуаторы;
 	res := get_list(sel);
 	clist.set_crewId_by_gpsId(res);
-	sel := 'select CREWS.ID, CREWS_H.TOSTATE from CREWS, CREWS_H where ' + ' CREWS.ID in (' +
-		clist.get_crewid_list_as_string() + ') ' + ' and CREWS_H.STATETIME > ' + sdate +
-		' and CREWS_H.CREWID = CREWS.ID ' + ' order by CREWS_H.STATETIME desc';
-	res := get_list(sel);
-	clist.set_crews_state_by_crewId(res);
+
+	// sel := 'select CREWS.ID, CREWS_H.TOSTATE from CREWS, CREWS_H where ' + ' CREWS.ID in (' +
+	// clist.get_crewid_list_as_string() + ') ' + ' and CREWS_H.STATETIME > ' + sdate +
+	// ' and CREWS_H.CREWID = CREWS.ID ' + ' order by CREWS_H.STATETIME desc';
+	// res := get_list(sel);
+	// clist.set_crews_state_by_crewId(res); // - не нужно, т.к. State заполняется в set_crewId_by_gpsId
+
 	clist.Crews.Sort(sort_crews_by_state_dist);
 	result := res;
 end;
@@ -268,17 +273,30 @@ function get_order_list(sdate : string; var clist : TCrewList) : TSTringList;
 // заказы занятых экипажей
 var
 	sel : string;
+	res : TSTringList;
 begin
-	// ПЕРЕПИСАТЬ!
-	sdate := '''' + sdate + '''';
-	// sel := 'select STARTTIME, STATE, SOURCE, STOPS_COUNT, STOPS, DESTINATION  from ORDERS where STOPS_COUNT > 0   order by STARTTIME DESC';
-	sel :=
-		'select CREWS.ID, ORDERS.SOURCE, ORDERS.STOPS_COUNT, ORDERS.STOPS, ORDERS.DESTINATION '
-		+ ' from CREWS, ORDERS ' + ' where  ' + ' CREWS.ID in (' + clist.get_crewid_list_as_string() + ') ' +
-		' and (ORDERS.CREWID = CREWS.ID) ';
-//         +'and (ORDERS.FINISHTIME is NULL) ';
+	// маршрут для " занятых " экипажей;
+	// ID    SOURCE                       DESTINATION         STARTTIME            FINISHTIME
+	// 143 | АКАДЕМИКА ЛЕБЕДЕВА УЛ., 6 | КОРОЛЕВА ПРОСП., 34 | 03.10.2011 14:22:44 | <null>     |
+	// STATE_TIME           SOURCE_TIME          CREW_ACCEPT_TIME     GPRS_STATE_TIME
+	// | 03.10.2011 14:48:57 | 03.10.2011 14:42:26 | 03.10.2011 14:22:44 | 03.10.2011 14:48:57 |
 
-	result := get_sql_list(sel, true);
+	sdate := '''' + sdate + '''';
+	// sel := 'select STARTTIME, STATE, SOURCE, STOPS_COUNT, STOPS, DESTINATION  from ORDERS
+	// where STOPS_COUNT > 0   order by STARTTIME DESC';
+	sel := 'select ' //
+		+ ' CREWS.ID, ORDERS.ID, ORDERS.SOURCE_TIME, ORDERS.SOURCE, ORDERS.DESTINATION, ' //
+		+ ' ORDERS.STOPS_COUNT, ORDERS.STOPS ' //
+		+ ' from CREWS, ORDERS ' //
+		+ ' where ' //
+		+ ' CREWS.ID in (' + clist.get_nonfree_crewid_list_as_string() + ') ' //
+		+ ' and (ORDERS.CREWID = CREWS.ID) ' //
+		+ ' and (ORDERS.STATE in (select ID from ORDER_STATES where SYSTEMSTATE = 1) ) ' //
+		+ ' order by ORDERS.SOURCE_TIME desc ';
+
+	res := get_sql_list(sel, false);
+	clist.set_crews_orderId(res);
+	exit(res);
 end;
 
 function html_to_string(WB : TWebBrowser) : string;
@@ -393,6 +411,7 @@ begin
 	// surl := '"' + surl + '"' + ' "id=\"recalcOutput\" align=\"left\">" "</td>"';
 	surl := '"' + surl + '"' + ' "DayVremyaPuti" "</td>"';
 	form_main.edit_zakaz4ik.Text := surl;
+	form_main.Memo1.Text := form_main.Memo1.Text + '\n' + surl;
 	surl := param64(surl);
 	surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
 	res := get_zapros(surl);
@@ -463,7 +482,8 @@ begin
 			grid_crews.RowCount := r + 1;
 			grid_crews.Cells[0, r] := IntToStr(crew.CrewId) + ' | ' + crew.name;
 			// grid_crews.Cells[0, r] := IntToStr(crew.CrewId);
-			grid_crews.Cells[1, r] := IntToStr(crew.Time);
+			// grid_crews.Cells[1, r] := IntToStr(crew.Time);
+			grid_crews.Cells[1, r] := crew.time_as_string;
 			grid_crews.Cells[2, r] := FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
 			grid_crews.Cells[3, r] := crew.state_as_string;
 			inc(r);
@@ -485,36 +505,68 @@ procedure get_show_crews_times(var clist : TCrewList; var rlist : TCrewList);
 		end;
 	end;
 
-var a1, a2 : TAdres;
+	procedure ret_adr(value : string; var s, h, k : string);
+	begin
+		s := get_substr(value, '', ',');
+		h := get_substr(value, ',', '');
+		if pos('/', h) > 0 then
+		begin
+			k := get_substr(h, '/', '');
+			h := get_substr(h, '', '/');
+			if pos('-', k) > 0 then
+				k := get_substr(k, '', '-');
+		end
+		else
+			k := '';
+	end;
+
+var a1, a2, a3, a4 : TAdres;
 	alist : TList;
 	pp : Pointer;
-	t : Integer;
+	t, t_stops : Integer;
+	ss2, ss3, s2, s3, h2, h3, k2, k3 : string;
+	crew : TCrew;
 begin
 	// !!
 	a1 := TAdres.Create('', '', '', '');
+	a2 := TAdres.Create('', '', '', '');
+	a3 := TAdres.Create('', '', '', '');
 	with clist do
-		a2 := TAdres.Create(ap_street, ap_house, ap_korpus, ap_gps);
+		a4 := TAdres.Create(ap_street, ap_house, ap_korpus, ap_gps);
 	alist := TList.Create();
-	alist.Add(Pointer(a1));
-	alist.Add(Pointer(a2));
-	// show_status(IntToStr(get_crew_way_time(alist)));
-
 	rlist.Crews.Clear();
+
 	while (clist.Crews.Count > rlist.Crews.Count) do
 		for pp in clist.Crews do
 			if (clist.crew(pp).Time < 0) { and (clist.crew(pp).State = 1) } then
 			begin
-				a1.Clear();
-				// a2.Clear();
-				a1.setAdres('', '', '', crew_list.crew(pp).Coord);
+				crew := clist.crew(pp);
 				alist.Clear();
+				a1.Clear();
+				a1.setAdres('', '', '', crew_list.crew(pp).Coord);
 				alist.Add(Pointer(a1));
-				alist.Add(Pointer(a2));
+				t_stops := 0;
+
+				a2.Clear(); a3.Clear();
+				if (crew_list.crew(pp).State = CREW_NAZAKAZE) then
+				begin
+					ss2 := get_substr(crew.order_way, '', ';');
+					ss3 := get_substr(crew.order_way, ';', '');
+					ret_adr(ss2, s2, h2, k2);
+					ret_adr(ss3, s3, h3, k3);
+					a2.setAdres(s2, h2, k2, '');
+					a3.setAdres(s3, h3, k3, '');
+					alist.Add(Pointer(a2));
+					alist.Add(Pointer(a3));
+					t_stops := 10 + 3;
+				end;
+
+				alist.Add(Pointer(a4));
 				show_status('запрос времени для экипажа ' + IntToStr(clist.crew(pp).CrewId));
 				t := get_crew_way_time(alist);
 				if (t >= 0) then
 				begin
-					crew_list.crew(pp).Time := t;
+					crew.set_time(t + t_stops);
 					copy_list();
 					rlist.Crews.Sort(sort_crews_by_time);
 					show_result_crews_grid(rlist);
@@ -577,12 +629,12 @@ begin
 		show_grid(list_tmp, grid_order);
 		// show_result_crews_grid(crew_list);
 
-		get_order_list(SDAY, crew_list);
-		show_grid(list_crew, grid_crews);
+		list_crew := get_order_list(SDAY, crew_list);
+		// show_grid(list_crew, grid_crews);
 
 		// !---
-		// get_show_crews_times(crew_list, res_crew_list);
-		// show_status('Request of crew times complete.');
+		get_show_crews_times(crew_list, res_crew_list);
+		show_status('Request of crew times complete.');
 
 		// if crew_list.crewByGpsId(9).is_crew_was_in_coord('30.3088703155518,59.9947509765625') then
 		// edit_zakaz4ik.Text := 'ASDFGHJKL!';
@@ -676,7 +728,7 @@ begin
 		edit_ap_street.Text := 'улица Самойловой';
 		edit_ap_house.Text := '7';
 		edit_ap_korpus.Text := '';
-		edit_ap_gps.Text := '30.375401,59.902930';
+//		edit_ap_gps.Text := '30.375401,59.902930';
 	end;
 	// form_main.DBGrid1.Hide();
 

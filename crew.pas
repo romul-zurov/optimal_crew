@@ -38,12 +38,16 @@ type
 		time_as_string : string; // оно же в виде часы-минуты;
 		coords : TStringList; // gps-трек за выбранный промежуток времени;
 		coords_times : TStringList; // gps-трек за выбранный промежуток времени;
+		orderId : Integer; // ID заказа занятого экипажа
+		order_way : string; // маршрут занятого экипажа
+
 		constructor Create(GpsId : Integer);
 		function set_current_coord() : Integer;
 		function sort_coords_by_time_desc() : Integer;
 		function append_coords(coord : string; time : string) : Integer;
 		function is_crew_was_in_coord(coord : string) : boolean;
 		procedure calc_dist(coord : string);
+		procedure set_time(m : Integer); // set time and time_as_string;
 	end;
 
 type
@@ -69,8 +73,10 @@ type
 
 		function get_gpsid_list_as_string() : string;
 		function get_crewid_list_as_string() : string;
+		function get_nonfree_crewid_list_as_string() : string;
 		function delete_all_none_crewId() : Integer;
 		function set_crewId_by_gpsId(list : TStringList) : Integer;
+		function set_crews_orderId(list : TStringList) : Integer;
 		function set_crews_state_by_crewId(var list : TStringList) : Integer;
 		function set_current_crews_coord() : Integer;
 		function set_crews_dist(coord : string) : Integer;
@@ -80,6 +86,7 @@ type
 		function findById(ID : Integer; gps : boolean) : Pointer;
 		function get_id_list_as_string(gps : boolean) : string;
 		function del_all_non_work_crews() : Integer;
+		function delete_all_none_orderId() : Integer;
 		procedure set_crews_state_as_string();
 	end;
 
@@ -142,12 +149,14 @@ begin
 	self.coords_times := TStringList.Create;
 	self.CrewID := -1;
 	self.State := -1; // состояние: 1 - свободен, 3 - на заказе;
-	Code := '';
-	name := '';
-	state_as_string := '';
-	coord := ''; // текущая (самая свежая) координата GPS
-	dist := -1.0; // расстояние до адреса подачи (АП)
-	time := -1; // время подъезда к АП в минутах;
+	self.Code := '';
+	self.name := '';
+	self.state_as_string := '';
+	self.coord := ''; // текущая (самая свежая) координата GPS
+	self.dist := -1.0; // расстояние до адреса подачи (АП)
+	self.time := -1; // время подъезда к АП в минутах;
+	self.orderId := -1; // ID заказа занятого экипажа
+	self.order_way := ''; // маршрут занятого экипажа
 end;
 
 function TCrew.is_crew_was_in_coord(coord : string) : boolean;
@@ -196,6 +205,16 @@ begin
 	s := s_2_6(s1) + ',' + s_2_6(s2);
 	self.coord := s;
 	exit(0);
+end;
+
+procedure TCrew.set_time(m : Integer);
+begin
+	if m < 0 then
+		exit();
+	self.time := m;
+	self.time_as_string := IntToStr(m mod 60) + ' мин.';
+	if m > 59 then
+		self.time_as_string := IntToStr(m div 60) + ' ч. ' + self.time_as_string;
 end;
 
 function TCrew.sort_coords_by_time_desc : Integer;
@@ -280,11 +299,21 @@ begin
 	exit(0);
 end;
 
+function TCrewList.delete_all_none_orderId() : Integer;
+var pp : Pointer;
+begin
+	for pp in self.Crews do
+		if (self.crew(pp).State = CREW_NAZAKAZE) then
+			if (self.crew(pp).orderId = -1) then
+				self.Crews.Delete(self.Crews.IndexOf(pp));
+	exit(0);
+end;
+
 function TCrewList.del_all_non_work_crews : Integer;
 var pp : Pointer;
 begin
 	for pp in self.Crews do
-		if self.crew(pp).State in [1, 3] then
+		if self.crew(pp).State in [CREW_SVOBODEN, CREW_NAZAKAZE] then
 			pass
 		else
 			self.Crews.Delete(self.Crews.IndexOf(pp));
@@ -342,6 +371,19 @@ begin
 	result := s;
 end;
 
+function TCrewList.get_nonfree_crewid_list_as_string() : string;
+var s : string;
+	pp : Pointer;
+begin
+	s := '';
+	for pp in self.Crews do
+		if (self.crew(pp).State = CREW_NAZAKAZE) and (self.crew(pp).CrewID > -1) then
+			s := s + ',' + IntToStr(self.crew(pp).CrewID);
+	if length(s) > 0 then
+		Delete(s, 1, 1);
+	exit(s);
+end;
+
 function TCrewList.isCrewIdInList(ID : Integer) : boolean;
 begin
 	result := self.isCrewInList(ID, false);
@@ -375,8 +417,13 @@ begin
 		crew.CrewID := StrToInt(sl.Strings[1]);
 		crew.Code := sl.Strings[2];
 		crew.name := sl.Strings[3];
+		crew.State := StrToInt(sl.Strings[4]);
+		if crew.State = 1 then
+			crew.state_as_string := 'Свободен'
+		else
+			crew.state_as_string := 'На заказе';
 	end;
-	self.delete_all_none_crewId();
+	self.delete_all_none_crewId(); self.delete_all_none_crewId();
 	FreeAndNil(sl);
 	exit(0);
 end;
@@ -386,6 +433,35 @@ var pp : Pointer;
 begin
 	for pp in self.Crews do
 		self.crew(pp).calc_dist(coord);
+	exit(0);
+end;
+
+function TCrewList.set_crews_orderId(list : TStringList) : Integer;
+var sl : TStringList;
+	s : string;
+	crew : TCrew;
+begin
+	sl := TStringList.Create();
+	for s in list do
+	begin
+		sl.Clear();
+		sl.Text := StringReplace(s, '|', #13#10, [rfReplaceAll]);
+		crew := self.crewByCrewId(StrToInt(sl.Strings[0]));
+
+		if (crew.orderId <> -1) or (crew.State <> CREW_NAZAKAZE) then
+			Continue; // если уже назначен заказ, то пропускаем,
+		// т.к. для экипажа на заказе м.б. несколько
+		// заказов в состоянии исполнения
+
+		if sl.Strings[5] <> '' then
+			Continue; // пропускаем заказы с промежуточными остановками;
+
+		crew.orderId := StrToInt(sl.Strings[1]);
+		// sl.Strings[2]; // - пропускаем
+		crew.order_way := sl.Strings[3] + ';' + sl.Strings[4];
+	end;
+	self.delete_all_none_orderId(); self.delete_all_none_orderId();
+	FreeAndNil(sl);
 	exit(0);
 end;
 
@@ -400,6 +476,7 @@ begin
 end;
 
 function TCrewList.set_crews_state_by_crewId(var list : TStringList) : Integer;
+// уже не нужен;
 var
 	s, sid, sstate : string;
 	crew : TCrew;
