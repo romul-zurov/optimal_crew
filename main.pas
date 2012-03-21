@@ -50,11 +50,10 @@ type
 
 var
 	form_main : Tform_main;
-	cur_time : TDateTime;
 	crew_list, res_crew_list : TCrewList;
+	order_list : TOrderList;
 	ac_taxi_url : string;
 	Complete_Flag : boolean;
-	DEBUG : boolean;
 
 implementation
 
@@ -299,6 +298,39 @@ begin
 	exit(res);
 end;
 
+function get_current_orders() : TSTringList;
+// заказы занятых экипажей
+var
+	sel : string;
+	res : TSTringList;
+begin
+	// маршрут для " занятых " экипажей;
+	// ID    SOURCE                       DESTINATION         STARTTIME            FINISHTIME
+	// 143 | АКАДЕМИКА ЛЕБЕДЕВА УЛ., 6 | КОРОЛЕВА ПРОСП., 34 | 03.10.2011 14:22:44 | <null>     |
+	// STATE_TIME           SOURCE_TIME          CREW_ACCEPT_TIME     GPRS_STATE_TIME
+	// | 03.10.2011 14:48:57 | 03.10.2011 14:42:26 | 03.10.2011 14:22:44 | 03.10.2011 14:48:57 |
+
+	// sdate := '''' + sdate + '''';
+	// sel := 'select STARTTIME, STATE, SOURCE, STOPS_COUNT, STOPS, DESTINATION  from ORDERS
+	// where STOPS_COUNT > 0   order by STARTTIME DESC';
+	sel := 'select ' //
+		+ ' ORDERS.ID, ORDERS.SOURCE_TIME, ORDERS.SOURCE, ORDERS.DESTINATION, ' //
+		+ ' ORDERS.STOPS_COUNT, ORDERS.STOPS ' //
+		+ ' from ORDERS ' //
+		+ ' where ' //
+	// + ' CREWS.ID in (' + clist.get_nonfree_crewid_list_as_string() + ') ' //
+	// + ' and (ORDERS.CREWID = CREWS.ID) ' //
+		+ ' (ORDERS.STATE in ' //
+		+ '   (select ORDER_STATES.ID from ORDER_STATES where ORDER_STATES.SYSTEMSTATE in (0, 1) ) ' //
+		+ ' ) ' //
+		+ ' and ORDERS.IS_PRIOR = 0 ' //
+		+ ' order by ORDERS.SOURCE_TIME desc ';
+
+	res := get_sql_list(sel, false);
+	// clist.set_crews_orderId(res);
+	exit(res);
+end;
+
 function html_to_string(WB : TWebBrowser) : string;
 var
 	StringStream : TStringStream;
@@ -464,6 +496,48 @@ begin
 	result := 0;
 end;
 
+procedure show_orders_grid(var list : TOrderList);
+var pp : Pointer;
+	r : Integer;
+	order : TOrder;
+begin
+	with form_main do
+	begin
+		with grid_order do
+		begin
+			Width := form_main.Width - 10;
+			ColCount := 6;
+			ColWidths[0] := 50;
+			ColWidths[1] := 200;
+            ColWidths[2] := 120;
+			ColWidths[3] := ColWidths[0];
+			ColWidths[4] := (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
+			ColWidths[5] := ColWidths[4];
+		end;
+
+		grid_order.RowCount := 0;
+		grid_order.Rows[0].Clear;
+		r := 0;
+		for pp in list.Orders do
+		begin
+			order := list.order(pp);
+			grid_order.RowCount := r + 1;
+			grid_order.Cells[0, r] := IntToStr(order.id);
+			if crew_list.crew(order.CrewId) <> nil then
+				grid_order.Cells[1, r] := crew_list.crew(order.CrewId).name
+			else
+				grid_order.Cells[1, r] := '! ' + IntToStr(order.CrewId);
+            grid_order.Cells[2, r] := order.source_time;
+			grid_order.Cells[3, r] := order.time_as_string();
+			with order.source do
+				grid_order.Cells[4, r] := street + ', ' + house + '-' + korpus;
+			with order.dest do
+				grid_order.Cells[5, r] := street + ', ' + house + '-' + korpus;
+			inc(r);
+		end;
+	end;
+end;
+
 procedure show_result_crews_grid(var list : TCrewList);
 var pp : Pointer;
 	r : Integer;
@@ -625,6 +699,13 @@ begin
 		list_crew := get_crew_list(SDAY, crew_list);
 		// show_grid(list_crew, grid_crews);
 
+		// try to get current orders
+		order_list := TOrderList.Create(ibquery_main);
+		list_order := order_list.get_current_orders();
+		// show_grid(list_order, grid_order);
+		show_orders_grid(order_list);
+		exit(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 		list_tmp := ret_crews_stringlist(crew_list);
 		show_grid(list_tmp, grid_order);
 		// show_result_crews_grid(crew_list);
@@ -728,7 +809,7 @@ begin
 		edit_ap_street.Text := 'улица Самойловой';
 		edit_ap_house.Text := '7';
 		edit_ap_korpus.Text := '';
-//		edit_ap_gps.Text := '30.375401,59.902930';
+		edit_ap_gps.Text := '30.375401,59.902930';
 	end;
 	// form_main.DBGrid1.Hide();
 

@@ -78,6 +78,15 @@ object form_main: Tform_main
     Height = 13
     Caption = 'GPS-'#1082#1086#1086#1088#1076#1080#1085#1072#1090#1099':'
   end
+  object Memo1: TMemo
+    Left = 544
+    Top = 328
+    Width = 409
+    Height = 137
+    Lines.Strings = (
+      'Memo1')
+    TabOrder = 13
+  end
   object grid_crews: TStringGrid
     Left = 0
     Top = 96
@@ -142,26 +151,13 @@ object form_main: Tform_main
     ParentCtl3D = False
     TabOrder = 4
   end
-  object grid_order: TStringGrid
-    Left = 0
-    Top = 322
-    Width = 529
-    Height = 177
-    ColCount = 3
-    Ctl3D = False
-    FixedCols = 0
-    RowCount = 1
-    FixedRows = 0
-    ParentCtl3D = False
-    TabOrder = 5
-  end
   object Button1: TButton
     Left = 871
     Top = 3
     Width = 99
     Height = 25
     Caption = 'Go!'
-    TabOrder = 8
+    TabOrder = 7
     OnClick = Button1Click
   end
   object edit_ap_house: TEdit
@@ -169,28 +165,28 @@ object form_main: Tform_main
     Top = 50
     Width = 58
     Height = 21
-    TabOrder = 9
+    TabOrder = 8
   end
   object edit_ap_korpus: TEdit
     Left = 535
     Top = 50
     Width = 58
     Height = 21
-    TabOrder = 10
+    TabOrder = 9
   end
   object edit_ap_gps: TEdit
     Left = 639
     Top = 50
     Width = 226
     Height = 21
-    TabOrder = 11
+    TabOrder = 10
   end
   object browser: TWebBrowser
     Left = 543
     Top = 344
     Width = 410
     Height = 155
-    TabOrder = 7
+    TabOrder = 6
     OnDocumentComplete = browserDocumentComplete
     ControlData = {
       4C000000602A0000051000000000000000000000000000000000000000000000
@@ -205,17 +201,21 @@ object form_main: Tform_main
     Width = 97
     Height = 17
     Caption = 'Release'
-    TabOrder = 12
+    TabOrder = 11
     OnClick = cb_real_baseClick
   end
-  object Memo1: TMemo
-    Left = 544
-    Top = 328
-    Width = 409
-    Height = 137
-    Lines.Strings = (
-      'Memo1')
-    TabOrder = 13
+  object grid_order: TStringGrid
+    Left = 0
+    Top = 106
+    Width = 978
+    Height = 393
+    ColCount = 3
+    Ctl3D = False
+    FixedCols = 0
+    RowCount = 1
+    FixedRows = 0
+    ParentCtl3D = False
+    TabOrder = 5
   end
   object db_main: TIBDatabase
     LoginPrompt = False

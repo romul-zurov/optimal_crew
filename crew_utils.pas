@@ -18,11 +18,27 @@ function param64(s : string) : string;
 function date_to_full(date : string) : string;
 function get_substr(value : string; sub1, sub2 : string) : string;
 procedure RemoveDuplicates(const stringList : TStringList);
+procedure return_adres(value : string; var s, h, k : string);
 
 implementation
 
 procedure pass;
 begin
+end;
+
+procedure return_adres(value : string; var s, h, k : string);
+begin
+	s := get_substr(value, '', ',');
+	h := get_substr(value, ',', '');
+	if pos('/', h) > 0 then
+	begin
+		k := get_substr(h, '/', '');
+		h := get_substr(h, '', '/');
+		if pos('-', k) > 0 then
+			k := get_substr(k, '', '-');
+	end
+	else
+		k := '';
 end;
 
 function reverseStringList(var list : TStringList) : Integer;
@@ -62,6 +78,8 @@ begin
 	h := copy(date, 9, 2);
 	n := copy(date, 11, 2);
 	s := copy(date, 13, 2);
+	if length(s) = 1 then
+		s := '0' + s;
 	result := y + '.' + m + '.' + d + ' ' + h + ':' + n + ':' + s;
 end;
 
