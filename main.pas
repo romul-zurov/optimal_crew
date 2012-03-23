@@ -6,7 +6,7 @@ uses
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
 	Dialogs, Grids, StdCtrls, DB, IBDatabase, DBGrids, ComCtrls, IBCustomDataSet,
 	StrUtils, DateUtils, IBQuery, OleCtrls, SHDocVw, MSHTML, ActiveX, IniFiles, WinInet,
-	crew, crew_utils;
+	crew, crew_utils, ExtCtrls;
 
 type
 	Tform_main = class(TForm)
@@ -15,19 +15,12 @@ type
 		Label2 : TLabel;
 		edit_zakaz4ik : TEdit;
 		edit_ap_street : TEdit;
-		Label3 : TLabel;
-		Label5 : TLabel;
-		Label4 : TLabel;
 		db_main : TIBDatabase;
 		stbar_main : TStatusBar;
 		ta_main : TIBTransaction;
-		DBGrid1 : TDBGrid;
 		datasource_main : TDataSource;
 		ibquery_main : TIBQuery;
-		grid_gps : TStringGrid;
 		grid_order : TStringGrid;
-		browser : TWebBrowser;
-		Button1 : TButton;
 		Label6 : TLabel;
 		edit_ap_house : TEdit;
 		Label7 : TLabel;
@@ -35,8 +28,13 @@ type
 		Label8 : TLabel;
 		edit_ap_gps : TEdit;
 		Label9 : TLabel;
+		GridPanel_main : TGridPanel;
+		panel_ap : TPanel;
+		Button1 : TButton;
 		cb_real_base : TCheckBox;
-		Memo1 : TMemo;
+		GridPanel_grids : TGridPanel;
+    GroupBox_order: TGroupBox;
+    GroupBox_crew: TGroupBox;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -253,8 +251,8 @@ begin
 		'select CREWS.IDENTIFIER, CREWS.ID, CREWS.CODE, CREWS.NAME, CREWS.STATE from CREWS where '
 		+ ' CREWS.IDENTIFIER in (' + clist.get_gpsid_list_as_string() + ') '
 	// только экипажи из crews по gpsId
-		+ ' and CREWS.STATE in (1,3) ' // в состоянии "свободен" и "на заказе", согласно таблице CREW_STATE
-		+ ' and LEFT(CREWS.CODE, 1) !=''Э'' '; // отбрасываем эвакуаторы;
+		+ ' and CREWS.STATE in (1,3) '; // в состоянии "свободен" и "на заказе", согласно таблице CREW_STATE
+	// + ' and LEFT(CREWS.CODE, 1) !=''Э'' '; // отбрасываем эвакуаторы - пока не нужно;
 	res := get_list(sel);
 	clist.set_crewId_by_gpsId(res);
 
@@ -383,25 +381,25 @@ begin
 	exit(s); // 'Foo String';
 end;
 
-function get_zapros_old(surl : string) : string;
-var
-	Doc : IHTMLDocument2;
-	s : string;
-begin
-	with form_main do
-	begin
-		browser.Navigate(surl);
-		Complete_Flag := false;
-		Doc := browser.Document as IHTMLDocument2;
-		while browser.ReadyState < READYSTATE_COMPLETE do
-			Application.ProcessMessages;
-		// while not browser.OnDocumentComplete do
-		// pass;
-		// Complete_Flag := false;
-		s := html_to_string(browser);
-		result := s; // 'Foo String';
-	end;
-end;
+// function get_zapros_old(surl : string) : string;
+// var
+// Doc : IHTMLDocument2;
+// s : string;
+// begin
+// with form_main do
+// begin
+// browser.Navigate(surl);
+// Complete_Flag := false;
+// Doc := browser.Document as IHTMLDocument2;
+// while browser.ReadyState < READYSTATE_COMPLETE do
+// Application.ProcessMessages;
+// // while not browser.OnDocumentComplete do
+// // pass;
+// // Complete_Flag := false;
+// s := html_to_string(browser);
+// result := s; // 'Foo String';
+// end;
+// end;
 
 function get_crew_way_time(var points : TList) : Integer;
 	procedure add_s(var s : string; s1, s2, s3, s4 : string; num : Integer);
@@ -443,7 +441,7 @@ begin
 	// surl := '"' + surl + '"' + ' "id=\"recalcOutput\" align=\"left\">" "</td>"';
 	surl := '"' + surl + '"' + ' "DayVremyaPuti" "</td>"';
 	form_main.edit_zakaz4ik.Text := surl;
-	form_main.Memo1.Text := form_main.Memo1.Text + '\n' + surl;
+	// form_main.Memo1.Text := form_main.Memo1.Text + '\n' + surl;
 	surl := param64(surl);
 	surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
 	res := get_zapros(surl);
@@ -509,7 +507,7 @@ begin
 			ColCount := 6;
 			ColWidths[0] := 50;
 			ColWidths[1] := 200;
-            ColWidths[2] := 120;
+			ColWidths[2] := 120;
 			ColWidths[3] := ColWidths[0];
 			ColWidths[4] := (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
 			ColWidths[5] := ColWidths[4];
@@ -527,7 +525,7 @@ begin
 				grid_order.Cells[1, r] := crew_list.crew(order.CrewId).name
 			else
 				grid_order.Cells[1, r] := '! ' + IntToStr(order.CrewId);
-            grid_order.Cells[2, r] := order.source_time;
+			grid_order.Cells[2, r] := order.source_time;
 			grid_order.Cells[3, r] := order.time_as_string();
 			with order.source do
 				grid_order.Cells[4, r] := street + ', ' + house + '-' + korpus;
@@ -692,7 +690,7 @@ begin
 
 		crew_list.set_ap(edit_ap_street.Text, edit_ap_house.Text, edit_ap_korpus.Text, edit_ap_gps.Text);
 		list_coord := get_coord_list(SCOORDTIME, crew_list);
-		show_grid(list_coord, grid_gps);
+		// show_grid(list_coord, grid_gps);
 
 		// edit_adres.Text := IntToStr(crew_list.Crews.Count);
 
@@ -783,6 +781,10 @@ end;
 
 procedure Tform_main.Button1Click(Sender : TObject);
 begin
+	// form_main.GridPanel_main.RowCollection.Items[0].SizeStyle := ssAbsolute;
+	// form_main.GridPanel_main.RowCollection.Items[0].Value := 0;
+	// exit();
+
 	show_tmp();
 end;
 
@@ -815,6 +817,9 @@ begin
 
 	crew_list := TCrewList.Create();
 	res_crew_list := TCrewList.Create();
+
+	form_main.panel_ap.Show();
+
 	if open_database() then
 	begin
 		// show_tmp();
