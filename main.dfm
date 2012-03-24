@@ -2,7 +2,7 @@ object form_main: Tform_main
   Left = 0
   Top = 0
   Caption = #1055#1086#1076#1073#1086#1088' '#1086#1087#1090#1080#1084#1072#1083#1100#1085#1086#1075#1086' '#1101#1082#1080#1087#1072#1078#1072' '#1040#1057'-'#1058#1072#1082#1089#1080
-  ClientHeight = 431
+  ClientHeight = 380
   ClientWidth = 845
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -17,22 +17,21 @@ object form_main: Tform_main
   TextHeight = 13
   object stbar_main: TStatusBar
     Left = 0
-    Top = 412
+    Top = 361
     Width = 845
     Height = 19
     Panels = <
       item
         Width = 50
       end>
-    ExplicitTop = 399
-    ExplicitWidth = 838
+    ExplicitTop = 412
   end
   object GridPanel_main: TGridPanel
     AlignWithMargins = True
     Left = 3
     Top = 3
     Width = 839
-    Height = 406
+    Height = 355
     Align = alClient
     ColumnCollection = <
       item
@@ -58,10 +57,7 @@ object form_main: Tform_main
         Value = 100.000000000000000000
       end>
     TabOrder = 1
-    ExplicitLeft = 8
-    ExplicitTop = 8
-    ExplicitWidth = 822
-    ExplicitHeight = 273
+    ExplicitHeight = 406
     object panel_ap: TPanel
       AlignWithMargins = True
       Left = 5
@@ -74,25 +70,23 @@ object form_main: Tform_main
       Margins.Bottom = 4
       Align = alTop
       TabOrder = 0
-      ExplicitWidth = 73
-      ExplicitHeight = 812
       object Label2: TLabel
-        Left = 1
+        Left = 10
         Top = 6
         Width = 51
         Height = 13
         Caption = #1047#1072#1082#1072#1079#1095#1080#1082':'
       end
       object Label1: TLabel
-        Left = 1
-        Top = 51
+        Left = 10
+        Top = 52
         Width = 75
         Height = 13
         Caption = #1040#1076#1088#1077#1089' '#1087#1086#1076#1072#1095#1080':'
       end
       object Label6: TLabel
-        Left = 90
-        Top = 34
+        Left = 99
+        Top = 35
         Width = 35
         Height = 13
         Caption = #1059#1083#1080#1094#1072':'
@@ -144,8 +138,8 @@ object form_main: Tform_main
         TabOrder = 2
       end
       object edit_ap_street: TEdit
-        Left = 81
-        Top = 49
+        Left = 90
+        Top = 50
         Width = 328
         Height = 21
         TabOrder = 3
@@ -176,14 +170,14 @@ object form_main: Tform_main
       Left = 1
       Top = 82
       Width = 837
-      Height = 323
+      Height = 272
       Align = alClient
       ColumnCollection = <
         item
-          Value = 79.950962864585980000
+          Value = 70.032449513318540000
         end
         item
-          Value = 20.049037135414000000
+          Value = 29.967550486681470000
         end>
       ControlCollection = <
         item
@@ -201,72 +195,63 @@ object form_main: Tform_main
           Value = 100.000000000000000000
         end>
       TabOrder = 1
-      ExplicitLeft = 102
-      ExplicitTop = 96
-      ExplicitWidth = 618
-      ExplicitHeight = 207
+      ExplicitHeight = 323
       object GroupBox_order: TGroupBox
         Left = 1
         Top = 1
-        Width = 667
-        Height = 321
+        Width = 584
+        Height = 270
         Align = alClient
         Caption = #1058#1077#1082#1091#1097#1080#1077' '#1079#1072#1082#1072#1079#1099':'
         TabOrder = 0
-        ExplicitLeft = 85
-        ExplicitTop = 32
-        ExplicitWidth = 337
-        ExplicitHeight = 173
+        ExplicitWidth = 477
         object grid_order: TStringGrid
           AlignWithMargins = True
           Left = 5
           Top = 18
-          Width = 657
-          Height = 298
+          Width = 574
+          Height = 247
           Align = alClient
           ColCount = 3
           Ctl3D = False
+          DefaultRowHeight = 16
           FixedCols = 0
           RowCount = 1
           FixedRows = 0
           ParentCtl3D = False
           TabOrder = 0
-          ExplicitLeft = 64
-          ExplicitTop = 51
-          ExplicitWidth = 217
-          ExplicitHeight = 39
+          ExplicitWidth = 657
+          ExplicitHeight = 298
         end
       end
       object GroupBox_crew: TGroupBox
-        Left = 668
+        Left = 585
         Top = 1
-        Width = 168
-        Height = 321
+        Width = 251
+        Height = 270
         Align = alClient
         Caption = #1044#1086#1089#1090#1091#1087#1085#1099#1077' '#1101#1082#1080#1087#1072#1078#1080':'
         TabOrder = 1
-        ExplicitLeft = 760
-        ExplicitTop = 176
-        ExplicitWidth = 185
-        ExplicitHeight = 105
+        ExplicitLeft = 668
+        ExplicitWidth = 168
+        ExplicitHeight = 321
         object grid_crews: TStringGrid
           AlignWithMargins = True
           Left = 5
           Top = 18
-          Width = 158
-          Height = 298
+          Width = 241
+          Height = 247
           Align = alClient
           ColCount = 4
           Ctl3D = False
+          DefaultRowHeight = 16
           FixedCols = 0
           RowCount = 1
           FixedRows = 0
           ParentCtl3D = False
           TabOrder = 0
-          ExplicitLeft = -121
-          ExplicitTop = 27
-          ExplicitWidth = 289
-          ExplicitHeight = 55
+          ExplicitWidth = 158
+          ExplicitHeight = 298
         end
       end
     end

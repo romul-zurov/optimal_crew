@@ -6,6 +6,7 @@ uses StrUtils, DateUtils, SysUtils, Classes, EncdDecd, Math;
 
 procedure pass;
 
+function replace_time(const value : string; const MyTime : TDateTime) : string;
 function replace_day(const value : string; const MyTime : TDateTime) : string;
 function replace_hour(const value : string; const MyTime : TDateTime) : string;
 function replace_minute(const value : string; const MyTime : TDateTime) : string;
@@ -178,7 +179,7 @@ begin
 			begin
 				try
 					n := strtoint(s);
-					if (n > 0) and (n <= 31) then
+					if (n >= -31) and (n <= 31) then
 					begin
 						DateTimeToString(s2, 'yyyy-mm-dd hh:nn:ss', IncDay(MyTime, n * (-1)));
 						res := ReplaceStr(res, '{Last_day_' + s + '}', s2);
@@ -207,7 +208,7 @@ begin
 			begin
 				try
 					n := strtoint(s);
-					if (n > 0) and (n <= 23) then
+					if (n >= -23) and (n <= 23) then
 					begin
 						DateTimeToString(s2, 'yyyy-mm-dd hh:nn:ss', IncHour(MyTime, n * (-1)));
 						res := ReplaceStr(res, '{Last_hour_' + s + '}', s2);
@@ -237,7 +238,7 @@ begin
 			begin
 				try
 					n := strtoint(s);
-					if (n > 0) and (n <= 59) then
+					if (n >= -59) and (n <= 59) then
 					begin
 						DateTimeToString(s2, 'yyyy-mm-dd hh:nn:ss', IncMinute(MyTime, n * (-1)));
 						res := ReplaceStr(res, '{Last_minute_' + s + '}', s2);
@@ -250,6 +251,17 @@ begin
 	until (p1 = 0) or (p2 = 0) or (n <= 0);
 
 	result := res;
+end;
+
+function replace_time(const value : string; const MyTime : TDateTime) : string;
+begin
+	result := value;
+	if pos('{Last_minute_', value) > 0 then
+		result := replace_minute(value, MyTime)
+	else if pos('{Last_hour_', value) > 0 then
+		result := replace_hour(value, MyTime)
+	else if pos('{Last_day_', value) > 0 then
+		result := replace_day(value, MyTime);
 end;
 
 procedure RemoveDuplicates(const stringList : TStringList);

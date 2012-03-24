@@ -12,6 +12,8 @@ const CREW_NAZAKAZE = 3;
 
 var
 	DEBUG : boolean;
+	DEBUG_SDATE_FROM : string;
+	DEBUG_SDATE_TO : string;
 	cur_time : TDateTime;
 
 function sort_crews_by_state_dist(p1, p2 : Pointer) : Integer;
@@ -58,6 +60,7 @@ type
 		function is_defined(OrderId : Integer) : boolean;
 		function Append(OrderId : Integer) : Pointer;
 		function get_current_orders() : TStringList;
+		function get_crews_id_as_string() : string;
 	end;
 
 type
@@ -94,12 +97,14 @@ type
 type
 	TCrewList = class(TObject)
 		Crews : TList;
+		query : TIBQuery;
+
 		ap_street : string;
 		ap_house : string;
 		ap_korpus : string;
 		ap_gps : string;
 
-		constructor Create();
+		constructor Create(var IBQuery : TIBQuery);
 		function crew(p : Pointer) : TCrew; overload;
 		function crew(CrewID : Integer) : TCrew; overload;
 		function crewByGpsId(GpsId : Integer) : TCrew;
@@ -122,6 +127,9 @@ type
 		function set_crews_dist(coord : string) : Integer;
 		function set_ap(street, house, korpus, gps : string) : Integer;
 		function clear_crew_list() : Integer;
+		function get_crew_list_by_crewid_string(screws_id : string) : TStringList;
+		function get_crew_list() : TStringList;
+		function set_crews_data(list : TStringList) : Integer;
 	private
 		function findById(ID : Integer; gps : boolean) : Pointer;
 		function get_id_list_as_string(gps : boolean) : string;
@@ -337,10 +345,11 @@ begin
 	exit(0);
 end;
 
-constructor TCrewList.Create();
+constructor TCrewList.Create(var IBQuery : TIBQuery);
 begin
 	inherited Create;
 	self.Crews := TList.Create();
+	self.query := IBQuery;
 end;
 
 function TCrewList.crew(p : Pointer) : TCrew;
@@ -441,6 +450,33 @@ begin
 	result := self.get_id_list_as_string(false);
 end;
 
+function TCrewList.get_crew_list_by_crewid_string(screws_id : string) : TStringList;
+var sel : string;
+begin
+	result := TStringList.Create();
+	if length(screws_id) = 0 then
+		exit(result);
+	sel := //
+		'select CREWS.ID, CREWS.IDENTIFIER, CREWS.CODE, CREWS.NAME, CREWS.STATE ' //
+		+ ' from CREWS ' //
+		+ ' where ' //
+		+ ' CREWS.ID in (' + screws_id + ') '; //
+	result := get_sql_stringlist(self.query, sel);
+	self.set_crews_data(result);
+end;
+
+function TCrewList.get_crew_list() : TStringList;
+var sel : string;
+begin
+	 sel := //
+	 'select CREWS.ID, CREWS.IDENTIFIER, CREWS.CODE, CREWS.NAME, CREWS.STATE ' //
+	 + ' from CREWS ' //
+	 + ' where ' //
+     + ' CREWS.STATE in (1,3) ';
+	 result := get_sql_stringlist(self.query, sel);
+	 self.set_crews_data(result);
+end;
+
 function TCrewList.get_gpsid_list_as_string : string;
 begin
 	result := self.get_id_list_as_string(true);
@@ -508,12 +544,45 @@ begin
 		crew.Code := sl.Strings[2];
 		crew.name := sl.Strings[3];
 		crew.state := StrToInt(sl.Strings[4]);
-		if crew.state = 1 then
+		if crew.state = CREW_SVOBODEN then
 			crew.state_as_string := 'Свободен'
 		else
 			crew.state_as_string := 'На заказе';
 	end;
 	self.delete_all_none_crewId(); self.delete_all_none_crewId();
+	FreeAndNil(sl);
+	exit(0);
+end;
+
+function TCrewList.set_crews_data(list : TStringList) : Integer;
+var sl : TStringList;
+	s : string;
+	crew : TCrew;
+	ID, GpsId : Integer;
+begin
+	sl := TStringList.Create();
+	// sl.Delimiter := '|';
+	for s in list do
+	begin
+		sl.Clear();
+		sl.Text := StringReplace(s, '|', #13#10, [rfReplaceAll]);
+		ID := StrToInt(sl.Strings[0]);
+		GpsId := StrToInt(sl.Strings[1]);
+		if self.isCrewIdInList(ID) then
+			crew := self.crewByCrewId(ID)
+		else
+			crew := self.crew(self.Append(GpsId));
+
+		crew.CrewID := ID;
+		crew.GpsId := GpsId;
+		crew.Code := sl.Strings[2];
+		crew.name := sl.Strings[3];
+		crew.state := StrToInt(sl.Strings[4]);
+		if crew.state = CREW_SVOBODEN then
+			crew.state_as_string := 'Свободен'
+		else
+			crew.state_as_string := 'На заказе';
+	end;
 	FreeAndNil(sl);
 	exit(0);
 end;
@@ -723,18 +792,36 @@ begin
 	exit(nil);
 end;
 
+function TOrderList.get_crews_id_as_string : string;
+var s : string;
+	pp : Pointer;
+begin
+	s := '';
+	for pp in self.Orders do
+		s := s + ',' + IntToStr(self.order(pp).CrewID);
+	delete(s, 1, 1);
+	result := s;
+end;
+
 function TOrderList.get_current_orders() : TStringList;
 var
 	sel, s : string;
 	res : TStringList;
-	sdate : string;
+	sdate_from, sdate_to : string;
 begin
 	cur_time := now();
 	if DEBUG then
-		sdate := '2011-10-03 00:00:00' // for back-up base
+	begin
+		sdate_from := DEBUG_SDATE_FROM; // for back-up base
+		sdate_to := DEBUG_SDATE_TO; // for back-up base
+	end
 	else
-		sdate := replace_hour('{Last_hour_2}', cur_time); // for real database
-	sdate := '''' + sdate + '''';
+	begin
+		sdate_from := replace_time('{Last_hour_2}', cur_time); // for real database
+		sdate_to := replace_time('{Last_hour_-4}', cur_time); // for real database
+	end;
+	sdate_from := '''' + sdate_from + '''';
+	sdate_to := '''' + sdate_to + '''';
 
 	sel := 'select ' //
 		+ ' ORDERS.ID ' //
@@ -745,8 +832,9 @@ begin
 	// .         ^^^ только заказы с состоянием "принят", "в работе" и т.п.
 	// .             см. данные таблицы ORDER_STATES
 		+ ' ) ' //
-		+ ' and ORDERS.SOURCE_TIME > ' + sdate //
-		+ ' order by ORDERS.SOURCE_TIME desc ';
+		+ ' and ORDERS.SOURCE_TIME > ' + sdate_from // выбираем заказы
+		+ ' and ORDERS.SOURCE_TIME < ' + sdate_to // по времени подачи
+		+ ' order by ORDERS.SOURCE_TIME asc ';
 
 	res := get_sql_stringlist(self.query, sel);
 	for s in res do

@@ -33,8 +33,8 @@ type
 		Button1 : TButton;
 		cb_real_base : TCheckBox;
 		GridPanel_grids : TGridPanel;
-    GroupBox_order: TGroupBox;
-    GroupBox_crew: TGroupBox;
+		GroupBox_order : TGroupBox;
+		GroupBox_crew : TGroupBox;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -232,12 +232,13 @@ function get_crew_list(sdate : string; var clist : TCrewList) : TSTringList;
 	end;
 
 var
-	sel, s, sid : string;
+	sel, s, sid, screws_gpsid : string;
 	res, sl : TSTringList;
 	id, GpsId : Integer;
 begin
-	sdate := '''' + sdate + '''';
 
+	sdate := '''' + sdate + '''';
+	res := TSTringList.Create();
 	{
 	  sel := 'select CREWS.IDENTIFIER, CREWS.ID, CREWS_H.TOSTATE, CREWS.CODE, CREWS.NAME' +
 	  ' from CREWS_H, CREWS where' + ' CREWS_H.STATETIME > ' + sdate +
@@ -247,9 +248,12 @@ begin
 	  }
 
 	// !!
-	sel :=
-		'select CREWS.IDENTIFIER, CREWS.ID, CREWS.CODE, CREWS.NAME, CREWS.STATE from CREWS where '
-		+ ' CREWS.IDENTIFIER in (' + clist.get_gpsid_list_as_string() + ') '
+	screws_gpsid := clist.get_gpsid_list_as_string();
+	if length(screws_gpsid) = 0 then
+		exit(res);
+	sel := //
+		'select CREWS.IDENTIFIER, CREWS.ID, CREWS.CODE, CREWS.NAME, CREWS.STATE from CREWS where ' //
+		+ ' CREWS.IDENTIFIER in (' + screws_gpsid + ') ' //
 	// только экипажи из crews по gpsId
 		+ ' and CREWS.STATE in (1,3) '; // в состоянии "свободен" и "на заказе", согласно таблице CREW_STATE
 	// + ' and LEFT(CREWS.CODE, 1) !=''Э'' '; // отбрасываем эвакуаторы - пока не нужно;
@@ -503,14 +507,16 @@ begin
 	begin
 		with grid_order do
 		begin
-			Width := form_main.Width - 10;
+			// Width := 1280 - 10;     //  - define as alClient
 			ColCount := 6;
 			ColWidths[0] := 50;
-			ColWidths[1] := 200;
+			// ColWidths[1] := 200;
 			ColWidths[2] := 120;
 			ColWidths[3] := ColWidths[0];
-			ColWidths[4] := (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
+			ColWidths[4] := 200; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
 			ColWidths[5] := ColWidths[4];
+			ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
+				- ColWidths[3] - ColWidths[4] - ColWidths[5];
 		end;
 
 		grid_order.RowCount := 0;
@@ -543,21 +549,31 @@ var pp : Pointer;
 begin
 	with form_main do
 	begin
+		with grid_crews do
+		begin
+			Width := form_main.GroupBox_crew.Width - 10;
+			ColCount := 4;
+			ColWidths[0] := 300;
+			ColWidths[1] := 60;
+			ColWidths[2] := 60;
+			ColWidths[3] := 60;
+		end;
+
 		grid_crews.RowCount := 0;
 		r := 0;
 		for pp in list.Crews do
 		begin
 			crew := list.crew(pp);
-			if crew.Time < 0 then
-				Continue;
+			// if crew.Time < 0 then
+			// Continue;
 
 			grid_crews.RowCount := r + 1;
 			grid_crews.Cells[0, r] := IntToStr(crew.CrewId) + ' | ' + crew.name;
 			// grid_crews.Cells[0, r] := IntToStr(crew.CrewId);
 			// grid_crews.Cells[1, r] := IntToStr(crew.Time);
-			grid_crews.Cells[1, r] := crew.time_as_string;
-			grid_crews.Cells[2, r] := FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
-			grid_crews.Cells[3, r] := crew.state_as_string;
+			grid_crews.Cells[1, r] := crew.state_as_string;
+			grid_crews.Cells[2, r] := crew.time_as_string;
+			grid_crews.Cells[3, r] := FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
 			inc(r);
 		end;
 	end;
@@ -659,6 +675,16 @@ var list_coord, list_crew, list_order, list_tmp : TSTringList;
 	pp : Pointer;
 begin
 	cur_time := now();
+	// !!----------------------------------------------------------------------
+	// form_main.edit_zakaz4ik.Text := //
+	// replace_time('{Last_minute_0}', cur_time) //
+	// + ' ' + replace_time('{Last_hour_10}', cur_time) //
+	// + ' ' + replace_time('{Last_day_31}', cur_time) //
+	// + ' ' + replace_time('{Last_minute_10}', cur_time) //
+	// ;
+	// exit();
+	// ------------------------------------------------------------------------
+
 	crew_list.clear_crew_list();
 	with form_main do
 	begin
@@ -676,6 +702,8 @@ begin
 		grid_crews.RowCount := 0; // clear grid
 
 		SDAY := '2011-10-03 00:00:00'; // for back-up base
+		DEBUG_SDATE_FROM := '2011-10-03 00:00:00';
+		DEBUG_SDATE_TO := '2011-10-04 00:00:00';
 		SCOORDTIME := '2011-10-03 14:57:50'; // for back-up base
 
 		if cb_real_base.Checked then
@@ -688,6 +716,18 @@ begin
 			edit_ap_gps.Text := get_gps_coords_for_adres(edit_ap_street.Text, edit_ap_house.Text,
 				edit_ap_korpus.Text);
 
+		// try to get current orders
+		order_list := TOrderList.Create(ibquery_main);
+		list_order := order_list.get_current_orders();
+		crew_list.get_crew_list_by_crewid_string(order_list.get_crews_id_as_string());
+		crew_list.get_crew_list();
+
+		// Show orders:
+		show_orders_grid(order_list);
+		show_result_crews_grid(crew_list);
+		exit(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+		// set AP for crew_list and get coords for crews
 		crew_list.set_ap(edit_ap_street.Text, edit_ap_house.Text, edit_ap_korpus.Text, edit_ap_gps.Text);
 		list_coord := get_coord_list(SCOORDTIME, crew_list);
 		// show_grid(list_coord, grid_gps);
@@ -696,13 +736,6 @@ begin
 
 		list_crew := get_crew_list(SDAY, crew_list);
 		// show_grid(list_crew, grid_crews);
-
-		// try to get current orders
-		order_list := TOrderList.Create(ibquery_main);
-		list_order := order_list.get_current_orders();
-		// show_grid(list_order, grid_order);
-		show_orders_grid(order_list);
-		exit(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 		list_tmp := ret_crews_stringlist(crew_list);
 		show_grid(list_tmp, grid_order);
@@ -815,8 +848,8 @@ begin
 	end;
 	// form_main.DBGrid1.Hide();
 
-	crew_list := TCrewList.Create();
-	res_crew_list := TCrewList.Create();
+	crew_list := TCrewList.Create(form_main.ibquery_main);
+	res_crew_list := TCrewList.Create(form_main.ibquery_main);
 
 	form_main.panel_ap.Show();
 
@@ -824,7 +857,7 @@ begin
 	begin
 		// show_tmp();
 	end;
-
+	form_main.Resizing(wsMaximized);
 end;
 
 end.
