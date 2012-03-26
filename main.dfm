@@ -175,7 +175,7 @@ object form_main: Tform_main
           Value = 70.032449513318540000
         end
         item
-          Value = 29.967550486681470000
+          Value = 29.967550486681460000
         end>
       ControlCollection = <
         item

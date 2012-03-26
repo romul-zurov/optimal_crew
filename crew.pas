@@ -4,7 +4,7 @@ interface
 
 uses crew_utils, // utils from robocap and mine
 	Controls, Forms, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX, //
-	IBQuery, DB;
+	IBQuery, DB, WinInet;
 
 const CREW_SVOBODEN = 1;
 
@@ -15,9 +15,11 @@ var
 	DEBUG_SDATE_FROM : string;
 	DEBUG_SDATE_TO : string;
 	cur_time : TDateTime;
+	ac_taxi_url : string;
 
 function sort_crews_by_state_dist(p1, p2 : Pointer) : Integer;
 function sort_crews_by_time(p1, p2 : Pointer) : Integer;
+function get_zapros(surl : string) : string;
 
 type
 	TAdres = class(TObject)
@@ -28,6 +30,7 @@ type
 		constructor Create(street, house, korpus, gps : string);
 		procedure setAdres(street, house, korpus, gps : string);
 		procedure Clear();
+		function isEmpty() : boolean;
 	end;
 
 type
@@ -83,6 +86,10 @@ type
 		OrderId : Integer; // ID заказа занятого экипажа
 		order_way : string; // маршрут занятого экипажа
 
+		source : TAdres; // address_from for state==3
+		dest : TAdres; // address_to for state==3
+		ap : TAdres; // адрес подачи экипажа
+
 		constructor Create(GpsId : Integer);
 		function set_current_coord() : Integer;
 		function sort_coords_by_time_desc() : Integer;
@@ -90,6 +97,7 @@ type
 		function is_crew_was_in_coord(coord : string) : boolean;
 		procedure calc_dist(coord : string);
 		procedure set_time(m : Integer); // set time and time_as_string;
+		function get_time(var list : TOrderList) : Integer;
 	end;
 
 type
@@ -143,6 +151,58 @@ type
 	end;
 
 implementation
+
+function html_to_string(WB : TWebBrowser) : string;
+var
+	StringStream : TStringStream;
+	Stream : IStream;
+	PersistStream : IPersistStreamInit;
+	res : string;
+begin
+	res := 'Error';
+	PersistStream := WB.Document as IPersistStreamInit;
+	StringStream := TStringStream.Create('');
+	Stream := TStreamAdapter.Create(StringStream, soReference) as IStream;
+	try
+		PersistStream.Save(Stream, true);
+		res := StringStream.DataString;
+	finally
+		StringStream.Free;
+	end;
+	res := get_substr(res, '&lt;&lt;&lt;', '&gt;&gt;&gt;');
+	result := res;
+end;
+
+function get_zapros(surl : string) : string;
+var form : TForm;
+	browser : TWebBrowser;
+	s : string;
+begin
+	form := TForm.Create(nil);
+	browser := TWebBrowser.Create(nil);
+	try
+		InternetSetOption(nil, INTERNET_OPTION_END_BROWSER_SESSION, nil, 0); // end IE session
+		// sleep(900);
+		TWinControl(browser).Parent := form;
+		browser.Silent := true;
+		browser.Align := alClient;
+		form.Width := 400;
+		form.Height := 100;
+		form.Show;
+		if not DEBUG then
+			form.Hide;
+		browser.Navigate(surl);
+		while browser.ReadyState < READYSTATE_COMPLETE do
+			Application.ProcessMessages;
+		s := html_to_string(browser);
+		if DEBUG then
+			sleep(1000);
+	finally
+		browser.Free;
+		form.Free;
+	end;
+	exit(s); // 'Foo String';
+end;
 
 function sql_select(var query : TIBQuery; sel : string) : Integer;
 begin
@@ -217,6 +277,59 @@ begin
 		exit(0);
 end;
 
+function get_crew_way_time(var points : TList) : Integer;
+	procedure add_s(var s : string; s1, s2, s3, s4 : string; num : Integer);
+	var ss : string;
+	begin
+		case num of
+			0 :
+				ss := 'from';
+			1 :
+				ss := 'int';
+			-1 :
+				ss := 'to';
+		end;
+		s := s + 'point_' + ss + '[obj][]=' + s1 + '&';
+		s := s + 'point_' + ss + '[house][]=' + s2 + '&';
+		s := s + 'point_' + ss + '[corp][]=' + s3 + '&';
+		s := s + 'point_' + ss + '[coords][]=' + s4 + '&';
+	end;
+
+var i, c, n, t : Integer;
+	a : TAdres;
+	surl, res : string;
+begin
+	c := points.Count;
+	if c < 2 then
+		exit(-1);
+	surl := ac_taxi_url + 'order?i_generate_address=1&service=0&';
+	for i := 0 to c - 1 do
+	begin
+		if i = 0 then
+			n := 0
+		else if i = (c - 1) then
+			n := -1
+		else
+			n := 1;
+		a := TAdres(points.Items[i]);
+		add_s(surl, a.street, a.house, a.korpus, a.gps, n);
+	end;
+	surl := '"' + surl + '"' + ' "DayVremyaPuti" "</td>"';
+	surl := param64(surl);
+	surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
+	res := get_zapros(surl);
+
+	res := get_substr(res, 'Время (с учетом пробок): ', ' мин.');
+	if (length(res) > 0) and (pos('Error', res) < 1) then
+		try
+			t := StrToInt(res);
+			exit(t);
+		except
+			exit(-1);
+		end;
+	exit(-1);
+end;
+
 { TCrew }
 
 function TCrew.append_coords(coord, time : string) : Integer;
@@ -250,6 +363,51 @@ begin
 	self.time := -1; // время подъезда к АП в минутах;
 	self.OrderId := -1; // ID заказа занятого экипажа
 	self.order_way := ''; // маршрут занятого экипажа
+
+	source := TAdres.Create('', '', '', ''); // address from
+	dest := TAdres.Create('', '', '', ''); // address to
+	ap := TAdres.Create('', '', '', ''); // адрес подачи
+end;
+
+function TCrew.get_time(var list : TOrderList) : Integer;
+var cur_pos : TAdres;
+	points : TList;
+	stops_time : Integer; // время на остановки для экипажа на заказе
+	order : TOrder;
+begin
+	if (self.state = -1) //
+		or (self.coord = '') //
+		or self.ap.isEmpty() //
+		or ( //
+		(self.state = CREW_NAZAKAZE) //
+			and ((self.OrderId = -1) or (self.source.isEmpty()) or (self.dest.isEmpty())) //
+		) //
+		then
+	begin
+		result := -1;
+		self.set_time(result);
+		exit(result);
+	end;
+
+	stops_time := 0;
+	points := TList.Create(); // список точек маршрута
+	cur_pos := TAdres.Create('', '', '', self.coord); // начало маршрута - текущая координата машины
+	points.Add(Pointer(cur_pos));
+
+	if self.state = CREW_NAZAKAZE then
+	// если экипаж на заказе, то проверяем, был ли он в точках source и dest
+	// если нет - добавляем их в маршрут и прибавляем время на остановки
+	begin
+
+	end;
+
+	points.Add(Pointer(self.ap)); // конец маршрута - адрес подачи
+
+	result := get_crew_way_time(points);
+
+	result := result + stops_time;
+	self.set_time(result);
+	FreeAndNil(points);
 end;
 
 function TCrew.is_crew_was_in_coord(coord : string) : boolean;
@@ -279,7 +437,7 @@ function TCrew.set_current_coord() : Integer;
 var sl : TStringList;
 	s, s1, s2 : string;
 	crew : TCrew;
-	count, i : Integer;
+	Count, i : Integer;
 begin
 	// count := IfThen(self.coords.count < self.coords_times.count, self.coords.count, self.coords_times.count);
 	// if (count <= 0) then
@@ -303,7 +461,11 @@ end;
 procedure TCrew.set_time(m : Integer);
 begin
 	if m < 0 then
+	begin
+		self.time := -1;
+		self.time_as_string := '';
 		exit();
+	end;
 	self.time := m;
 	self.time_as_string := IntToStr(m mod 60) + ' мин.';
 	if m > 59 then
@@ -314,13 +476,13 @@ function TCrew.sort_coords_by_time_desc : Integer;
 var sl : TStringList;
 	s : string;
 	crew : TCrew;
-	count, i : Integer;
+	Count, i : Integer;
 begin
-	count := IfThen(self.coords.count < self.coords_times.count, self.coords.count, self.coords_times.count);
-	if (count <= 0) then
+	Count := IfThen(self.coords.Count < self.coords_times.Count, self.coords.Count, self.coords_times.Count);
+	if (Count <= 0) then
 		exit(-1);
 	sl := TStringList.Create();
-	for i := 0 to (count - 1) do
+	for i := 0 to (Count - 1) do
 		sl.Append(self.coords_times.Strings[i] + '|' + self.coords.Strings[i]);
 	sl.Sorted := true;
 	sl.Duplicates := dupIgnore;
@@ -530,7 +692,7 @@ begin
 	begin
 		coords := coords_to_str(self.query.fields);
 		j := 0;
-		while (j < coords.count) do
+		while (j < coords.Count) do
 		begin
 			slist.Append(coords.Strings[j]);
 			inc(j);
@@ -564,7 +726,7 @@ end;
 function TCrewList.get_crew_list_by_order_list(var list : TOrderList) : TStringList;
 begin
 	result := self.get_crew_list_by_crewid_string(list.get_crews_id_as_string());
-    self.set_crews_orderId_by_order_list(list);
+	self.set_crews_orderId_by_order_list(list);
 end;
 
 function TCrewList.get_crew_list() : TStringList;
@@ -735,13 +897,14 @@ end;
 
 procedure TCrewList.set_crews_orderId_by_order_list(var list : TOrderList);
 var order : TOrder;
-	pp : pointer;
+	pp : Pointer;
 begin
-	for pp in list.Orders do begin
-    	order := list.order(pp);
+	for pp in list.Orders do
+	begin
+		order := list.order(pp);
 		if self.isCrewIdInList(order.CrewID) then
 			self.crewByCrewId(order.CrewID).OrderId := order.ID;
-    end;
+	end;
 end;
 
 procedure TCrewList.set_crews_state_as_string;
@@ -812,6 +975,14 @@ begin
 	self.house := house;
 	self.korpus := korpus;
 	self.gps := gps;
+end;
+
+function TAdres.isEmpty : boolean;
+begin
+	if (length(self.gps) > 0) or ((length(self.street) > 0) and (length(self.house) > 0)) then
+		exit(false)
+	else
+		exit(true);
 end;
 
 procedure TAdres.setAdres(street, house, korpus, gps : string);

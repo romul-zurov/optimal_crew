@@ -50,7 +50,6 @@ var
 	form_main : Tform_main;
 	crew_list, res_crew_list : TCrewList;
 	order_list : TOrderList;
-	ac_taxi_url : string;
 	Complete_Flag : boolean;
 
 implementation
@@ -333,57 +332,57 @@ begin
 	exit(res);
 end;
 
-function html_to_string(WB : TWebBrowser) : string;
-var
-	StringStream : TStringStream;
-	Stream : IStream;
-	PersistStream : IPersistStreamInit;
-	res : string;
-begin
-	res := 'Error';
-	PersistStream := WB.Document as IPersistStreamInit;
-	StringStream := TStringStream.Create('');
-	Stream := TStreamAdapter.Create(StringStream, soReference) as IStream;
-	try
-		PersistStream.Save(Stream, true);
-		res := StringStream.DataString;
-	finally
-		StringStream.Free;
-	end;
-	res := get_substr(res, '&lt;&lt;&lt;', '&gt;&gt;&gt;');
-	result := res;
-end;
-
-function get_zapros(surl : string) : string;
-var Form : TForm;
-	browser : TWebBrowser;
-	s : string;
-begin
-	Form := TForm.Create(nil);
-	browser := TWebBrowser.Create(nil);
-	try
-		InternetSetOption(nil, INTERNET_OPTION_END_BROWSER_SESSION, nil, 0); // end IE session
-		// sleep(900);
-		TWinControl(browser).Parent := Form;
-		browser.Silent := true;
-		browser.Align := alClient;
-		Form.Width := 400;
-		Form.Height := 100;
-		Form.Show;
-		if not DEBUG then
-			Form.Hide;
-		browser.Navigate(surl);
-		while browser.ReadyState < READYSTATE_COMPLETE do
-			Application.ProcessMessages;
-		s := html_to_string(browser);
-		if DEBUG then
-			sleep(1000);
-	finally
-		browser.Free;
-		Form.Free;
-	end;
-	exit(s); // 'Foo String';
-end;
+// function html_to_string(WB : TWebBrowser) : string;
+// var
+// StringStream : TStringStream;
+// Stream : IStream;
+// PersistStream : IPersistStreamInit;
+// res : string;
+// begin
+// res := 'Error';
+// PersistStream := WB.Document as IPersistStreamInit;
+// StringStream := TStringStream.Create('');
+// Stream := TStreamAdapter.Create(StringStream, soReference) as IStream;
+// try
+// PersistStream.Save(Stream, true);
+// res := StringStream.DataString;
+// finally
+// StringStream.Free;
+// end;
+// res := get_substr(res, '&lt;&lt;&lt;', '&gt;&gt;&gt;');
+// result := res;
+// end;
+//
+// function get_zapros(surl : string) : string;
+// var Form : TForm;
+// browser : TWebBrowser;
+// s : string;
+// begin
+// Form := TForm.Create(nil);
+// browser := TWebBrowser.Create(nil);
+// try
+// InternetSetOption(nil, INTERNET_OPTION_END_BROWSER_SESSION, nil, 0); // end IE session
+// // sleep(900);
+// TWinControl(browser).Parent := Form;
+// browser.Silent := true;
+// browser.Align := alClient;
+// Form.Width := 400;
+// Form.Height := 100;
+// Form.Show;
+// if not DEBUG then
+// Form.Hide;
+// browser.Navigate(surl);
+// while browser.ReadyState < READYSTATE_COMPLETE do
+// Application.ProcessMessages;
+// s := html_to_string(browser);
+// if DEBUG then
+// sleep(1000);
+// finally
+// browser.Free;
+// Form.Free;
+// end;
+// exit(s); // 'Foo String';
+// end;
 
 // function get_zapros_old(surl : string) : string;
 // var
@@ -560,6 +559,7 @@ begin
 		end;
 
 		grid_crews.RowCount := 0;
+		grid_crews.Rows[0].Clear();
 		r := 0;
 		for pp in list.Crews do
 		begin
@@ -725,6 +725,7 @@ begin
 		crew_list.get_crews_coords(SCOORDTIME);
 		if crew_list.get_crew_list() = nil then
 			edit_zakaz4ik.Text := 'Nil!';
+		crew_list.Crews.Sort(sort_crews_by_state_dist);
 
 		// Show orders:
 		show_orders_grid(order_list);
