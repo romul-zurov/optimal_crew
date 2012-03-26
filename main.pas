@@ -686,6 +686,8 @@ begin
 	// ------------------------------------------------------------------------
 
 	crew_list.clear_crew_list();
+	order_list.clear_order_list();
+
 	with form_main do
 	begin
 
@@ -708,8 +710,8 @@ begin
 
 		if cb_real_base.Checked then
 		begin
-			SCOORDTIME := replace_minute('{Last_minute_30}', cur_time); // for real database
-			SDAY := replace_hour('{Last_hour_4}', cur_time); // for real database
+			SCOORDTIME := replace_time('{Last_minute_30}', cur_time); // for real database
+			SDAY := replace_time('{Last_hour_4}', cur_time); // for real database
 		end;
 
 		if edit_ap_gps.Text = '' then
@@ -717,10 +719,12 @@ begin
 				edit_ap_korpus.Text);
 
 		// try to get current orders
-		order_list := TOrderList.Create(ibquery_main);
+
 		list_order := order_list.get_current_orders();
-		crew_list.get_crew_list_by_crewid_string(order_list.get_crews_id_as_string());
-		crew_list.get_crew_list();
+		crew_list.get_crew_list_by_order_list(order_list);
+		crew_list.get_crews_coords(SCOORDTIME);
+		if crew_list.get_crew_list() = nil then
+			edit_zakaz4ik.Text := 'Nil!';
 
 		// Show orders:
 		show_orders_grid(order_list);
@@ -850,6 +854,7 @@ begin
 
 	crew_list := TCrewList.Create(form_main.ibquery_main);
 	res_crew_list := TCrewList.Create(form_main.ibquery_main);
+	order_list := TOrderList.Create(ibquery_main);
 
 	form_main.panel_ap.Show();
 

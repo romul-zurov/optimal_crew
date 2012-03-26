@@ -24,7 +24,6 @@ object form_main: Tform_main
       item
         Width = 50
       end>
-    ExplicitTop = 412
   end
   object GridPanel_main: TGridPanel
     AlignWithMargins = True
@@ -57,7 +56,6 @@ object form_main: Tform_main
         Value = 100.000000000000000000
       end>
     TabOrder = 1
-    ExplicitHeight = 406
     object panel_ap: TPanel
       AlignWithMargins = True
       Left = 5
@@ -195,7 +193,6 @@ object form_main: Tform_main
           Value = 100.000000000000000000
         end>
       TabOrder = 1
-      ExplicitHeight = 323
       object GroupBox_order: TGroupBox
         Left = 1
         Top = 1
@@ -204,7 +201,6 @@ object form_main: Tform_main
         Align = alClient
         Caption = #1058#1077#1082#1091#1097#1080#1077' '#1079#1072#1082#1072#1079#1099':'
         TabOrder = 0
-        ExplicitWidth = 477
         object grid_order: TStringGrid
           AlignWithMargins = True
           Left = 5
@@ -220,8 +216,6 @@ object form_main: Tform_main
           FixedRows = 0
           ParentCtl3D = False
           TabOrder = 0
-          ExplicitWidth = 657
-          ExplicitHeight = 298
         end
       end
       object GroupBox_crew: TGroupBox
@@ -232,9 +226,6 @@ object form_main: Tform_main
         Align = alClient
         Caption = #1044#1086#1089#1090#1091#1087#1085#1099#1077' '#1101#1082#1080#1087#1072#1078#1080':'
         TabOrder = 1
-        ExplicitLeft = 668
-        ExplicitWidth = 168
-        ExplicitHeight = 321
         object grid_crews: TStringGrid
           AlignWithMargins = True
           Left = 5
@@ -250,8 +241,6 @@ object form_main: Tform_main
           FixedRows = 0
           ParentCtl3D = False
           TabOrder = 0
-          ExplicitWidth = 158
-          ExplicitHeight = 298
         end
       end
     end
