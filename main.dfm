@@ -61,107 +61,124 @@ object form_main: Tform_main
       Left = 5
       Top = 5
       Width = 829
-      Height = 73
+      Height = 56
       Margins.Left = 4
       Margins.Top = 4
       Margins.Right = 4
       Margins.Bottom = 4
       Align = alTop
+      AutoSize = True
       TabOrder = 0
+      DesignSize = (
+        829
+        56)
       object Label2: TLabel
-        Left = 10
-        Top = 6
+        Left = 540
+        Top = 1
         Width = 51
         Height = 13
         Caption = #1047#1072#1082#1072#1079#1095#1080#1082':'
+        Visible = False
       end
       object Label1: TLabel
-        Left = 10
-        Top = 52
+        Left = 2
+        Top = 2
         Width = 75
         Height = 13
         Caption = #1040#1076#1088#1077#1089' '#1087#1086#1076#1072#1095#1080':'
+        Visible = False
       end
       object Label6: TLabel
-        Left = 99
-        Top = 35
+        Left = 97
+        Top = 2
         Width = 35
         Height = 13
         Caption = #1059#1083#1080#1094#1072':'
+        Visible = False
       end
       object Label7: TLabel
-        Left = 432
-        Top = 36
+        Left = 207
+        Top = 2
         Width = 24
         Height = 13
         Caption = #1044#1086#1084':'
+        Visible = False
       end
       object Label8: TLabel
-        Left = 496
-        Top = 36
+        Left = 271
+        Top = 1
         Width = 40
         Height = 13
         Caption = #1050#1086#1088#1087#1091#1089':'
+        Visible = False
       end
       object Label9: TLabel
-        Left = 590
-        Top = 30
+        Left = 373
+        Top = 1
         Width = 90
         Height = 13
         Caption = 'GPS-'#1082#1086#1086#1088#1076#1080#1085#1072#1090#1099':'
+        Visible = False
       end
       object Button1: TButton
-        Left = 756
-        Top = 1
-        Width = 64
+        Left = 684
+        Top = 7
+        Width = 125
         Height = 25
-        Caption = 'Go!'
+        Anchors = [akTop, akRight]
+        Caption = #1054#1073#1085#1086#1074#1080#1090#1100' '#1089#1087#1080#1089#1086#1082
         TabOrder = 0
         OnClick = Button1Click
       end
       object cb_real_base: TCheckBox
-        Left = 678
-        Top = 7
+        Left = 745
+        Top = 38
         Width = 64
         Height = 17
+        Anchors = [akTop, akRight]
         Caption = 'Release'
         TabOrder = 1
         OnClick = cb_real_baseClick
       end
       object edit_zakaz4ik: TEdit
-        Left = 81
-        Top = 3
-        Width = 577
+        Left = 531
+        Top = 19
+        Width = 147
         Height = 21
         TabOrder = 2
+        Visible = False
       end
       object edit_ap_street: TEdit
-        Left = 90
-        Top = 50
-        Width = 328
+        Left = 2
+        Top = 21
+        Width = 183
         Height = 21
         TabOrder = 3
+        Visible = False
       end
       object edit_ap_house: TEdit
-        Left = 424
-        Top = 50
+        Left = 207
+        Top = 21
         Width = 58
         Height = 21
         TabOrder = 4
+        Visible = False
       end
       object edit_ap_korpus: TEdit
-        Left = 488
-        Top = 50
+        Left = 271
+        Top = 21
         Width = 58
         Height = 21
         TabOrder = 5
+        Visible = False
       end
       object edit_ap_gps: TEdit
-        Left = 582
-        Top = 48
-        Width = 235
+        Left = 365
+        Top = 19
+        Width = 160
         Height = 21
         TabOrder = 6
+        Visible = False
       end
     end
     object GridPanel_grids: TGridPanel
