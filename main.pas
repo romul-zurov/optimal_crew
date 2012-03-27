@@ -3,10 +3,11 @@ unit main;
 interface
 
 uses
+	crew, form_order, crew_utils, //
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
 	Dialogs, Grids, StdCtrls, DB, IBDatabase, DBGrids, ComCtrls, IBCustomDataSet,
 	StrUtils, DateUtils, IBQuery, OleCtrls, SHDocVw, MSHTML, ActiveX, IniFiles, WinInet,
-	crew, crew_utils, ExtCtrls;
+	ExtCtrls;
 
 type
 	Tform_main = class(TForm)
@@ -40,6 +41,7 @@ type
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
 		procedure cb_real_baseClick(Sender : TObject);
 		procedure FormClose(Sender : TObject; var Action : TCloseAction);
+		procedure grid_orderClick(Sender : TObject);
 	private
 		{ Private declarations }
 	public
@@ -48,9 +50,13 @@ type
 
 var
 	form_main : Tform_main;
-	crew_list, res_crew_list : TCrewList;
+	crew_list, res_crew_list, tmp_clist : TCrewList;
 	order_list : TOrderList;
 	Complete_Flag : boolean;
+	SDAY, SCOORDTIME : string;
+	order_crew : TOrderCrews;
+	acrews : array of TCrewList;
+	crews_count : integer;
 
 implementation
 
@@ -61,7 +67,7 @@ begin
 	form_main.stbar_main.Panels[0].Text := status;
 end;
 
-function sql_select(sel : string) : Integer;
+function sql_select(sel : string) : integer;
 begin
 	with form_main do
 	begin
@@ -113,10 +119,10 @@ end;
 function coords_to_str(fields : TFields; var clist : TCrewList) : TSTringList;
 var
 	field : TField; // main file
-	j, l, id : Integer;
+	j, l, id : integer;
 	// s, s2, d : string;
 	b : TBytes;
-	pint : ^Integer;
+	pint : ^integer;
 	plat, plong : ^single;
 	s, sdate1, sdate2, sgpsid, scoords : string;
 	res : TSTringList;
@@ -164,7 +170,7 @@ function get_coord_list(const SCTIME : string; var clist : TCrewList) : TSTringL
 var
 	sel : string;
 	// Coord : string;
-	j : Integer;
+	j : integer;
 	coords, slist : TSTringList;
 begin
 	cur_time := now();
@@ -233,7 +239,7 @@ function get_crew_list(sdate : string; var clist : TCrewList) : TSTringList;
 var
 	sel, s, sid, screws_gpsid : string;
 	res, sl : TSTringList;
-	id, GpsId : Integer;
+	id, GpsId : integer;
 begin
 
 	sdate := '''' + sdate + '''';
@@ -404,8 +410,8 @@ end;
 // end;
 // end;
 
-function get_crew_way_time(var points : TList) : Integer;
-	procedure add_s(var s : string; s1, s2, s3, s4 : string; num : Integer);
+function get_crew_way_time(var points : Tlist) : integer;
+	procedure add_s(var s : string; s1, s2, s3, s4 : string; num : integer);
 	var ss : string;
 	begin
 		case num of
@@ -422,7 +428,7 @@ function get_crew_way_time(var points : TList) : Integer;
 		s := s + 'point_' + ss + '[coords][]=' + s4 + '&';
 	end;
 
-var i, c, n, t : Integer;
+var i, c, n, t : integer;
 	a : TAdres;
 	surl, res : string;
 begin
@@ -489,7 +495,7 @@ begin
 	result := res;
 end;
 
-function get_track_time(surl : string) : Integer;
+function get_track_time(surl : string) : integer;
 begin
 	with form_main do
 	begin
@@ -499,7 +505,7 @@ end;
 
 procedure show_orders_grid(var list : TOrderList);
 var pp : Pointer;
-	r : Integer;
+	r : integer;
 	order : TOrder;
 begin
 	with form_main do
@@ -507,6 +513,8 @@ begin
 		with grid_order do
 		begin
 			// Width := 1280 - 10;     //  - define as alClient
+			RowCount := 2;
+			FixedRows := 1;
 			ColCount := 6;
 			ColWidths[0] := 50;
 			// ColWidths[1] := 200;
@@ -516,11 +524,17 @@ begin
 			ColWidths[5] := ColWidths[4];
 			ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
 				- ColWidths[3] - ColWidths[4] - ColWidths[5];
+
+			Cells[0, 0] := '№';
+			Cells[1, 0] := 'Экипаж';
+			Cells[2, 0] := 'Состояние';
+			Cells[3, 0] := 'До окончания';
+			Cells[4, 0] := 'Адрес подачи';
+			Cells[5, 0] := 'Адрес назначения';
 		end;
 
-		grid_order.RowCount := 0;
-		grid_order.Rows[0].Clear;
-		r := 0;
+		// grid_order.Rows[0].Clear;
+		r := 1;
 		for pp in list.Orders do
 		begin
 			order := list.order(pp);
@@ -543,7 +557,7 @@ end;
 
 procedure show_result_crews_grid(var list : TCrewList);
 var pp : Pointer;
-	r : Integer;
+	r : integer;
 	crew : TCrew;
 begin
 	with form_main do
@@ -551,11 +565,12 @@ begin
 		with grid_crews do
 		begin
 			Width := form_main.GroupBox_crew.Width - 10;
-			ColCount := 4;
+			ColCount := 5;
 			ColWidths[0] := 300;
 			ColWidths[1] := 60;
 			ColWidths[2] := 60;
 			ColWidths[3] := 60;
+			ColWidths[4] := 120;
 		end;
 
 		grid_crews.RowCount := 0;
@@ -574,6 +589,7 @@ begin
 			grid_crews.Cells[1, r] := crew.state_as_string;
 			grid_crews.Cells[2, r] := crew.time_as_string;
 			grid_crews.Cells[3, r] := FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
+			grid_crews.Cells[4, r] := crew.Coord;
 			inc(r);
 		end;
 	end;
@@ -609,9 +625,9 @@ procedure get_show_crews_times(var clist : TCrewList; var rlist : TCrewList);
 	end;
 
 var a1, a2, a3, a4 : TAdres;
-	alist : TList;
+	alist : Tlist;
 	pp : Pointer;
-	t, t_stops : Integer;
+	t, t_stops : integer;
 	ss2, ss3, s2, s3, h2, h3, k2, k3 : string;
 	crew : TCrew;
 begin
@@ -621,7 +637,7 @@ begin
 	a3 := TAdres.Create('', '', '', '');
 	with clist do
 		a4 := TAdres.Create(ap_street, ap_house, ap_korpus, ap_gps);
-	alist := TList.Create();
+	alist := Tlist.Create();
 	rlist.Crews.Clear();
 
 	while (clist.Crews.Count > rlist.Crews.Count) do
@@ -668,11 +684,27 @@ begin
 	grid.Cols[0].Assign(list);
 end;
 
+procedure set_bd_times();
+begin
+	SDAY := '2011-10-03 00:00:00'; // for back-up base
+	DEBUG_SDATE_FROM := '2011-10-03 00:00:00';
+	DEBUG_SDATE_TO := '2011-10-04 00:00:00';
+	SCOORDTIME := '2011-10-03 14:57:50'; // for back-up base
+
+	if form_main.cb_real_base.Checked then
+	begin
+		SCOORDTIME := replace_time('{Last_minute_30}', cur_time); // for real database
+		SDAY := replace_time('{Last_hour_4}', cur_time); // for real database
+	end;
+end;
+
 procedure show_tmp();
 var list_coord, list_crew, list_order, list_tmp : TSTringList;
-	surl, sc1, sc2, ap_coord, SDAY, SCOORDTIME : string;
-	i, t : Integer;
-	pp : Pointer;
+	surl, sc1, sc2, ap_coord : string;
+	i, t : integer;
+	pp, po : Pointer;
+	order : TOrder;
+	crew : TCrew;
 begin
 	cur_time := now();
 	// !!----------------------------------------------------------------------
@@ -703,16 +735,7 @@ begin
 
 		grid_crews.RowCount := 0; // clear grid
 
-		SDAY := '2011-10-03 00:00:00'; // for back-up base
-		DEBUG_SDATE_FROM := '2011-10-03 00:00:00';
-		DEBUG_SDATE_TO := '2011-10-04 00:00:00';
-		SCOORDTIME := '2011-10-03 14:57:50'; // for back-up base
-
-		if cb_real_base.Checked then
-		begin
-			SCOORDTIME := replace_time('{Last_minute_30}', cur_time); // for real database
-			SDAY := replace_time('{Last_hour_4}', cur_time); // for real database
-		end;
+		set_bd_times();
 
 		if edit_ap_gps.Text = '' then
 			edit_ap_gps.Text := get_gps_coords_for_adres(edit_ap_street.Text, edit_ap_house.Text,
@@ -725,11 +748,13 @@ begin
 		crew_list.get_crews_coords(SCOORDTIME);
 		if crew_list.get_crew_list() = nil then
 			edit_zakaz4ik.Text := 'Nil!';
+		// crew_list.delete_all_none_coord();
 		crew_list.Crews.Sort(sort_crews_by_state_dist);
 
 		// Show orders:
 		show_orders_grid(order_list);
 		show_result_crews_grid(crew_list);
+
 		exit(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 		// set AP for crew_list and get coords for crews
@@ -765,6 +790,76 @@ begin
 		// edit_zakaz4ik.Text := sc1 + ' :: ' + sc2;
 		// edit_adres.Text := floattostr(get_dist_from_coord(sc1, sc2));
 	end;
+end;
+
+procedure show_order(row : integer);
+var order : TOrder;
+	ordId : integer;
+	pp : Pointer;
+	crew : TCrew;
+	slist : TSTringList;
+	clist : TCrewList;
+
+begin
+	if form_main.grid_order.Cells[0, row] = '' then
+		exit();
+
+	try
+		ordId := StrToInt(form_main.grid_order.Cells[0, row]);
+	except
+		exit();
+	end;
+	order := order_list.order(order_list.find_by_Id(ordId));
+	if order = nil then
+		exit();
+
+	if order.CrewId <> -1 then
+	begin
+		crew := TCrew(crew_list.findByCrewId(order.CrewId));
+		order.time_to_end := crew.get_time(order_list, false);
+		show_orders_grid(order_list);
+
+		exit();
+	end;
+
+	// order.form := TForm.Create(nil);
+	// TWinControl(browser).Parent := form;
+	// order.form.Width := 800;
+	// order.form.Height := 600;
+	order.form.Show();
+	set_bd_times();
+	inc(crews_count);
+	setlength(acrews, crews_count);
+	acrews[crews_count - 1] := TCrewList.Create(form_main.ibquery_main);
+	clist := TCrewList(Pointer(acrews[crews_count - 1]));
+
+	clist.get_crew_list_by_order_list(order_list);
+	clist.get_crews_coords(SCOORDTIME);
+	if clist.get_crew_list() = nil then
+		pass;
+	if order.source.gps = '' then
+		with order.source do
+			gps := get_gps_coords_for_adres(street, house, korpus);
+	with order.source do
+		clist.set_ap(street, house, korpus, gps);
+	clist.set_crews_dist(clist.ap_gps);
+	clist.Crews.Sort(sort_crews_by_state_dist);
+
+	slist := TSTringList.Create();
+	for pp in clist.Crews do
+	begin
+		if not order.form.Visible then
+			break;
+
+		crew := clist.crew(pp);
+		crew.ap := order.source;
+		crew.get_time(order_list, true);
+		clist.Crews.Sort(sort_crews_by_time); // !!!!!!!!!!!!!!!!  :((
+		slist := clist.ret_crews_stringlist();
+		order.form.show_crews(slist);
+		clist.Crews.Sort(sort_crews_by_state_dist); // !!!!!!!!!!  :)))
+	end;
+	FreeAndNil(slist);
 end;
 
 function open_database() : boolean;
@@ -854,8 +949,8 @@ begin
 	// form_main.DBGrid1.Hide();
 
 	crew_list := TCrewList.Create(form_main.ibquery_main);
-	res_crew_list := TCrewList.Create(form_main.ibquery_main);
 	order_list := TOrderList.Create(ibquery_main);
+	crews_count := 0;
 
 	form_main.panel_ap.Show();
 
@@ -864,6 +959,11 @@ begin
 		// show_tmp();
 	end;
 	form_main.Resizing(wsMaximized);
+end;
+
+procedure Tform_main.grid_orderClick(Sender : TObject);
+begin
+	show_order(self.grid_order.row);
 end;
 
 end.

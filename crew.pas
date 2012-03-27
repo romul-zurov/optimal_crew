@@ -3,6 +3,8 @@ unit crew;
 interface
 
 uses crew_utils, // utils from robocap and mine
+	form_order, // form for orders
+	Generics.Collections, // for forward class definition
 	Controls, Forms, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX, //
 	IBQuery, DB, WinInet;
 
@@ -22,6 +24,8 @@ function sort_crews_by_time(p1, p2 : Pointer) : Integer;
 function get_zapros(surl : string) : string;
 
 type
+	TCrewList = class;
+
 	TAdres = class(TObject)
 		street : string;
 		house : string;
@@ -33,7 +37,6 @@ type
 		function isEmpty() : boolean;
 	end;
 
-type
 	TOrder = class(TObject)
 		ID : Integer; // order main ID in ORDERS table, -1 if not defined
 		CrewID : Integer; // crew ID for a order, -1 if not defined
@@ -45,14 +48,15 @@ type
 		time_to_end : Integer; // время до окончания заказа в минутах
 
 		query : TIBQuery;
-		form : TForm; // form to show order
+		form : TFormOrder; // form to show order
+
+		// crews_list : TCrewList;
 
 		constructor Create(OrderId : Integer; var IBQuery : TIBQuery);
 		function get_order_data() : Integer;
 		function time_as_string() : string; // время до окончания заказа в виде часы-минуты;
 	end;
 
-type
 	TOrderList = class(TObject)
 		Orders : TList;
 		query : TIBQuery;
@@ -67,7 +71,6 @@ type
 		function get_crews_id_as_string() : string;
 	end;
 
-type
 	TCrew = class(TObject)
 		CrewID : Integer;
 		GpsId : Integer;
@@ -97,13 +100,9 @@ type
 		function is_crew_was_in_coord(coord : string) : boolean;
 		procedure calc_dist(coord : string);
 		procedure set_time(m : Integer); // set time and time_as_string;
-		function get_time(var list : TOrderList) : Integer;
+		function get_time(var list : TOrderList; newOrder : boolean) : Integer;
 	end;
 
-type
-	PTCrew = ^TCrew;
-
-type
 	TCrewList = class(TObject)
 		Crews : TList;
 		query : TIBQuery;
@@ -129,6 +128,7 @@ type
 		function get_crewid_list_as_string() : string;
 		function get_nonfree_crewid_list_as_string() : string;
 		function delete_all_none_crewId() : Integer;
+		function delete_all_none_coord() : Integer;
 		function set_crewId_by_gpsId(list : TStringList) : Integer;
 		function set_crews_orderId(list : TStringList) : Integer;
 		function set_crews_state_by_crewId(var list : TStringList) : Integer;
@@ -141,6 +141,7 @@ type
 		function get_crew_list() : TStringList;
 		function set_crews_data(list : TStringList) : Integer;
 		function get_crews_coords(SCTIME : string) : Integer;
+		function ret_crews_stringlist() : TStringList;
 	private
 		function findById(ID : Integer; gps : boolean) : Pointer;
 		function get_id_list_as_string(gps : boolean) : string;
@@ -148,6 +149,12 @@ type
 		function delete_all_none_orderId() : Integer;
 		procedure set_crews_state_as_string();
 		procedure set_crews_orderId_by_order_list(var list : TOrderList);
+	end;
+
+	TOrderCrews = class(TObject)
+		OrderId : Integer;
+		crew_list : TCrewList;
+		constructor Create(var IBQuery : TIBQuery; ordId : Integer);
 	end;
 
 implementation
@@ -330,6 +337,33 @@ begin
 	exit(-1);
 end;
 
+function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
+	function get_coords() : string;
+	var surl : string;
+	begin
+		surl := ac_taxi_url + 'order?i_generate_address=1&service=0&';
+		surl := surl + 'point_from[obj][]=' + ulica + '&';
+		surl := surl + 'point_from[house][]=' + dom + '&';
+		surl := surl + 'point_from[corp][]=' + korpus + '&';
+		surl := surl + 'point_to[obj][]=' + ulica + '&';
+		surl := surl + 'point_to[house][]=' + dom + '&';
+		surl := surl + 'point_to[corp][]=' + korpus + '&';
+
+		surl := '"' + surl + '"' + ' "DayGPSKoordinatPoAdresu" "foo"';
+		surl := param64(surl);
+		surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
+
+		result := get_zapros(surl);
+	end;
+
+var surl, res : string;
+begin
+	res := get_coords();
+	if pos('Error', res) > 0 then
+		res := 'Error';
+	result := res;
+end;
+
 { TCrew }
 
 function TCrew.append_coords(coord, time : string) : Integer;
@@ -369,7 +403,15 @@ begin
 	ap := TAdres.Create('', '', '', ''); // адрес подачи
 end;
 
-function TCrew.get_time(var list : TOrderList) : Integer;
+function TCrew.get_time(var list : TOrderList; newOrder : boolean) : Integer;
+	function get_gps(adr : TAdres) : string;
+	begin
+		if adr.gps = '' then
+			with adr do
+				gps := get_gps_coords_for_adres(street, house, korpus);
+		exit(adr.gps);
+	end;
+
 var cur_pos : TAdres;
 	points : TList;
 	stops_time : Integer; // время на остановки для экипажа на заказе
@@ -377,7 +419,7 @@ var cur_pos : TAdres;
 begin
 	if (self.state = -1) //
 		or (self.coord = '') //
-		or self.ap.isEmpty() //
+		or (newOrder and self.ap.isEmpty()) //
 		or ( //
 		(self.state = CREW_NAZAKAZE) //
 			and ((self.OrderId = -1) or (self.source.isEmpty()) or (self.dest.isEmpty())) //
@@ -398,16 +440,30 @@ begin
 	// если экипаж на заказе, то проверяем, был ли он в точках source и dest
 	// если нет - добавляем их в маршрут и прибавляем время на остановки
 	begin
-
+		order := list.order(list.find_by_Id(self.OrderId));
+		if not self.is_crew_was_in_coord(get_gps(order.source)) then
+		begin
+			points.Add(Pointer(order.source));
+			points.Add(Pointer(order.dest));
+			stops_time := stops_time + 10 + 3;
+		end
+		else if not self.is_crew_was_in_coord(get_gps(order.dest)) then
+		begin
+			points.Add(Pointer(order.dest));
+			stops_time := stops_time + 3;
+		end;
 	end;
 
-	points.Add(Pointer(self.ap)); // конец маршрута - адрес подачи
+	if newOrder then
+		points.Add(Pointer(self.ap)); // конец маршрута - адрес подачи для нового заказа
 
 	result := get_crew_way_time(points);
 
-	result := result + stops_time;
-	self.set_time(result);
+	result := ifthen(result > -1, result + stops_time, -1);
+	if newOrder then
+		self.set_time(result);
 	FreeAndNil(points);
+	exit(result);
 end;
 
 function TCrew.is_crew_was_in_coord(coord : string) : boolean;
@@ -478,7 +534,7 @@ var sl : TStringList;
 	crew : TCrew;
 	Count, i : Integer;
 begin
-	Count := IfThen(self.coords.Count < self.coords_times.Count, self.coords.Count, self.coords_times.Count);
+	Count := ifthen(self.coords.Count < self.coords_times.Count, self.coords.Count, self.coords_times.Count);
 	if (Count <= 0) then
 		exit(-1);
 	sl := TStringList.Create();
@@ -556,6 +612,15 @@ begin
 		result := nil;
 end;
 
+function TCrewList.delete_all_none_coord : Integer;
+var pp : Pointer;
+begin
+	for pp in self.Crews do
+		if (self.crew(pp).coord = '') then
+			self.Crews.delete(self.Crews.IndexOf(pp));
+	exit(0);
+end;
+
 function TCrewList.delete_all_none_crewId : Integer;
 var pp : Pointer;
 begin
@@ -599,7 +664,7 @@ end;
 function TCrewList.findById(ID : Integer; gps : boolean) : Pointer;
 var
 	crew : TCrew;
-	pcrew : PTCrew;
+	pcrew : ^TCrew;
 begin
 	result := nil;
 	for pcrew in self.Crews do
@@ -701,6 +766,7 @@ begin
 	end;
 	slist.Sorted := true;
 	self.set_current_crews_coord();
+	self.delete_all_none_coord(); self.delete_all_none_coord();
 	// self.set_crews_dist(self.ap_gps);
 
 	FreeAndNil(slist);
@@ -724,9 +790,22 @@ begin
 end;
 
 function TCrewList.get_crew_list_by_order_list(var list : TOrderList) : TStringList;
+var pp : Pointer;
+	order : TOrder;
+	crew : TCrew;
 begin
 	result := self.get_crew_list_by_crewid_string(list.get_crews_id_as_string());
 	self.set_crews_orderId_by_order_list(list);
+	for pp in list.Orders do
+	begin
+		order := list.order(pp);
+		crew := self.crewByCrewId(order.CrewID);
+		if (order <> nil) and (crew <> nil) then
+		begin
+			crew.source := order.source;
+			crew.dest := order.dest;
+		end;
+	end;
 end;
 
 function TCrewList.get_crew_list() : TStringList;
@@ -786,6 +865,27 @@ end;
 function TCrewList.isGpsIdInList(ID : Integer) : boolean;
 begin
 	result := self.isCrewInList(ID, true);
+end;
+
+function TCrewList.ret_crews_stringlist : TStringList;
+var pp : Pointer;
+	crew : TCrew;
+	s : string;
+begin
+	result := TStringList.Create();
+	for pp in self.Crews do
+	begin
+		crew := self.crew(pp);
+		if crew.time > -1 then
+		begin
+			s := IntToStr(crew.CrewID) + '|' //
+				+ crew.name + '||' //
+				+ crew.state_as_string + '|||' //
+				+ crew.time_as_string + '||||' //
+				+ FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
+			result.Append(s);
+		end;
+	end;
 end;
 
 function TCrewList.set_ap(street, house, korpus, gps : string) : Integer;
@@ -879,12 +979,12 @@ begin
 		crew := self.crewByCrewId(StrToInt(sl.Strings[0]));
 
 		if (crew.OrderId <> -1) or (crew.state <> CREW_NAZAKAZE) then
-			Continue; // если уже назначен заказ, то пропускаем,
+			continue; // если уже назначен заказ, то пропускаем,
 		// т.к. для экипажа на заказе м.б. несколько
 		// заказов в состоянии исполнения
 
 		if sl.Strings[5] <> '' then
-			Continue; // пропускаем заказы с промежуточными остановками;
+			continue; // пропускаем заказы с промежуточными остановками;
 
 		crew.OrderId := StrToInt(sl.Strings[1]);
 		// sl.Strings[2]; // - пропускаем
@@ -1008,7 +1108,7 @@ begin
 	time_to_end := -1; // время до окончания заказа в минутах
 	self.query := IBQuery;
 
-	form := TForm.Create(nil);
+	form := TFormOrder.Create(nil);
 end;
 
 function TOrder.get_order_data() : Integer;
@@ -1163,6 +1263,15 @@ begin
 		result := TOrder(self.Orders.Items[i])
 	else
 		result := nil;
+end;
+
+{ TOrderCrews }
+
+constructor TOrderCrews.Create(var IBQuery : TIBQuery; ordId : Integer);
+begin
+	inherited Create();
+	self.OrderId := ordId;
+	self.crew_list.Create(IBQuery);
 end;
 
 end.

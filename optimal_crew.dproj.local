@@ -12,5 +12,7 @@
     <Transaction>2012.02.07 00:29:58.428.pas,D:\work\optimal_crew\utils.pas=D:\work\optimal_crew\crew_utils.pas</Transaction>
     <Transaction>2012.02.10 19:51:57.113.txt,D:\work\optimal_crew\New1.txt=D:\work\optimal_crew\TODO.txt</Transaction>
     <Transaction>2012.03.02 00:23:29.237.pas,D:\work\optimal_crew\Unit1.pas=D:\work\optimal_crew\crew.pas</Transaction>
+    <Transaction>2012.03.26 22:27:01.685.pas,D:\work\optimal_crew\Unit1.pas=D:\work\optimal_crew\form_order.pas</Transaction>
+    <Transaction>2012.03.26 22:27:01.685.dfm,D:\work\optimal_crew\Unit1.dfm=D:\work\optimal_crew\form_order.dfm</Transaction>
   </Transactions>
 </BorlandProject>
