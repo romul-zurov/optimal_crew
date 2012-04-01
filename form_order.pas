@@ -17,7 +17,7 @@ type
 		{ Private declarations }
 	public
 		{ Public declarations }
-		procedure show_crews(var slist : tstringlist);
+		procedure show_crews(OrderId : integer; source, dest : string; var slist : tstringlist);
 	end;
 
 var
@@ -38,10 +38,13 @@ begin
 	self.Height := 400;
 end;
 
-procedure TFormOrder.show_crews(var slist : tstringlist);
+procedure TFormOrder.show_crews(OrderId : integer; source, dest : string; var slist : tstringlist);
 var s : string;
 	r : integer;
 begin
+	self.Caption := 'Заказ № ' + inttostr(OrderId);
+	self.GroupBox_crews.Caption := 'Подбор экипажа для заказ № ' + inttostr(OrderId) //
+		+ ' ' + source + ' --> ' + dest;
 	with self.grid_crews do
 	begin
 		RowCount := 2;
@@ -71,7 +74,7 @@ begin
 			Cells[1, r] := get_substr(s, '|', '||');
 			Cells[2, r] := get_substr(s, '||', '|||');
 			Cells[3, r] := get_substr(s, '|||', '||||');
-			Cells[4, r] := get_substr(s, '||||', '') + 'км';
+			Cells[4, r] := get_substr(s, '||||', ''); // + 'км';
 			inc(r);
 		end;
 end;

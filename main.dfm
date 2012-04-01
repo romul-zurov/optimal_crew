@@ -3,7 +3,7 @@ object form_main: Tform_main
   Top = 0
   Caption = #1055#1086#1076#1073#1086#1088' '#1086#1087#1090#1080#1084#1072#1083#1100#1085#1086#1075#1086' '#1101#1082#1080#1087#1072#1078#1072' '#1040#1057'-'#1058#1072#1082#1089#1080
   ClientHeight = 380
-  ClientWidth = 845
+  ClientWidth = 884
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -18,7 +18,7 @@ object form_main: Tform_main
   object stbar_main: TStatusBar
     Left = 0
     Top = 361
-    Width = 845
+    Width = 884
     Height = 19
     Panels = <
       item
@@ -29,7 +29,7 @@ object form_main: Tform_main
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 839
+    Width = 878
     Height = 355
     Align = alClient
     ColumnCollection = <
@@ -60,8 +60,8 @@ object form_main: Tform_main
       AlignWithMargins = True
       Left = 5
       Top = 5
-      Width = 829
-      Height = 56
+      Width = 868
+      Height = 43
       Margins.Left = 4
       Margins.Top = 4
       Margins.Right = 4
@@ -70,8 +70,8 @@ object form_main: Tform_main
       AutoSize = True
       TabOrder = 0
       DesignSize = (
-        829
-        56)
+        868
+        43)
       object Label2: TLabel
         Left = 540
         Top = 1
@@ -121,7 +121,7 @@ object form_main: Tform_main
         Visible = False
       end
       object Button1: TButton
-        Left = 684
+        Left = 723
         Top = 7
         Width = 125
         Height = 25
@@ -131,12 +131,12 @@ object form_main: Tform_main
         OnClick = Button1Click
       end
       object cb_real_base: TCheckBox
-        Left = 745
-        Top = 38
-        Width = 64
+        Left = 687
+        Top = 11
+        Width = 30
         Height = 17
         Anchors = [akTop, akRight]
-        Caption = 'Release'
+        Caption = 'R'
         TabOrder = 1
         OnClick = cb_real_baseClick
       end
@@ -183,16 +183,16 @@ object form_main: Tform_main
     end
     object GridPanel_grids: TGridPanel
       Left = 1
-      Top = 82
-      Width = 837
-      Height = 272
+      Top = 52
+      Width = 876
+      Height = 302
       Align = alClient
       ColumnCollection = <
         item
           Value = 70.032449513318540000
         end
         item
-          Value = 29.967550486681470000
+          Value = 29.967550486681460000
         end>
       ControlCollection = <
         item
@@ -213,8 +213,8 @@ object form_main: Tform_main
       object GroupBox_order: TGroupBox
         Left = 1
         Top = 1
-        Width = 584
-        Height = 270
+        Width = 612
+        Height = 300
         Align = alClient
         Caption = #1058#1077#1082#1091#1097#1080#1077' '#1079#1072#1082#1072#1079#1099':'
         TabOrder = 0
@@ -222,8 +222,8 @@ object form_main: Tform_main
           AlignWithMargins = True
           Left = 5
           Top = 18
-          Width = 574
-          Height = 247
+          Width = 602
+          Height = 277
           Align = alClient
           ColCount = 3
           Ctl3D = False
@@ -233,14 +233,14 @@ object form_main: Tform_main
           FixedRows = 0
           ParentCtl3D = False
           TabOrder = 0
-          OnClick = grid_orderClick
+          OnDblClick = grid_orderDblClick
         end
       end
       object GroupBox_crew: TGroupBox
-        Left = 585
+        Left = 613
         Top = 1
-        Width = 251
-        Height = 270
+        Width = 262
+        Height = 300
         Align = alClient
         Caption = #1044#1086#1089#1090#1091#1087#1085#1099#1077' '#1101#1082#1080#1087#1072#1078#1080':'
         TabOrder = 1
@@ -248,8 +248,8 @@ object form_main: Tform_main
           AlignWithMargins = True
           Left = 5
           Top = 18
-          Width = 241
-          Height = 247
+          Width = 252
+          Height = 277
           Align = alClient
           ColCount = 4
           Ctl3D = False

@@ -41,7 +41,7 @@ type
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
 		procedure cb_real_baseClick(Sender : TObject);
 		procedure FormClose(Sender : TObject; var Action : TCloseAction);
-		procedure grid_orderClick(Sender : TObject);
+		procedure grid_orderDblClick(Sender : TObject);
 	private
 		{ Private declarations }
 	public
@@ -517,17 +517,17 @@ begin
 			FixedRows := 1;
 			ColCount := 6;
 			ColWidths[0] := 50;
-			// ColWidths[1] := 200;
+			ColWidths[1] := 200;
 			ColWidths[2] := 120;
-			ColWidths[3] := ColWidths[0];
+			ColWidths[3] := 80;
 			ColWidths[4] := 200; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
 			ColWidths[5] := ColWidths[4];
-			ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
-				- ColWidths[3] - ColWidths[4] - ColWidths[5];
+//			ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
+//				- ColWidths[3] - ColWidths[4] - ColWidths[5];
 
 			Cells[0, 0] := '№';
 			Cells[1, 0] := 'Экипаж';
-			Cells[2, 0] := 'Состояние';
+			Cells[2, 0] := 'Время подачи';
 			Cells[3, 0] := 'До окончания';
 			Cells[4, 0] := 'Адрес подачи';
 			Cells[5, 0] := 'Адрес назначения';
@@ -546,10 +546,8 @@ begin
 				grid_order.Cells[1, r] := '! ' + IntToStr(order.CrewId);
 			grid_order.Cells[2, r] := order.source_time;
 			grid_order.Cells[3, r] := order.time_as_string();
-			with order.source do
-				grid_order.Cells[4, r] := street + ', ' + house + '-' + korpus;
-			with order.dest do
-				grid_order.Cells[5, r] := street + ', ' + house + '-' + korpus;
+			grid_order.Cells[4, r] := order.source.get_as_string();
+			grid_order.Cells[5, r] := order.dest.get_as_string();
 			inc(r);
 		end;
 	end;
@@ -856,7 +854,7 @@ begin
 		crew.get_time(order_list, true);
 		clist.Crews.Sort(sort_crews_by_time); // !!!!!!!!!!!!!!!!  :((
 		slist := clist.ret_crews_stringlist();
-		order.form.show_crews(slist);
+		order.form.show_crews(order.ID, order.source.get_as_string(), order.dest.get_as_string(), slist);
 		clist.Crews.Sort(sort_crews_by_state_dist); // !!!!!!!!!!  :)))
 	end;
 	FreeAndNil(slist);
@@ -959,9 +957,10 @@ begin
 		// show_tmp();
 	end;
 	form_main.Resizing(wsMaximized);
+	show_orders_grid(order_list);
 end;
 
-procedure Tform_main.grid_orderClick(Sender : TObject);
+procedure Tform_main.grid_orderDblClick(Sender : TObject);
 begin
 	show_order(self.grid_order.row);
 end;

@@ -29,17 +29,26 @@ end;
 
 procedure return_adres(value : string; var s, h, k : string);
 begin
+	s := ''; h := ''; k := '';
 	s := get_substr(value, '', ',');
-	h := get_substr(value, ',', '');
-	if pos('/', h) > 0 then
+	if s = '' then
 	begin
+		// если адрес типа "финляндский вокзал" то вертаем его в улице и выходим
+		s := value;
+		exit();
+	end;
+	h := get_substr(value, ',', '');
+	if pos('/', h) > 0 then // если есть номер корпуса
+	begin
+		// выделяем корпус
 		k := get_substr(h, '/', '');
 		h := get_substr(h, '', '/');
-		if pos('-', k) > 0 then
+		if pos('-', k) > 0 then // отбрасываем квартиру
 			k := get_substr(k, '', '-');
 	end
-	else
-		k := '';
+	else if pos('-', h) > 0 then // отбрасываем квартиру
+		h := get_substr(h, '', '-');
+
 end;
 
 function reverseStringList(var list : TStringList) : Integer;
@@ -122,8 +131,10 @@ function get_dist_from_coord(scoord1, scoord2 : string) : double;
 	var slat, slong : string;
 	begin
 		result := false;
-		sc := ReplaceStr(sc, ' ', '');
+		sc := StringReplace(sc, ' ', '', [rfReplaceAll]); // ReplaceStr(sc, ' ', '');
 		slong := get_substr(sc, '', ','); slat := get_substr(sc, ',', '');
+		if (slong = '') or (slat = '') then
+			exit();
 		try
 			long := dotStrtoFloat(slong);
 			lat := dotStrtoFloat(slat);

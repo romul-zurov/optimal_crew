@@ -12,6 +12,8 @@ const CREW_SVOBODEN = 1;
 
 const CREW_NAZAKAZE = 3;
 
+const ZAKAZ_DONE = 2; // согласно ORDER_STATE.SYSTEMSTATE
+
 var
 	DEBUG : boolean;
 	DEBUG_SDATE_FROM : string;
@@ -35,11 +37,15 @@ type
 		procedure setAdres(street, house, korpus, gps : string);
 		procedure Clear();
 		function isEmpty() : boolean;
+		function get_as_string() : string;
 	end;
 
 	TOrder = class(TObject)
 		ID : Integer; // order main ID in ORDERS table, -1 if not defined
 		CrewID : Integer; // crew ID for a order, -1 if not defined
+		want_CrewId : Integer; // желаемый экипаж на заказе
+		prior_CrewId : Integer; // предварительный экипаж на предвар. заказе
+		prior : boolean; // признак предварительного заказа
 		state : Integer; // -1 - not defined, 0 - принят, маршрут задан
 		// .                 1 - в работе, 2 - выполнен;
 		source : TAdres; // address from
@@ -69,6 +75,7 @@ type
 		function Append(OrderId : Integer) : Pointer;
 		function get_current_orders() : TStringList;
 		function get_crews_id_as_string() : string;
+		function delete_all_none_adres() : Integer;
 	end;
 
 	TCrew = class(TObject)
@@ -252,13 +259,19 @@ end;
 
 function sort_crews_by_time(p1, p2 : Pointer) : Integer;
 var t1, t2 : Integer;
+	d1, d2 : double;
 	c1, c2 : TCrew;
 begin
 	c1 := TCrew(p1); c2 := TCrew(p2);
 	t1 := c1.time; t2 := c2.time;
+	d1 := c1.dist_way; d2 := c2.dist_way;
 	if (t1 < t2) then
 		exit(-1)
 	else if (t1 > t2) then
+		exit(1)
+	else if (d1 < d2) then // если время равно, сравниваем длину маршрута
+		exit(-1)
+	else if (d1 > d2) then
 		exit(1)
 	else
 		exit(0);
@@ -284,7 +297,7 @@ begin
 		exit(0);
 end;
 
-function get_crew_way_time(var points : TList) : Integer;
+function get_crew_way_time(var points : TList; var dist_way : double) : Integer;
 	procedure add_s(var s : string; s1, s2, s3, s4 : string; num : Integer);
 	var ss : string;
 	begin
@@ -304,8 +317,9 @@ function get_crew_way_time(var points : TList) : Integer;
 
 var i, c, n, t : Integer;
 	a : TAdres;
-	surl, res : string;
+	surl, res, dist_res : string;
 begin
+	dist_way := -1;
 	c := points.Count;
 	if c < 2 then
 		exit(-1);
@@ -326,9 +340,11 @@ begin
 	surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
 	res := get_zapros(surl);
 
+	dist_res := get_substr(res, 'Маршрут (без учета пробок): ', ' км.');
 	res := get_substr(res, 'Время (с учетом пробок): ', ' мин.');
 	if (length(res) > 0) and (pos('Error', res) < 1) then
 		try
+			dist_way := dotStrtoFloat(dist_res);
 			t := StrToInt(res);
 			exit(t);
 		except
@@ -360,7 +376,8 @@ var surl, res : string;
 begin
 	res := get_coords();
 	if pos('Error', res) > 0 then
-		res := 'Error';
+		// res := 'Error';
+		res := '';
 	result := res;
 end;
 
@@ -404,7 +421,7 @@ begin
 end;
 
 function TCrew.get_time(var list : TOrderList; newOrder : boolean) : Integer;
-	function get_gps(adr : TAdres) : string;
+	function get_set_gps(var adr : TAdres) : string;
 	begin
 		if adr.gps = '' then
 			with adr do
@@ -441,33 +458,50 @@ begin
 	// если нет - добавляем их в маршрут и прибавляем время на остановки
 	begin
 		order := list.order(list.find_by_Id(self.OrderId));
-		if not self.is_crew_was_in_coord(get_gps(order.source)) then
+		if not self.is_crew_was_in_coord(get_set_gps(order.source)) then
 		begin
+			// если экипаж ещё не забрал клиента
 			points.Add(Pointer(order.source));
 			points.Add(Pointer(order.dest));
 			stops_time := stops_time + 10 + 3;
 		end
-		else if not self.is_crew_was_in_coord(get_gps(order.dest)) then
+		else if not self.is_crew_was_in_coord(get_set_gps(order.dest)) then
 		begin
+			// если уже забрал, но не высадил
 			points.Add(Pointer(order.dest));
 			stops_time := stops_time + 3;
+		end
+		else
+		begin
+			// забрал-высадил, то делаем заказ завёршенным и экипаж свободным
+			stops_time := -1; // см. далее
+			self.state := CREW_SVOBODEN;
+			order.CrewID := -1; // сбрасываем экипаж в заказе
+			order.state := ZAKAZ_DONE;
 		end;
 	end;
 
-	if newOrder then
-		points.Add(Pointer(self.ap)); // конец маршрута - адрес подачи для нового заказа
+	if (not newOrder) and (stops_time = -1) then
+		// если забрал-высадил и нет нового АП, то считаем заказ завёршенным
+		result := 0
+	else
+	begin
+		if newOrder then
+			points.Add(Pointer(self.ap)); // конец маршрута - адрес подачи для нового заказа
 
-	result := get_crew_way_time(points);
+		result := get_crew_way_time(points, self.dist_way);
 
-	result := ifthen(result > -1, result + stops_time, -1);
-	if newOrder then
-		self.set_time(result);
+		result := ifthen(result > -1, result + stops_time, -1);
+		if newOrder then
+			self.set_time(result);
+	end;
+
 	FreeAndNil(points);
 	exit(result);
 end;
 
 function TCrew.is_crew_was_in_coord(coord : string) : boolean;
-const RADIUS = 100.0;
+const RADIUS = 150.0;
 var cc : string;
 	d : double;
 begin
@@ -520,8 +554,11 @@ begin
 	begin
 		self.time := -1;
 		self.time_as_string := '';
+		self.dist_way := -1;
+		self.dist_way_as_string := '';
 		exit();
 	end;
+	self.dist_way_as_string := FloatToStrF(self.dist_way, ffFixed, 8, 3) + 'км';
 	self.time := m;
 	self.time_as_string := IntToStr(m mod 60) + ' мин.';
 	if m > 59 then
@@ -882,7 +919,8 @@ begin
 				+ crew.name + '||' //
 				+ crew.state_as_string + '|||' //
 				+ crew.time_as_string + '||||' //
-				+ FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
+				+ crew.dist_way_as_string;
+			// + FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
 			result.Append(s);
 		end;
 	end;
@@ -1077,9 +1115,25 @@ begin
 	self.gps := gps;
 end;
 
+function TAdres.get_as_string : string;
+begin
+	if length(self.street) > 0 then
+		result := self.street
+	else
+		exit('');
+	if length(self.house) > 0 then
+	begin
+		result := result + ', ' + self.house;
+		if length(self.korpus) > 0 then
+			result := result + '/' + self.korpus;
+	end;
+	exit(result);
+end;
+
 function TAdres.isEmpty : boolean;
 begin
-	if (length(self.gps) > 0) or ((length(self.street) > 0) and (length(self.house) > 0)) then
+	if (length(self.gps) > 0) or (length(self.street) > 0) then
+		// если есть координата или улица, то адрес не пустой
 		exit(false)
 	else
 		exit(true);
@@ -1100,6 +1154,9 @@ begin
 	inherited Create();
 	self.ID := OrderId;
 	self.CrewID := -1;
+	want_CrewId := -1; // желаемый экипаж на заказе
+	prior_CrewId := -1; // предварительный экипаж на предвар. заказе
+	prior := false; // признак предварительного заказа
 	state := -1; // -1 - not defined, 0 - принят, маршрут задан
 	// .                 1 - в работе, 2 - выполнен;
 	source := TAdres.Create('', '', '', ''); // address from
@@ -1149,7 +1206,9 @@ end;
 function TOrder.time_as_string : string;
 begin
 	if self.time_to_end < 0 then
-		exit('-');
+		exit('неизвестно')
+	else if self.time_to_end = 0 then
+		exit('завершён');
 	result := IntToStr(self.time_to_end mod 60) + ' мин.';
 	if self.time_to_end > 59 then
 		result := IntToStr(self.time_to_end div 60) + ' ч. ' + result;
@@ -1178,6 +1237,17 @@ begin
 	inherited Create;
 	self.Orders := TList.Create();
 	self.query := IBQuery;
+end;
+
+function TOrderList.delete_all_none_adres : Integer;
+var pp : Pointer;
+	order : TOrder;
+begin
+	for pp in self.Orders do
+		with self.order(pp) do
+			if source.isEmpty() or dest.isEmpty() then
+				self.Orders.delete(self.Orders.IndexOf(pp));
+	exit(0);
 end;
 
 function TOrderList.find_by_Id(OrderId : Integer) : Pointer;
@@ -1243,6 +1313,7 @@ begin
 			// если заказа нет в списке, то запрашиваем его данные
 		end;
 
+	self.delete_all_none_adres(); self.delete_all_none_adres();
 	exit(res);
 end;
 
