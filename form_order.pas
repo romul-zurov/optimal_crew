@@ -5,12 +5,17 @@ interface
 uses
 	crew_utils, //
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-	Dialogs, Grids, StdCtrls;
+	Dialogs, Grids, StdCtrls, ExtCtrls, OleCtrls, SHDocVw;
 
 type
 	TFormOrder = class(TForm)
 		GroupBox_crews : TGroupBox;
 		grid_crews : TStringGrid;
+		GridPanel_order : TGridPanel;
+		GroupBox_controls : TGroupBox;
+		GroupBox1 : TGroupBox;
+		WebBrowser1 : TWebBrowser;
+		Button_get_crew : TButton;
 		procedure FormCreate(Sender : TObject);
 		procedure FormClose(Sender : TObject; var Action : TCloseAction);
 	private

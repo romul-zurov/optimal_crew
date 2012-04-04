@@ -3,11 +3,11 @@ unit main;
 interface
 
 uses
-	crew, form_order, crew_utils, //
+	crew, form_order, crew_utils, crew_globals, //
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
 	Dialogs, Grids, StdCtrls, DB, IBDatabase, DBGrids, ComCtrls, IBCustomDataSet,
 	StrUtils, DateUtils, IBQuery, OleCtrls, SHDocVw, MSHTML, ActiveX, IniFiles, WinInet,
-	ExtCtrls;
+	ExtCtrls, ActnList;
 
 type
 	Tform_main = class(TForm)
@@ -54,7 +54,7 @@ var
 	order_list : TOrderList;
 	Complete_Flag : boolean;
 	SDAY, SCOORDTIME : string;
-	order_crew : TOrderCrews;
+	// order_crew : TOrderCrews;
 	acrews : array of TCrewList;
 	crews_count : integer;
 
@@ -515,22 +515,24 @@ begin
 			// Width := 1280 - 10;     //  - define as alClient
 			RowCount := 2;
 			FixedRows := 1;
-			ColCount := 6;
+			ColCount := 7;
 			ColWidths[0] := 50;
-			ColWidths[1] := 200;
+			ColWidths[1] := 220;
 			ColWidths[2] := 120;
 			ColWidths[3] := 80;
-			ColWidths[4] := 200; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
-			ColWidths[5] := ColWidths[4];
-//			ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
-//				- ColWidths[3] - ColWidths[4] - ColWidths[5];
+			ColWidths[4] := 120;
+			ColWidths[5] := 200; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
+			ColWidths[6] := ColWidths[5];
+			// ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
+			// - ColWidths[3] - ColWidths[4] - ColWidths[5];
 
 			Cells[0, 0] := '№';
 			Cells[1, 0] := 'Экипаж';
 			Cells[2, 0] := 'Время подачи';
 			Cells[3, 0] := 'До окончания';
-			Cells[4, 0] := 'Адрес подачи';
-			Cells[5, 0] := 'Адрес назначения';
+			Cells[4, 0] := 'Состояние';
+			Cells[5, 0] := 'Адрес подачи';
+			Cells[6, 0] := 'Адрес назначения';
 		end;
 
 		// grid_order.Rows[0].Clear;
@@ -541,13 +543,14 @@ begin
 			grid_order.RowCount := r + 1;
 			grid_order.Cells[0, r] := IntToStr(order.id);
 			if crew_list.crew(order.CrewId) <> nil then
-				grid_order.Cells[1, r] := crew_list.crew(order.CrewId).name
+				grid_order.Cells[1, r] := IntToStr(order.CrewId) + ' | ' + crew_list.crew(order.CrewId).name
 			else
 				grid_order.Cells[1, r] := '! ' + IntToStr(order.CrewId);
 			grid_order.Cells[2, r] := order.source_time;
 			grid_order.Cells[3, r] := order.time_as_string();
-			grid_order.Cells[4, r] := order.source.get_as_string();
-			grid_order.Cells[5, r] := order.dest.get_as_string();
+			grid_order.Cells[4, r] := order.state_as_string();
+			grid_order.Cells[5, r] := order.source.get_as_string();
+			grid_order.Cells[6, r] := order.dest.get_as_string();
 			inc(r);
 		end;
 	end;
@@ -691,7 +694,7 @@ begin
 
 	if form_main.cb_real_base.Checked then
 	begin
-		SCOORDTIME := replace_time('{Last_minute_30}', cur_time); // for real database
+		SCOORDTIME := replace_time('{Last_hour_2}', cur_time); // for real database
 		SDAY := replace_time('{Last_hour_4}', cur_time); // for real database
 	end;
 end;
@@ -854,7 +857,7 @@ begin
 		crew.get_time(order_list, true);
 		clist.Crews.Sort(sort_crews_by_time); // !!!!!!!!!!!!!!!!  :((
 		slist := clist.ret_crews_stringlist();
-		order.form.show_crews(order.ID, order.source.get_as_string(), order.dest.get_as_string(), slist);
+		order.form.show_crews(order.id, order.source.get_as_string(), order.dest.get_as_string(), slist);
 		clist.Crews.Sort(sort_crews_by_state_dist); // !!!!!!!!!!  :)))
 	end;
 	FreeAndNil(slist);
@@ -875,6 +878,8 @@ begin
 				base := FIniFile.ReadString('Base', 'Path', '');
 				user := FIniFile.ReadString('Base', 'User', '');
 				password := FIniFile.ReadString('Base', 'Password', '');
+				// ac_taxi_url := 'http://test.robocab.ru/';
+				ac_taxi_url := FIniFile.ReadString('Url', 'Main_Url', '');
 			finally
 			end;
 		end;
@@ -931,7 +936,6 @@ end;
 
 procedure Tform_main.FormCreate(Sender : TObject);
 begin
-	ac_taxi_url := 'http://test.robocab.ru/';
 	with form_main do
 	begin
 		cb_real_base.Checked := true; // work with real base, not back-up
@@ -955,6 +959,7 @@ begin
 	if open_database() then
 	begin
 		// show_tmp();
+		create_order_states(ibquery_main);
 	end;
 	form_main.Resizing(wsMaximized);
 	show_orders_grid(order_list);

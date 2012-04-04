@@ -51,6 +51,7 @@
 			<DCCReference Include="form_order.pas">
 				<Form>FormOrder</Form>
 			</DCCReference>
+			<DCCReference Include="crew_globals.pas"/>
 			<None Include="TODO.txt"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
