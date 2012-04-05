@@ -34,7 +34,7 @@ type
 		// crews_list : TCrewList;
 
 		constructor Create(OrderId : Integer; var IBQuery : TIBQuery);
-		function get_order_data() : Integer;
+		function get_order_data() : string;
 		function time_as_string() : string; // время до окончания заказа в виде часы-минуты;
 		function state_as_string() : string; // время до окончания заказа в виде часы-минуты;
 	end;
@@ -916,7 +916,7 @@ begin
 	form := TFormOrder.Create(nil);
 end;
 
-function TOrder.get_order_data() : Integer;
+function TOrder.get_order_data() : string;
 var
 	sel, s, h, k : string;
 	res : Tstringlist;
@@ -938,6 +938,7 @@ begin
 		+ ' ORDERS.ID = ' + IntToStr(self.ID); //
 
 	res := get_sql_stringlist(self.query, sel);
+	result := res.Text; // return raw data as string
 
 	res.Text := StringReplace(res.Text, '|', #13#10, [rfReplaceAll]);
 
@@ -948,7 +949,7 @@ begin
 	return_adres(res.Strings[3], s, h, k); self.source.setAdres(s, h, k, '');
 	return_adres(res.Strings[4], s, h, k); self.dest.setAdres(s, h, k, '');
 
-	exit(0);
+	exit(result);
 end;
 
 function TOrder.state_as_string : string;
@@ -1027,7 +1028,7 @@ end;
 
 function TOrderList.get_current_orders() : Tstringlist;
 var
-	sel, s : string;
+	sel, s, s1 : string;
 	res : Tstringlist;
 	sdate_from, sdate_to : string;
 begin
@@ -1061,15 +1062,17 @@ begin
 		+ ' order by ORDERS.SOURCE_TIME asc ';
 
 	res := get_sql_stringlist(self.query, sel);
+	result := Tstringlist.Create();
 	for s in res do
 		if not self.is_defined(StrToInt(s)) then
 		begin
-			self.order(self.Append(StrToInt(s))).get_order_data();
 			// если заказа нет в списке, то запрашиваем его данные
+			s1 := self.order(self.Append(StrToInt(s))).get_order_data();
+			result.Append(s1);
 		end;
 
 	self.delete_all_none_adres(); self.delete_all_none_adres();
-	exit(res);
+	exit(result);
 end;
 
 function TOrderList.is_defined(OrderId : Integer) : boolean;

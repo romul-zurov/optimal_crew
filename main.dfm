@@ -2,7 +2,7 @@ object form_main: Tform_main
   Left = 0
   Top = 0
   Caption = #1055#1086#1076#1073#1086#1088' '#1086#1087#1090#1080#1084#1072#1083#1100#1085#1086#1075#1086' '#1101#1082#1080#1087#1072#1078#1072' '#1040#1057'-'#1058#1072#1082#1089#1080
-  ClientHeight = 380
+  ClientHeight = 399
   ClientWidth = 884
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -17,7 +17,7 @@ object form_main: Tform_main
   TextHeight = 13
   object stbar_main: TStatusBar
     Left = 0
-    Top = 361
+    Top = 380
     Width = 884
     Height = 19
     Panels = <
@@ -30,7 +30,7 @@ object form_main: Tform_main
     Left = 3
     Top = 3
     Width = 878
-    Height = 355
+    Height = 374
     Align = alClient
     ColumnCollection = <
       item
@@ -50,7 +50,7 @@ object form_main: Tform_main
     RowCollection = <
       item
         SizeStyle = ssAuto
-        Value = 53.703703703703710000
+        Value = 100.000000000000000000
       end
       item
         Value = 100.000000000000000000
@@ -131,7 +131,7 @@ object form_main: Tform_main
         OnClick = Button1Click
       end
       object cb_real_base: TCheckBox
-        Left = 687
+        Left = 696
         Top = 11
         Width = 30
         Height = 17
@@ -143,7 +143,7 @@ object form_main: Tform_main
       object edit_zakaz4ik: TEdit
         Left = 531
         Top = 19
-        Width = 147
+        Width = 78
         Height = 21
         TabOrder = 2
         Visible = False
@@ -180,12 +180,22 @@ object form_main: Tform_main
         TabOrder = 6
         Visible = False
       end
+      object button_show_sl: TButton
+        Left = 615
+        Top = 7
+        Width = 75
+        Height = 25
+        Anchors = [akTop, akRight]
+        Caption = 'Debug'
+        TabOrder = 7
+        OnClick = button_show_slClick
+      end
     end
     object GridPanel_grids: TGridPanel
       Left = 1
       Top = 52
       Width = 876
-      Height = 302
+      Height = 321
       Align = alClient
       ColumnCollection = <
         item
@@ -214,7 +224,7 @@ object form_main: Tform_main
         Left = 1
         Top = 1
         Width = 612
-        Height = 300
+        Height = 319
         Align = alClient
         Caption = #1058#1077#1082#1091#1097#1080#1077' '#1079#1072#1082#1072#1079#1099':'
         TabOrder = 0
@@ -223,7 +233,7 @@ object form_main: Tform_main
           Left = 5
           Top = 18
           Width = 602
-          Height = 277
+          Height = 296
           Align = alClient
           ColCount = 3
           Ctl3D = False
@@ -240,7 +250,7 @@ object form_main: Tform_main
         Left = 613
         Top = 1
         Width = 262
-        Height = 300
+        Height = 319
         Align = alClient
         Caption = #1044#1086#1089#1090#1091#1087#1085#1099#1077' '#1101#1082#1080#1087#1072#1078#1080':'
         TabOrder = 1
@@ -249,7 +259,7 @@ object form_main: Tform_main
           Left = 5
           Top = 18
           Width = 252
-          Height = 277
+          Height = 296
           Align = alClient
           ColCount = 4
           Ctl3D = False

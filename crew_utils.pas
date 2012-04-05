@@ -82,14 +82,17 @@ begin
 	date := ReplaceStr(date, ' ', '');
 	date := ReplaceStr(date, '.', '');
 	date := ReplaceStr(date, ':', '');
+	if length(date) = 13 then
+		Insert('0', date, 9);
+
 	d := copy(date, 1, 2);
 	m := copy(date, 3, 2);
 	y := copy(date, 5, 4);
 	h := copy(date, 9, 2);
 	n := copy(date, 11, 2);
 	s := copy(date, 13, 2);
-	if length(s) = 1 then
-		s := '0' + s;
+	// if length(s) = 1 then
+	// s := '0' + s;
 	result := y + '.' + m + '.' + d + ' ' + h + ':' + n + ':' + s;
 end;
 

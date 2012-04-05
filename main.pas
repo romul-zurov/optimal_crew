@@ -3,7 +3,7 @@ unit main;
 interface
 
 uses
-	crew, form_order, crew_utils, crew_globals, //
+	crew, form_order, form_debug, crew_utils, crew_globals, //
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
 	Dialogs, Grids, StdCtrls, DB, IBDatabase, DBGrids, ComCtrls, IBCustomDataSet,
 	StrUtils, DateUtils, IBQuery, OleCtrls, SHDocVw, MSHTML, ActiveX, IniFiles, WinInet,
@@ -36,12 +36,14 @@ type
 		GridPanel_grids : TGridPanel;
 		GroupBox_order : TGroupBox;
 		GroupBox_crew : TGroupBox;
+    button_show_sl: TButton;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
 		procedure cb_real_baseClick(Sender : TObject);
 		procedure FormClose(Sender : TObject; var Action : TCloseAction);
 		procedure grid_orderDblClick(Sender : TObject);
+    procedure button_show_slClick(Sender: TObject);
 	private
 		{ Private declarations }
 	public
@@ -50,6 +52,7 @@ type
 
 var
 	form_main : Tform_main;
+	form_debug : TFormDebug;
 	crew_list, res_crew_list, tmp_clist : TCrewList;
 	order_list : TOrderList;
 	Complete_Flag : boolean;
@@ -745,6 +748,7 @@ begin
 		// try to get current orders
 
 		list_order := order_list.get_current_orders();
+        form_debug.show_orders(list_order);
 		crew_list.get_crew_list_by_order_list(order_list);
 		crew_list.get_crews_coords(SCOORDTIME);
 		if crew_list.get_crew_list() = nil then
@@ -924,6 +928,14 @@ begin
 	show_tmp();
 end;
 
+procedure Tform_main.button_show_slClick(Sender: TObject);
+begin
+	if form_debug.Showing then
+		form_debug.Hide()
+	else
+		form_debug.Show();
+end;
+
 procedure Tform_main.cb_real_baseClick(Sender : TObject);
 begin
 	DEBUG := not form_main.cb_real_base.Checked;
@@ -961,6 +973,7 @@ begin
 		// show_tmp();
 		create_order_states(ibquery_main);
 	end;
+	form_debug := TFormDebug.Create(nil);
 	form_main.Resizing(wsMaximized);
 	show_orders_grid(order_list);
 end;
