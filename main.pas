@@ -37,6 +37,7 @@ type
 		GroupBox_order : TGroupBox;
 		GroupBox_crew : TGroupBox;
 		button_show_sl : TButton;
+		Timer_coords : TTimer;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -45,6 +46,7 @@ type
 		procedure grid_orderDblClick(Sender : TObject);
 		procedure button_show_slClick(Sender : TObject);
 		procedure grid_crewsDblClick(Sender : TObject);
+		procedure Timer_coordsTimer(Sender : TObject);
 	private
 		{ Private declarations }
 	public
@@ -52,6 +54,7 @@ type
 	end;
 
 function open_database() : boolean;
+function reconnect_db() : boolean;
 
 var
 	form_main : Tform_main;
@@ -59,7 +62,8 @@ var
 	crew_list, res_crew_list, tmp_clist : TCrewList;
 	order_list : TOrderList;
 	Complete_Flag : boolean;
-	SDAY, SCOORDTIME : string;
+	SDAY : string;
+	// SCOORDTIME : string;
 	// order_crew : TOrderCrews;
 	acrews : array of TCrewList;
 	crews_count : integer;
@@ -72,6 +76,17 @@ implementation
 // begin
 // form_main.stbar_main.Panels[0].Text := status;
 // end;
+
+function reconnect_db() : boolean;
+begin
+	try
+		form_main.db_main.Connected := false;
+		result := open_database();
+		exit(result);
+	except
+		exit(false);
+	end;
+end;
 
 function sql_select(sel : string) : integer;
 begin
@@ -636,6 +651,7 @@ begin
 			inc(r);
 		end;
 	end;
+    show_status(list.meausure_time);
 end;
 
 procedure get_show_crews_times(var clist : TCrewList; var rlist : TCrewList);
@@ -732,14 +748,26 @@ begin
 	SDAY := '2011-10-03 00:00:00'; // for back-up base
 	DEBUG_SDATE_FROM := '2011-10-03 00:00:00';
 	DEBUG_SDATE_TO := '2011-10-04 00:00:00';
-	SCOORDTIME := '2011-10-03 14:57:50'; // for back-up base
+	// SCOORDTIME := '2011-10-03 14:57:50'; // for back-up base
 
 	if form_main.cb_real_base.Checked then
 	begin
 		cur_time := now();
-		SCOORDTIME := replace_time(COORDS_BUF_SIZE, cur_time); // for real database
+		// SCOORDTIME := replace_time(COORDS_BUF_SIZE, cur_time); // for real database
 		SDAY := replace_time('{Last_hour_4}', cur_time); // for real database
 	end;
+end;
+
+procedure first_request();
+begin
+	order_list.get_current_orders();
+	crew_list.get_crew_list_by_order_list(order_list);
+	crew_list.get_crews_coords();
+	crew_list.Crews.Sort(sort_crews_by_crewid);
+
+	// Show orders:
+	show_orders_grid(order_list);
+	show_result_crews_grid(crew_list);
 end;
 
 procedure show_tmp();
@@ -761,12 +789,13 @@ begin
 	// exit();
 	// ------------------------------------------------------------------------
 
-	crew_list.clear_crew_list();
+	// !!!
+	// crew_list.clear_crew_list();
 	order_list.clear_order_list();
 
 	// !!!!!!  оепедекюрэ щрнр оеяемж!!!
-	form_main.db_main.Connected := false;
-	open_database();
+	if not reconnect_db() then
+		exit();
 
 	with form_main do
 	begin
@@ -794,7 +823,7 @@ begin
 		list_order := order_list.get_current_orders();
 		form_debug.show_orders(list_order);
 		crew_list.get_crew_list_by_order_list(order_list);
-		crew_list.get_crews_coords(SCOORDTIME);
+		crew_list.get_crews_coords();
 		if crew_list.get_crew_list() = nil then
 			edit_zakaz4ik.Text := 'Nil!';
 		// crew_list.delete_all_none_coord();
@@ -809,7 +838,7 @@ begin
 
 		// set AP for crew_list and get coords for crews
 		crew_list.set_ap(edit_ap_street.Text, edit_ap_house.Text, edit_ap_korpus.Text, edit_ap_gps.Text);
-		list_coord := get_coord_list(SCOORDTIME, crew_list);
+		// list_coord := get_coord_list(SCOORDTIME, crew_list);
 		// show_grid(list_coord, grid_gps);
 
 		// edit_adres.Text := IntToStr(crew_list.Crews.Count);
@@ -884,7 +913,7 @@ begin
 	clist := TCrewList(Pointer(acrews[crews_count - 1]));
 
 	clist.get_crew_list_by_order_list(order_list);
-	clist.get_crews_coords(SCOORDTIME);
+	clist.get_crews_coords();
 	if clist.get_crew_list() = nil then
 		pass;
 	if order.source.gps = '' then
@@ -1016,15 +1045,16 @@ begin
 
 	form_main.panel_ap.Show();
 
+	form_debug := TFormDebug.Create(nil);
+	form_main.Resizing(wsMaximized);
 	if open_database() then
 	begin
 		// show_tmp();
 		create_order_and_crew_states(ibquery_main);
+		first_request();
 	end;
-
-	form_debug := TFormDebug.Create(nil);
-	form_main.Resizing(wsMaximized);
-	show_orders_grid(order_list);
+	form_main.Timer_coords.Enabled := true;
+	// show_orders_grid(order_list);
 end;
 
 procedure Tform_main.grid_crewsDblClick(Sender : TObject);
@@ -1043,6 +1073,13 @@ end;
 procedure Tform_main.grid_orderDblClick(Sender : TObject);
 begin
 	show_order(self.grid_order.row);
+end;
+
+procedure Tform_main.Timer_coordsTimer(Sender : TObject);
+begin
+	crew_list.get_crews_coords();
+	crew_list.Crews.Sort(sort_crews_by_crewid);
+	show_result_crews_grid(crew_list);
 end;
 
 end.

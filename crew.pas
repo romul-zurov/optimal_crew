@@ -99,6 +99,8 @@ type
 		ap_korpus : string;
 		ap_gps : string;
 
+		meausure_time : string; // время выборки координат из базы
+
 		constructor Create(var IBQuery : TIBQuery);
 		function crew(p : Pointer) : TCrew; overload;
 		function crew(CrewID : Integer) : TCrew; overload;
@@ -127,7 +129,7 @@ type
 		function get_crew_list_by_order_list(var List : TOrderList) : TStringList;
 		function get_crew_list() : TStringList;
 		function set_crews_data(List : TStringList) : Integer;
-		function get_crews_coords(SCTIME : string) : Integer;
+		function get_crews_coords() : Integer;
 		function ret_crews_stringlist() : TStringList;
 	private
 		function findById(ID : Integer; gps : boolean) : Pointer;
@@ -244,7 +246,7 @@ var sdt : string;
 	Count, i : Integer;
 begin
 	if DEBUG then
-		exit(0); // для бэк-ап базы координаты не отбрасываем
+		exit(0); // для бэк-ап базы координаты не отбрасываем :)
 	Count := ifthen(self.coords.Count < self.coords_times.Count, self.coords.Count, self.coords_times.Count);
 	if (Count <= 0) then
 		exit(-1);
@@ -444,6 +446,7 @@ begin
 	inherited Create;
 	self.Crews := TList.Create();
 	self.query := IBQuery;
+	meausure_time := ''; // время выборки координат из базы
 end;
 
 function TCrewList.crew(p : Pointer) : TCrew;
@@ -561,7 +564,7 @@ begin
 	result := self.get_id_list_as_string(false);
 end;
 
-function TCrewList.get_crews_coords(SCTIME : string) : Integer;
+function TCrewList.get_crews_coords() : Integer;
 	function s_2_6(sc : string) : string;
 	var n : double;
 	begin
@@ -614,11 +617,25 @@ function TCrewList.get_crews_coords(SCTIME : string) : Integer;
 
 var
 	sel : string;
+	stime : string;
 begin
-	SCTIME := '''' + SCTIME + '''';
+	stime := replace_time(COORDS_BUF_SIZE, now());
+	if (self.meausure_time = '') or (self.meausure_time < stime) then
+		// если запроса координат не было слишком или был давно, то запрашиваем его
+		// за период COORDS_BUF_SIZE
+		self.meausure_time := stime;
+
+	stime := '''' + self.meausure_time + ''''; // время запроса координат
+	// теперь сохраняем текущее время для следующей выборки
+	// replace_time используем для корректности формата
+	self.meausure_time := replace_time('{Last_minute_0}', now());
+
+	if DEBUG then
+		stime := DEBUG_MEASURE_TIME; // for back-up DB
+
 	sel := 'select ID, MEASURE_START_TIME, MEASURE_END_TIME, COORDS ' //
 		+ 'from CREWS_COORDS ' //
-		+ ' where MEASURE_START_TIME > ' + SCTIME //
+		+ ' where MEASURE_START_TIME > ' + stime //
 	// + ' order by MEASURE_START_TIME ASC, ID ASC';
 		;
 	sql_select(self.query, sel);

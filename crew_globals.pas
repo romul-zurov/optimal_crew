@@ -5,7 +5,7 @@ interface
 uses crew_utils, // utils from robocap and mine
 	Generics.Collections, // for forward class definition
 	Controls, Forms, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX, //
-	IBQuery, DB, WinInet, StrUtils, ComCtrls;
+	IBQuery, IBDataBase, DB, WinInet, StrUtils, ComCtrls;
 
 const CREW_SVOBODEN = 1;
 
@@ -15,7 +15,15 @@ const ORDER_DONE = 4; // согласно ORDER_STATES
 
 const ORDER_KLIENT_NA_BORTU = 29; // согласно ORDER_STATES
 
-const COORDS_BUF_SIZE = '{Last_hour_2}';
+const ORDER_CREW_NO_COORD = -2; // у экипажа нет координат, просчёт маршрута невозможен
+
+const ORDER_BAD_ADRES = -4; // адрес(а) маршрута заказа не определются картой, просчёт маршрута невозможен
+
+const ORDER_WAY_ERROR = -8; // ошибка при просчёте маршрута, время не определено
+
+const COORDS_BUF_SIZE = '{Last_hour_2}'; // размер буфера координат экипажа, в часах
+
+const DEBUG_MEASURE_TIME = '''2011-10-03 13:57:50'''; // for back-up base
 
 function get_zapros(surl : string) : string;
 function create_order_and_crew_states(var IBQuery : TIBQuery) : Integer;
@@ -24,6 +32,7 @@ function get_sql_stringlist(var query : TIBQuery; sel : string) : Tstringlist;
 function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
 function get_crew_way_time(var points : TList; var dist_way : double) : Integer;
 procedure show_status(status : string);
+
 
 type
 	TAdres = class(TObject)
@@ -49,6 +58,7 @@ var
 	PGlobalStatusBar : Pointer;
 
 implementation
+
 
 function get_crew_way_time(var points : TList; var dist_way : double) : Integer;
 	procedure add_s(var s : string; s1, s2, s3, s4 : string; num : Integer);
@@ -216,6 +226,13 @@ begin
 
 	crew_states := Tstringlist.Create();
 	set_states(crew_states, 'CREW_STATE');
+
+	with order_states do
+	begin
+		Append(IntToStr(ORDER_CREW_NO_COORD) + '=нет_координат_экипажа');
+		Append(IntToStr(ORDER_BAD_ADRES) + '=невозможно_определить_координаты_адреса');
+		Append(IntToStr(ORDER_WAY_ERROR) + '=просчёт_маршрута_неудачен');
+	end;
 
 	exit(0);
 end;

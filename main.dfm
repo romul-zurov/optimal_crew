@@ -228,7 +228,6 @@ object form_main: Tform_main
         Align = alClient
         Caption = #1058#1077#1082#1091#1097#1080#1077' '#1079#1072#1082#1072#1079#1099':'
         TabOrder = 0
-        ExplicitWidth = 612
         object grid_order: TStringGrid
           AlignWithMargins = True
           Left = 5
@@ -245,7 +244,6 @@ object form_main: Tform_main
           ParentCtl3D = False
           TabOrder = 0
           OnDblClick = grid_orderDblClick
-          ExplicitWidth = 602
         end
       end
       object GroupBox_crew: TGroupBox
@@ -256,8 +254,6 @@ object form_main: Tform_main
         Align = alClient
         Caption = #1044#1086#1089#1090#1091#1087#1085#1099#1077' '#1101#1082#1080#1087#1072#1078#1080':'
         TabOrder = 1
-        ExplicitLeft = 613
-        ExplicitWidth = 262
         object grid_crews: TStringGrid
           AlignWithMargins = True
           Left = 5
@@ -274,7 +270,6 @@ object form_main: Tform_main
           ParentCtl3D = False
           TabOrder = 0
           OnDblClick = grid_crewsDblClick
-          ExplicitWidth = 252
         end
       end
     end
@@ -310,5 +305,12 @@ object form_main: Tform_main
     DataSource = datasource_main
     Left = 464
     Top = 472
+  end
+  object Timer_coords: TTimer
+    Enabled = False
+    Interval = 10000
+    OnTimer = Timer_coordsTimer
+    Left = 344
+    Top = 16
   end
 end
