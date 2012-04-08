@@ -2,10 +2,15 @@ unit crew_utils;
 
 interface
 
-uses StrUtils, DateUtils, SysUtils, Classes, EncdDecd, Math;
+uses StrUtils, DateUtils, SysUtils, Classes, EncdDecd, Math, Grids;
+
+type
+	TMyGrid = class(TCustomGrid)
+	end;
 
 procedure pass;
 
+procedure del_grid_row(var Grid : TStringGrid; Row : Integer);
 function replace_time(const value : string; const MyTime : TDateTime) : string;
 function replace_day(const value : string; const MyTime : TDateTime) : string;
 function replace_hour(const value : string; const MyTime : TDateTime) : string;
@@ -78,6 +83,7 @@ end;
 
 function date_to_full(date : string) : string;
 var y, m, d, h, n, s : string;
+	// MySettings : TFormatSettings;
 begin
 	date := ReplaceStr(date, ' ', '');
 	date := ReplaceStr(date, '.', '');
@@ -91,9 +97,13 @@ begin
 	h := copy(date, 9, 2);
 	n := copy(date, 11, 2);
 	s := copy(date, 13, 2);
-	// if length(s) = 1 then
-	// s := '0' + s;
-	result := y + '.' + m + '.' + d + ' ' + h + ':' + n + ':' + s;
+	result := y + '-' + m + '-' + d + ' ' + h + ':' + n + ':' + s;
+
+	// MySettings.DateSeparator := '-';
+	// MySettings.TimeSeparator := ':';
+	// MySettings.ShortDateFormat := 'yyyy-mm-dd';
+	// MySettings.ShortTimeFormat := 'hh:nn:ss';
+	// StrToDateTime(result, MySettings);
 end;
 
 function dotStrtoFloat(s : string) : double;
@@ -292,6 +302,11 @@ begin
 	finally
 		FreeandNil(buffer);
 	end;
+end;
+
+procedure del_grid_row(var Grid : TStringGrid; Row : Integer);
+begin
+	TMyGrid(Grid).DeleteRow(Row);
 end;
 
 end.

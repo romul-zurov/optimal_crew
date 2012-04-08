@@ -2,8 +2,8 @@ object FormDebug: TFormDebug
   Left = 0
   Top = 0
   Caption = 'FormDebug'
-  ClientHeight = 218
-  ClientWidth = 426
+  ClientHeight = 315
+  ClientWidth = 599
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -17,8 +17,8 @@ object FormDebug: TFormDebug
   object GridPanel1: TGridPanel
     Left = 0
     Top = 0
-    Width = 426
-    Height = 218
+    Width = 599
+    Height = 315
     Align = alClient
     Caption = 'GridPanel1'
     ColumnCollection = <
@@ -44,12 +44,14 @@ object FormDebug: TFormDebug
         Value = 50.000000000000000000
       end>
     TabOrder = 0
+    ExplicitWidth = 426
+    ExplicitHeight = 218
     object sg_orders: TStringGrid
       AlignWithMargins = True
       Left = 4
       Top = 4
-      Width = 418
-      Height = 102
+      Width = 591
+      Height = 150
       Align = alClient
       ColCount = 4
       Ctl3D = False
@@ -59,13 +61,15 @@ object FormDebug: TFormDebug
       FixedRows = 0
       ParentCtl3D = False
       TabOrder = 0
+      ExplicitWidth = 418
+      ExplicitHeight = 102
     end
     object sg_crews: TStringGrid
       AlignWithMargins = True
       Left = 4
-      Top = 112
-      Width = 418
-      Height = 102
+      Top = 160
+      Width = 591
+      Height = 151
       Align = alClient
       ColCount = 4
       Ctl3D = False
@@ -75,6 +79,9 @@ object FormDebug: TFormDebug
       FixedRows = 0
       ParentCtl3D = False
       TabOrder = 1
+      ExplicitTop = 112
+      ExplicitWidth = 418
+      ExplicitHeight = 102
     end
   end
 end

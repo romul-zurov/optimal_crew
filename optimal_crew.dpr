@@ -7,7 +7,8 @@ uses
   crew in 'crew.pas',
   form_order in 'form_order.pas' {FormOrder},
   crew_globals in 'crew_globals.pas',
-  form_debug in 'form_debug.pas' {FormDebug};
+  form_debug in 'form_debug.pas' {FormDebug},
+  form_crew in 'form_crew.pas' {FormCrew};
 
 {$R *.res}
 
@@ -17,5 +18,6 @@ begin
   Application.CreateForm(Tform_main, form_main);
   Application.CreateForm(TFormOrder, FormOrder);
   Application.CreateForm(TFormDebug, FormDebug);
+  Application.CreateForm(TFormCrew, FormCrew);
   Application.Run;
 end.

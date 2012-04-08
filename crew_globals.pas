@@ -5,20 +5,25 @@ interface
 uses crew_utils, // utils from robocap and mine
 	Generics.Collections, // for forward class definition
 	Controls, Forms, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX, //
-	IBQuery, DB, WinInet, StrUtils;
+	IBQuery, DB, WinInet, StrUtils, ComCtrls;
 
 const CREW_SVOBODEN = 1;
 
 const CREW_NAZAKAZE = 3;
 
-const ZAKAZ_DONE = 4; // согласно ORDER_STATE
+const ORDER_DONE = 4; // согласно ORDER_STATES
+
+const ORDER_KLIENT_NA_BORTU = 29; // согласно ORDER_STATES
+
+const COORDS_BUF_SIZE = '{Last_hour_2}';
 
 function get_zapros(surl : string) : string;
-function create_order_states(var IBQuery : TIBQuery) : Integer;
+function create_order_and_crew_states(var IBQuery : TIBQuery) : Integer;
 function sql_select(var query : TIBQuery; sel : string) : Integer;
 function get_sql_stringlist(var query : TIBQuery; sel : string) : Tstringlist;
 function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
 function get_crew_way_time(var points : TList; var dist_way : double) : Integer;
+procedure show_status(status : string);
 
 type
 	TAdres = class(TObject)
@@ -40,6 +45,8 @@ var
 	cur_time : TDateTime;
 	ac_taxi_url : string;
 	order_states : Tstringlist;
+	crew_states : Tstringlist;
+	PGlobalStatusBar : Pointer;
 
 implementation
 
@@ -81,6 +88,7 @@ begin
 		a := TAdres(points.Items[i]);
 		add_s(surl, a.street, a.house, a.korpus, a.gps, n);
 	end;
+	show_status(surl);
 	surl := '"' + surl + '"' + ' "DayVremyaPuti" "</td>"';
 	surl := param64(surl);
 	surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
@@ -115,7 +123,9 @@ function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
 		surl := param64(surl);
 		surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
 
+		show_status('Запрос координат для адреса ' + ulica + ' ' + dom + ' ' + korpus + '...');
 		result := get_zapros(surl);
+		show_status(result);
 	end;
 
 var surl, res : string;
@@ -179,25 +189,34 @@ begin
 	exit(s); // 'Foo String';
 end;
 
-function create_order_states(var IBQuery : TIBQuery) : Integer;
-var sel, s : string;
-	i : Integer;
+function create_order_and_crew_states(var IBQuery : TIBQuery) : Integer;
+	procedure set_states(var states : Tstringlist; table_name : string);
+	var sel, s : string;
+		i : Integer;
+	begin
+		sel := 'select ' //
+			+ ' ID, NAME ' //
+			+ ' from ' //
+			+ table_name;
+		states := get_sql_stringlist(IBQuery, sel);
+		for i := 0 to states.Count - 1 do
+		begin
+			s := states.Strings[i];
+			s := StringReplace(s, ' ', '_', [rfReplaceAll]);
+			s := StringReplace(s, '|', '=', [rfReplaceAll]);
+			states.Strings[i] := s;
+		end;
+		s := '-1=не_определено';
+		states.Append(s);
+	end;
+
 begin
 	order_states := Tstringlist.Create();
-	sel := 'select ' //
-		+ ' ID, NAME ' //
-		+ ' from ORDER_STATES ' //
-		;
-	order_states := get_sql_stringlist(IBQuery, sel);
-	for i := 0 to order_states.Count - 1 do
-	begin
-		s := order_states.Strings[i];
-		s := StringReplace(s, ' ', '_', [rfReplaceAll]);
-		s := StringReplace(s, '|', '=', [rfReplaceAll]);
-		order_states.Strings[i] := s;
-	end;
-	s := '-1=не_определено';
-	order_states.Append(s);
+	set_states(order_states, 'ORDER_STATES');
+
+	crew_states := Tstringlist.Create();
+	set_states(crew_states, 'CREW_STATE');
+
 	exit(0);
 end;
 
@@ -208,12 +227,12 @@ begin
 	try
 		query.Prepare;
 	except
-		// show_status('неверный запрос к БД');
+		show_status('неверный запрос к БД');
 		result := -1;
 		exit;
 	end;
 	query.Open;
-	// show_status('запрос произведён');
+	show_status('запрос произведён');
 	result := 0;
 end;
 
@@ -289,6 +308,15 @@ begin
 	self.house := house;
 	self.korpus := korpus;
 	self.gps := gps;
+end;
+
+procedure show_status(status : string);
+var stbar : TStatusBar;
+begin
+	if PGlobalStatusBar = nil then
+		exit();
+	stbar := TStatusBar(PGlobalStatusBar);
+	stbar.Panels[0].Text := status;
 end;
 
 end.

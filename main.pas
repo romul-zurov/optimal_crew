@@ -3,7 +3,7 @@ unit main;
 interface
 
 uses
-	crew, form_order, form_debug, crew_utils, crew_globals, //
+	crew, form_crew, form_order, form_debug, crew_utils, crew_globals, //
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
 	Dialogs, Grids, StdCtrls, DB, IBDatabase, DBGrids, ComCtrls, IBCustomDataSet,
 	StrUtils, DateUtils, IBQuery, OleCtrls, SHDocVw, MSHTML, ActiveX, IniFiles, WinInet,
@@ -36,19 +36,22 @@ type
 		GridPanel_grids : TGridPanel;
 		GroupBox_order : TGroupBox;
 		GroupBox_crew : TGroupBox;
-    button_show_sl: TButton;
+		button_show_sl : TButton;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
 		procedure cb_real_baseClick(Sender : TObject);
 		procedure FormClose(Sender : TObject; var Action : TCloseAction);
 		procedure grid_orderDblClick(Sender : TObject);
-    procedure button_show_slClick(Sender: TObject);
+		procedure button_show_slClick(Sender : TObject);
+		procedure grid_crewsDblClick(Sender : TObject);
 	private
 		{ Private declarations }
 	public
 		{ Public declarations }
 	end;
+
+function open_database() : boolean;
 
 var
 	form_main : Tform_main;
@@ -60,15 +63,15 @@ var
 	// order_crew : TOrderCrews;
 	acrews : array of TCrewList;
 	crews_count : integer;
+	form_cur_crew : TFormCrew;
 
 implementation
 
 {$R *.dfm}
-
-procedure show_status(status : string);
-begin
-	form_main.stbar_main.Panels[0].Text := status;
-end;
+// procedure show_status(status : string);
+// begin
+// form_main.stbar_main.Panels[0].Text := status;
+// end;
 
 function sql_select(sel : string) : integer;
 begin
@@ -508,15 +511,17 @@ end;
 
 procedure show_orders_grid(var list : TOrderList);
 var pp : Pointer;
-	r : integer;
+	row, ord_id : integer;
 	order : TOrder;
+	sord_id : string;
 begin
 	with form_main do
 	begin
 		with grid_order do
 		begin
 			// Width := 1280 - 10;     //  - define as alClient
-			RowCount := 2;
+			// !!!
+			// RowCount := 2;
 			FixedRows := 1;
 			ColCount := 7;
 			ColWidths[0] := 50;
@@ -538,24 +543,58 @@ begin
 			Cells[6, 0] := 'јдрес назначени€';
 		end;
 
-		// grid_order.Rows[0].Clear;
-		r := 1;
+		// отображаем экипажи из списка
 		for pp in list.Orders do
 		begin
 			order := list.order(pp);
-			grid_order.RowCount := r + 1;
-			grid_order.Cells[0, r] := IntToStr(order.id);
-			if crew_list.crew(order.CrewId) <> nil then
-				grid_order.Cells[1, r] := IntToStr(order.CrewId) + ' | ' + crew_list.crew(order.CrewId).name
+			sord_id := IntToStr(order.id);
+			row := grid_order.Cols[0].IndexOf(sord_id);
+			if row > -1 then
+			begin
+				// если заказ уже есть в сетке то row - уже определена
+				show_status('заказ є ' + sord_id + ' найден')
+			end
 			else
-				grid_order.Cells[1, r] := '! ' + IntToStr(order.CrewId);
-			grid_order.Cells[2, r] := order.source_time;
-			grid_order.Cells[3, r] := order.time_as_string();
-			grid_order.Cells[4, r] := order.state_as_string();
-			grid_order.Cells[5, r] := order.source.get_as_string();
-			grid_order.Cells[6, r] := order.dest.get_as_string();
-			inc(r);
+			begin
+				row := grid_order.RowCount;
+				if (row = 2) and (length(grid_order.Cells[0, 1]) = 0) then
+					// если в сетке ещЄ нет заказов
+					// то пишем со строки 1
+					row := 1
+				else
+					// иначе добавл€ем пустую строку в сетку и пишем в неЄ
+					with grid_order do
+						RowCount := RowCount + 1;
+			end;
+			grid_order.Cells[0, row] := sord_id;
+			if crew_list.crew(order.CrewId) <> nil then
+				grid_order.Cells[1, row] := IntToStr(order.CrewId) + ' | ' + crew_list.crew(order.CrewId).name
+			else
+				grid_order.Cells[1, row] := '! ' + IntToStr(order.CrewId);
+			grid_order.Cells[2, row] := order.source_time;
+			grid_order.Cells[3, row] := order.time_as_string();
+			grid_order.Cells[4, row] := order.state_as_string();
+			grid_order.Cells[5, row] := order.source.get_as_string();
+			grid_order.Cells[6, row] := order.dest.get_as_string();
 		end;
+		// теперь удал€ем заказы из сетки, коих нет в списке
+		// remove all grid lines, which not in order_list :)
+		// for row := grid_order.RowCount - 1 downto 1 do
+		// begin
+		// sord_id := grid_order.Cells[0, row];
+		// if sord_id = '' then
+		// continue;
+		// try
+		// ord_id := StrToInt(sord_id);
+		// finally
+		// end;
+		// if order_list.is_defined(ord_id) then
+		// pass
+		// else
+		// // если такого заказа уже нет в списке, удал€ем его из сетки
+		// show_status('”старевший заказ є ' + IntToStr(ord_id) + ' убран из списка видимых.');
+		// del_grid_row(grid_order, row);
+		// end;
 	end;
 end;
 
@@ -569,12 +608,12 @@ begin
 		with grid_crews do
 		begin
 			Width := form_main.GroupBox_crew.Width - 10;
-			ColCount := 5;
-			ColWidths[0] := 300;
-			ColWidths[1] := 60;
-			ColWidths[2] := 60;
-			ColWidths[3] := 60;
-			ColWidths[4] := 120;
+			ColCount := 3; // 5;
+			ColWidths[0] := 30; // 300;
+			ColWidths[1] := 120; // 60;
+			ColWidths[2] := 90;
+			// ColWidths[3] := 60;
+			// ColWidths[4] := 60; // 120;
 		end;
 
 		grid_crews.RowCount := 0;
@@ -587,13 +626,13 @@ begin
 			// Continue;
 
 			grid_crews.RowCount := r + 1;
-			grid_crews.Cells[0, r] := IntToStr(crew.CrewId) + ' | ' + crew.name;
+			grid_crews.Cells[0, r] := IntToStr(crew.CrewId); // + ' | ' + crew.name;
 			// grid_crews.Cells[0, r] := IntToStr(crew.CrewId);
 			// grid_crews.Cells[1, r] := IntToStr(crew.Time);
-			grid_crews.Cells[1, r] := crew.state_as_string;
-			grid_crews.Cells[2, r] := crew.time_as_string;
-			grid_crews.Cells[3, r] := FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
-			grid_crews.Cells[4, r] := crew.Coord;
+			grid_crews.Cells[1, r] := crew.Coord;
+			grid_crews.Cells[2, r] := crew.state_as_string();
+			// grid_crews.Cells[3, r] := FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
+			// grid_crews.Cells[4, r] := crew.time_as_string;
 			inc(r);
 		end;
 	end;
@@ -697,7 +736,8 @@ begin
 
 	if form_main.cb_real_base.Checked then
 	begin
-		SCOORDTIME := replace_time('{Last_hour_2}', cur_time); // for real database
+		cur_time := now();
+		SCOORDTIME := replace_time(COORDS_BUF_SIZE, cur_time); // for real database
 		SDAY := replace_time('{Last_hour_4}', cur_time); // for real database
 	end;
 end;
@@ -724,6 +764,10 @@ begin
 	crew_list.clear_crew_list();
 	order_list.clear_order_list();
 
+	// !!!!!!  ѕ≈–≈ƒ≈Ћј“№ Ё“ќ“ ѕ≈—≈Ќ÷!!!
+	form_main.db_main.Connected := false;
+	open_database();
+
 	with form_main do
 	begin
 
@@ -741,20 +785,21 @@ begin
 
 		set_bd_times();
 
-		if edit_ap_gps.Text = '' then
-			edit_ap_gps.Text := get_gps_coords_for_adres(edit_ap_street.Text, edit_ap_house.Text,
-				edit_ap_korpus.Text);
+		// if edit_ap_gps.Text = '' then
+		// edit_ap_gps.Text := get_gps_coords_for_adres(edit_ap_street.Text, edit_ap_house.Text,
+		// edit_ap_korpus.Text);
 
 		// try to get current orders
 
 		list_order := order_list.get_current_orders();
-        form_debug.show_orders(list_order);
+		form_debug.show_orders(list_order);
 		crew_list.get_crew_list_by_order_list(order_list);
 		crew_list.get_crews_coords(SCOORDTIME);
 		if crew_list.get_crew_list() = nil then
 			edit_zakaz4ik.Text := 'Nil!';
 		// crew_list.delete_all_none_coord();
-		crew_list.Crews.Sort(sort_crews_by_state_dist);
+
+		crew_list.Crews.Sort(sort_crews_by_crewid);
 
 		// Show orders:
 		show_orders_grid(order_list);
@@ -928,7 +973,7 @@ begin
 	show_tmp();
 end;
 
-procedure Tform_main.button_show_slClick(Sender: TObject);
+procedure Tform_main.button_show_slClick(Sender : TObject);
 begin
 	if form_debug.Showing then
 		form_debug.Hide()
@@ -962,6 +1007,9 @@ begin
 	end;
 	// form_main.DBGrid1.Hide();
 
+	form_cur_crew := TFormCrew.Create(nil);
+	form_main.grid_order.RowCount := 2;
+	PGlobalStatusBar := Pointer(form_main.stbar_main);
 	crew_list := TCrewList.Create(form_main.ibquery_main);
 	order_list := TOrderList.Create(ibquery_main);
 	crews_count := 0;
@@ -971,11 +1019,25 @@ begin
 	if open_database() then
 	begin
 		// show_tmp();
-		create_order_states(ibquery_main);
+		create_order_and_crew_states(ibquery_main);
 	end;
+
 	form_debug := TFormDebug.Create(nil);
 	form_main.Resizing(wsMaximized);
 	show_orders_grid(order_list);
+end;
+
+procedure Tform_main.grid_crewsDblClick(Sender : TObject);
+var pp : Pointer;
+	id, r : integer;
+	sid : string;
+begin
+	r := self.grid_crews.row;
+	sid := self.grid_crews.Cells[0, r];
+	// sid := get_substr(sid, '', ' |');
+	id := StrToInt(sid);
+	pp := crew_list.findByCrewId(id);
+	form_cur_crew.show_crew(pp);
 end;
 
 procedure Tform_main.grid_orderDblClick(Sender : TObject);

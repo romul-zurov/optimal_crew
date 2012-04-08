@@ -55,6 +55,9 @@
 			<DCCReference Include="form_debug.pas">
 				<Form>FormDebug</Form>
 			</DCCReference>
+			<DCCReference Include="form_crew.pas">
+				<Form>FormCrew</Form>
+			</DCCReference>
 			<None Include="TODO.txt"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>

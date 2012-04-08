@@ -2,7 +2,7 @@ object form_main: Tform_main
   Left = 0
   Top = 0
   Caption = #1055#1086#1076#1073#1086#1088' '#1086#1087#1090#1080#1084#1072#1083#1100#1085#1086#1075#1086' '#1101#1082#1080#1087#1072#1078#1072' '#1040#1057'-'#1058#1072#1082#1089#1080
-  ClientHeight = 399
+  ClientHeight = 404
   ClientWidth = 884
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -15,22 +15,12 @@ object form_main: Tform_main
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
-  object stbar_main: TStatusBar
-    Left = 0
-    Top = 380
-    Width = 884
-    Height = 19
-    Panels = <
-      item
-        Width = 50
-      end>
-  end
   object GridPanel_main: TGridPanel
     AlignWithMargins = True
     Left = 3
     Top = 3
     Width = 878
-    Height = 374
+    Height = 398
     Align = alClient
     ColumnCollection = <
       item
@@ -46,6 +36,11 @@ object form_main: Tform_main
         Column = 0
         Control = GridPanel_grids
         Row = 1
+      end
+      item
+        Column = 0
+        Control = stbar_main
+        Row = 2
       end>
     RowCollection = <
       item
@@ -54,8 +49,12 @@ object form_main: Tform_main
       end
       item
         Value = 100.000000000000000000
+      end
+      item
+        SizeStyle = ssAuto
+        Value = 30.000000000000000000
       end>
-    TabOrder = 1
+    TabOrder = 0
     object panel_ap: TPanel
       AlignWithMargins = True
       Left = 5
@@ -195,14 +194,15 @@ object form_main: Tform_main
       Left = 1
       Top = 52
       Width = 876
-      Height = 321
+      Height = 326
       Align = alClient
       ColumnCollection = <
         item
-          Value = 70.032449513318540000
+          Value = 100.000000000000000000
         end
         item
-          Value = 29.967550486681460000
+          SizeStyle = ssAbsolute
+          Value = 250.000000000000000000
         end>
       ControlCollection = <
         item
@@ -223,17 +223,18 @@ object form_main: Tform_main
       object GroupBox_order: TGroupBox
         Left = 1
         Top = 1
-        Width = 612
-        Height = 319
+        Width = 624
+        Height = 324
         Align = alClient
         Caption = #1058#1077#1082#1091#1097#1080#1077' '#1079#1072#1082#1072#1079#1099':'
         TabOrder = 0
+        ExplicitWidth = 612
         object grid_order: TStringGrid
           AlignWithMargins = True
           Left = 5
           Top = 18
-          Width = 602
-          Height = 296
+          Width = 614
+          Height = 301
           Align = alClient
           ColCount = 3
           Ctl3D = False
@@ -244,22 +245,25 @@ object form_main: Tform_main
           ParentCtl3D = False
           TabOrder = 0
           OnDblClick = grid_orderDblClick
+          ExplicitWidth = 602
         end
       end
       object GroupBox_crew: TGroupBox
-        Left = 613
+        Left = 625
         Top = 1
-        Width = 262
-        Height = 319
+        Width = 250
+        Height = 324
         Align = alClient
         Caption = #1044#1086#1089#1090#1091#1087#1085#1099#1077' '#1101#1082#1080#1087#1072#1078#1080':'
         TabOrder = 1
+        ExplicitLeft = 613
+        ExplicitWidth = 262
         object grid_crews: TStringGrid
           AlignWithMargins = True
           Left = 5
           Top = 18
-          Width = 252
-          Height = 296
+          Width = 240
+          Height = 301
           Align = alClient
           ColCount = 4
           Ctl3D = False
@@ -269,8 +273,21 @@ object form_main: Tform_main
           FixedRows = 0
           ParentCtl3D = False
           TabOrder = 0
+          OnDblClick = grid_crewsDblClick
+          ExplicitWidth = 252
         end
       end
+    end
+    object stbar_main: TStatusBar
+      Left = 1
+      Top = 378
+      Width = 876
+      Height = 19
+      Align = alClient
+      Panels = <
+        item
+          Width = 100
+        end>
     end
   end
   object db_main: TIBDatabase

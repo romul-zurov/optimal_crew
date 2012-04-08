@@ -11,7 +11,7 @@ type
 		GridPanel1 : TGridPanel;
 		sg_orders : TStringGrid;
 		sg_crews : TStringGrid;
-    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+		procedure FormCloseQuery(Sender : TObject; var CanClose : Boolean);
 	private
 		{ Private declarations }
 		procedure show_grid(var list : TSTringList; var grid : TStringGrid);
@@ -29,7 +29,7 @@ implementation
 {$R *.dfm}
 { TFormDebug }
 
-procedure TFormDebug.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+procedure TFormDebug.FormCloseQuery(Sender : TObject; var CanClose : Boolean);
 begin
 	self.Hide();
 end;
