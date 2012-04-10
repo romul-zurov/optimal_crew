@@ -21,7 +21,8 @@ function get_dist_from_coord(scoord1, scoord2 : string) : double;
 
 function reverseStringList(var list : TStringList) : Integer;
 function param64(s : string) : string;
-function date_to_full(date : string) : string;
+function date_to_full(date : string) : string; overload;
+function date_to_full(date : TDateTime) : string; overload;
 function get_substr(value : string; sub1, sub2 : string) : string;
 procedure RemoveDuplicates(const stringList : TStringList);
 procedure return_adres(value : string; var s, h, k : string);
@@ -88,6 +89,8 @@ begin
 	date := ReplaceStr(date, ' ', '');
 	date := ReplaceStr(date, '.', '');
 	date := ReplaceStr(date, ':', '');
+    date := ReplaceStr(date, '-', '');
+    date := ReplaceStr(date, '_', '');
 	if length(date) = 13 then
 		Insert('0', date, 9);
 
@@ -104,6 +107,13 @@ begin
 	// MySettings.ShortDateFormat := 'yyyy-mm-dd';
 	// MySettings.ShortTimeFormat := 'hh:nn:ss';
 	// StrToDateTime(result, MySettings);
+end;
+
+function date_to_full(date : TDateTime) : string;
+var s : string;
+begin
+	DateTimeToString(s, 'yyyy-mm-dd hh:nn:ss', date);
+	exit(s);
 end;
 
 function dotStrtoFloat(s : string) : double;

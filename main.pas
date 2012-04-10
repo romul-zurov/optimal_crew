@@ -19,7 +19,6 @@ type
 		db_main : TIBDatabase;
 		stbar_main : TStatusBar;
 		ta_main : TIBTransaction;
-		datasource_main : TDataSource;
 		ibquery_main : TIBQuery;
 		grid_order : TStringGrid;
 		Label6 : TLabel;
@@ -68,6 +67,7 @@ var
 	acrews : array of TCrewList;
 	crews_count : integer;
 	form_cur_crew : TFormCrew;
+	form_cur_order : TFormOrder;
 
 implementation
 
@@ -651,7 +651,7 @@ begin
 			inc(r);
 		end;
 	end;
-    show_status(list.meausure_time);
+	show_status(list.meausure_time);
 end;
 
 procedure get_show_crews_times(var clist : TCrewList; var rlist : TCrewList);
@@ -791,11 +791,13 @@ begin
 
 	// !!!
 	// crew_list.clear_crew_list();
-	order_list.clear_order_list();
+
+	// !!!
+	// order_list.clear_order_list();
 
 	// !!!!!!  оепедекюрэ щрнр оеяемж!!!
-	if not reconnect_db() then
-		exit();
+	// if not reconnect_db() then
+	// exit();
 
 	with form_main do
 	begin
@@ -888,6 +890,11 @@ begin
 	except
 		exit();
 	end;
+
+	pp := order_list.find_by_Id(ordId);
+	form_cur_order.show_order(pp);
+	exit();
+
 	order := order_list.order(order_list.find_by_Id(ordId));
 	if order = nil then
 		exit();
@@ -901,44 +908,40 @@ begin
 		exit();
 	end;
 
-	// order.form := TForm.Create(nil);
-	// TWinControl(browser).Parent := form;
-	// order.form.Width := 800;
-	// order.form.Height := 600;
-	order.form.Show();
-	set_bd_times();
-	inc(crews_count);
-	setlength(acrews, crews_count);
-	acrews[crews_count - 1] := TCrewList.Create(form_main.ibquery_main);
-	clist := TCrewList(Pointer(acrews[crews_count - 1]));
-
-	clist.get_crew_list_by_order_list(order_list);
-	clist.get_crews_coords();
-	if clist.get_crew_list() = nil then
-		pass;
-	if order.source.gps = '' then
-		with order.source do
-			gps := get_gps_coords_for_adres(street, house, korpus);
-	with order.source do
-		clist.set_ap(street, house, korpus, gps);
-	clist.set_crews_dist(clist.ap_gps);
-	clist.Crews.Sort(sort_crews_by_state_dist);
-
-	slist := TSTringList.Create();
-	for pp in clist.Crews do
-	begin
-		if not order.form.Visible then
-			break;
-
-		crew := clist.crew(pp);
-		crew.ap := order.source;
-		crew.get_time(order_list, true);
-		clist.Crews.Sort(sort_crews_by_time); // !!!!!!!!!!!!!!!!  :((
-		slist := clist.ret_crews_stringlist();
-		order.form.show_crews(order.id, order.source.get_as_string(), order.dest.get_as_string(), slist);
-		clist.Crews.Sort(sort_crews_by_state_dist); // !!!!!!!!!!  :)))
-	end;
-	FreeAndNil(slist);
+	// order.form.Show();
+	// set_bd_times();
+	// inc(crews_count);
+	// setlength(acrews, crews_count);
+	// acrews[crews_count - 1] := TCrewList.Create(form_main.ibquery_main);
+	// clist := TCrewList(Pointer(acrews[crews_count - 1]));
+	//
+	// clist.get_crew_list_by_order_list(order_list);
+	// clist.get_crews_coords();
+	// if clist.get_crew_list() = nil then
+	// pass;
+	// if order.source.gps = '' then
+	// with order.source do
+	// gps := get_gps_coords_for_adres(street, house, korpus);
+	// with order.source do
+	// clist.set_ap(street, house, korpus, gps);
+	// clist.set_crews_dist(clist.ap_gps);
+	// clist.Crews.Sort(sort_crews_by_state_dist);
+	//
+	// slist := TSTringList.Create();
+	// for pp in clist.Crews do
+	// begin
+	// if not order.form.Visible then
+	// break;
+	//
+	// crew := clist.crew(pp);
+	// crew.ap := order.source;
+	// crew.get_time(order_list, true);
+	// clist.Crews.Sort(sort_crews_by_time); // !!!!!!!!!!!!!!!!  :((
+	// slist := clist.ret_crews_stringlist();
+	// order.form.show_crews(order.id, order.source.get_as_string(), order.dest.get_as_string(), slist);
+	// clist.Crews.Sort(sort_crews_by_state_dist); // !!!!!!!!!!  :)))
+	// end;
+	// FreeAndNil(slist);
 end;
 
 function open_database() : boolean;
@@ -998,7 +1001,7 @@ begin
 	// form_main.GridPanel_main.RowCollection.Items[0].SizeStyle := ssAbsolute;
 	// form_main.GridPanel_main.RowCollection.Items[0].Value := 0;
 	// exit();
-
+	form_cur_crew.Close();
 	show_tmp();
 end;
 
@@ -1037,6 +1040,7 @@ begin
 	// form_main.DBGrid1.Hide();
 
 	form_cur_crew := TFormCrew.Create(nil);
+	form_cur_order := TFormOrder.Create(nil);
 	form_main.grid_order.RowCount := 2;
 	PGlobalStatusBar := Pointer(form_main.stbar_main);
 	crew_list := TCrewList.Create(form_main.ibquery_main);
@@ -1080,6 +1084,9 @@ begin
 	crew_list.get_crews_coords();
 	crew_list.Crews.Sort(sort_crews_by_crewid);
 	show_result_crews_grid(crew_list);
+	if form_cur_crew.Showing then
+		form_cur_crew.show_crew();
+
 end;
 
 end.

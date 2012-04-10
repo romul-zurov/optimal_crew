@@ -2,8 +2,8 @@ object form_main: Tform_main
   Left = 0
   Top = 0
   Caption = #1055#1086#1076#1073#1086#1088' '#1086#1087#1090#1080#1084#1072#1083#1100#1085#1086#1075#1086' '#1101#1082#1080#1087#1072#1078#1072' '#1040#1057'-'#1058#1072#1082#1089#1080
-  ClientHeight = 404
-  ClientWidth = 884
+  ClientHeight = 323
+  ClientWidth = 756
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -19,8 +19,8 @@ object form_main: Tform_main
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 878
-    Height = 398
+    Width = 750
+    Height = 317
     Align = alClient
     ColumnCollection = <
       item
@@ -59,8 +59,8 @@ object form_main: Tform_main
       AlignWithMargins = True
       Left = 5
       Top = 5
-      Width = 868
-      Height = 43
+      Width = 740
+      Height = 42
       Margins.Left = 4
       Margins.Top = 4
       Margins.Right = 4
@@ -69,10 +69,10 @@ object form_main: Tform_main
       AutoSize = True
       TabOrder = 0
       DesignSize = (
-        868
-        43)
+        740
+        42)
       object Label2: TLabel
-        Left = 540
+        Left = 164
         Top = 1
         Width = 51
         Height = 13
@@ -81,30 +81,30 @@ object form_main: Tform_main
       end
       object Label1: TLabel
         Left = 2
-        Top = 2
+        Top = 1
         Width = 75
         Height = 13
         Caption = #1040#1076#1088#1077#1089' '#1087#1086#1076#1072#1095#1080':'
         Visible = False
       end
       object Label6: TLabel
-        Left = 97
-        Top = 2
+        Left = 33
+        Top = 1
         Width = 35
         Height = 13
         Caption = #1059#1083#1080#1094#1072':'
         Visible = False
       end
       object Label7: TLabel
-        Left = 207
-        Top = 2
+        Left = 63
+        Top = 1
         Width = 24
         Height = 13
         Caption = #1044#1086#1084':'
         Visible = False
       end
       object Label8: TLabel
-        Left = 271
+        Left = 63
         Top = 1
         Width = 40
         Height = 13
@@ -112,7 +112,7 @@ object form_main: Tform_main
         Visible = False
       end
       object Label9: TLabel
-        Left = 373
+        Left = 93
         Top = 1
         Width = 90
         Height = 13
@@ -120,8 +120,8 @@ object form_main: Tform_main
         Visible = False
       end
       object Button1: TButton
-        Left = 723
-        Top = 7
+        Left = 595
+        Top = 6
         Width = 125
         Height = 25
         Anchors = [akTop, akRight]
@@ -130,8 +130,8 @@ object form_main: Tform_main
         OnClick = Button1Click
       end
       object cb_real_base: TCheckBox
-        Left = 696
-        Top = 11
+        Left = 568
+        Top = 10
         Width = 30
         Height = 17
         Anchors = [akTop, akRight]
@@ -140,48 +140,48 @@ object form_main: Tform_main
         OnClick = cb_real_baseClick
       end
       object edit_zakaz4ik: TEdit
-        Left = 531
-        Top = 19
-        Width = 78
+        Left = 119
+        Top = 20
+        Width = 18
         Height = 21
         TabOrder = 2
         Visible = False
       end
       object edit_ap_street: TEdit
         Left = 2
-        Top = 21
-        Width = 183
+        Top = 20
+        Width = 25
         Height = 21
         TabOrder = 3
         Visible = False
       end
       object edit_ap_house: TEdit
-        Left = 207
-        Top = 21
-        Width = 58
+        Left = 33
+        Top = 20
+        Width = 24
         Height = 21
         TabOrder = 4
         Visible = False
       end
       object edit_ap_korpus: TEdit
-        Left = 271
-        Top = 21
-        Width = 58
+        Left = 63
+        Top = 20
+        Width = 24
         Height = 21
         TabOrder = 5
         Visible = False
       end
       object edit_ap_gps: TEdit
-        Left = 365
-        Top = 19
-        Width = 160
+        Left = 93
+        Top = 20
+        Width = 20
         Height = 21
         TabOrder = 6
         Visible = False
       end
       object button_show_sl: TButton
-        Left = 615
-        Top = 7
+        Left = 487
+        Top = 6
         Width = 75
         Height = 25
         Anchors = [akTop, akRight]
@@ -192,9 +192,9 @@ object form_main: Tform_main
     end
     object GridPanel_grids: TGridPanel
       Left = 1
-      Top = 52
-      Width = 876
-      Height = 326
+      Top = 51
+      Width = 748
+      Height = 246
       Align = alClient
       ColumnCollection = <
         item
@@ -223,8 +223,8 @@ object form_main: Tform_main
       object GroupBox_order: TGroupBox
         Left = 1
         Top = 1
-        Width = 624
-        Height = 324
+        Width = 496
+        Height = 244
         Align = alClient
         Caption = #1058#1077#1082#1091#1097#1080#1077' '#1079#1072#1082#1072#1079#1099':'
         TabOrder = 0
@@ -232,8 +232,8 @@ object form_main: Tform_main
           AlignWithMargins = True
           Left = 5
           Top = 18
-          Width = 614
-          Height = 301
+          Width = 486
+          Height = 221
           Align = alClient
           ColCount = 3
           Ctl3D = False
@@ -247,10 +247,10 @@ object form_main: Tform_main
         end
       end
       object GroupBox_crew: TGroupBox
-        Left = 625
+        Left = 497
         Top = 1
         Width = 250
-        Height = 324
+        Height = 244
         Align = alClient
         Caption = #1044#1086#1089#1090#1091#1087#1085#1099#1077' '#1101#1082#1080#1087#1072#1078#1080':'
         TabOrder = 1
@@ -259,7 +259,7 @@ object form_main: Tform_main
           Left = 5
           Top = 18
           Width = 240
-          Height = 301
+          Height = 221
           Align = alClient
           ColCount = 4
           Ctl3D = False
@@ -275,8 +275,8 @@ object form_main: Tform_main
     end
     object stbar_main: TStatusBar
       Left = 1
-      Top = 378
-      Width = 876
+      Top = 297
+      Width = 748
       Height = 19
       Align = alClient
       Panels = <
@@ -287,30 +287,30 @@ object form_main: Tform_main
   end
   object db_main: TIBDatabase
     LoginPrompt = False
-    Left = 264
-    Top = 472
+    Left = 40
+    Top = 160
   end
   object ta_main: TIBTransaction
     DefaultDatabase = db_main
-    Left = 528
-    Top = 472
-  end
-  object datasource_main: TDataSource
-    Left = 360
-    Top = 472
+    Params.Strings = (
+      'read_committed'
+      'rec_version'
+      'nowait'
+      'read')
+    Left = 112
+    Top = 168
   end
   object ibquery_main: TIBQuery
     Database = db_main
     Transaction = ta_main
-    DataSource = datasource_main
-    Left = 464
-    Top = 472
+    Left = 192
+    Top = 168
   end
   object Timer_coords: TTimer
     Enabled = False
     Interval = 10000
     OnTimer = Timer_coordsTimer
-    Left = 344
-    Top = 16
+    Left = 264
+    Top = 8
   end
 end

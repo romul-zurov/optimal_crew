@@ -4,7 +4,6 @@ interface
 
 uses crew_utils, // utils from robocap and mine
 	crew_globals, // my global var and function
-	form_order, // form for orders
 	Generics.Collections, // for forward class definition
 	Controls, Forms, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX, //
 	IBQuery, DB, WinInet, StrUtils;
@@ -30,7 +29,7 @@ type
 		time_to_end : Integer; // время до окончания заказа в минутах
 
 		query : TIBQuery;
-		form : TFormOrder; // form to show order
+//		form : TFormOrder; // form to show order
 
 		// crews_list : TCrewList;
 
@@ -116,7 +115,7 @@ type
 		function get_gpsid_list_as_string() : string;
 		function get_crewid_list_as_string() : string;
 		function get_nonfree_crewid_list_as_string() : string;
-		// function del_all_none_crewId() : Integer;
+		function del_all_none_crewId() : Integer;
 		// function del_all_none_coord() : Integer;
 		function set_crewId_by_gpsId(List : TStringList) : Integer;
 		function set_crews_orderId(List : TStringList) : Integer;
@@ -403,13 +402,12 @@ begin
 	if (Count <= 0) then
 		exit(-1);
 	sl := TStringList.Create();
+	sl.Duplicates := dupIgnore; // не допускаем дубликатов
+	sl.Sorted := true;
 	for i := 0 to (Count - 1) do
 		sl.Append(self.coords_times.Strings[i] + '|' + self.coords.Strings[i]);
-	sl.Sorted := true;
-	sl.Duplicates := dupIgnore;
 	reverseStringList(sl);
-	self.coords.Clear();
-	self.coords_times.Clear();
+	self.coords.Clear(); self.coords_times.Clear();
 	for s in sl do
 	begin
 		self.coords_times.Append(get_substr(s, '', '|'));
@@ -494,14 +492,21 @@ end;
 // exit(0);
 // end;
 
-// function TCrewList.del_all_none_crewId : Integer;
-// var pp : Pointer;
-// begin
-// for pp in self.Crews do
-// if (self.crew(pp).CrewID = -1) then
-// self.Crews.Delete(self.Crews.IndexOf(pp));
-// exit(0);
-// end;
+function TCrewList.del_all_none_crewId : Integer;
+var pp : Pointer;
+	i : Integer;
+begin
+	for i := self.Crews.Count - 1 downto 0 do
+	begin
+		pp := Pointer(self.Crews.Items[i]);
+		if (self.crew(pp).CrewID = -1) then
+			self.Crews.Delete(i);
+	end;
+	// for pp in self.Crews do
+	// if (self.crew(pp).CrewID = -1) then
+	// self.Crews.Delete(self.Crews.IndexOf(pp));
+	exit(0);
+end;
 
 // function TCrewList.del_all_none_orderId() : Integer;
 // var pp : Pointer;
@@ -581,15 +586,18 @@ function TCrewList.get_crews_coords() : Integer;
 		b : TBytes;
 		pint : ^Integer;
 		plat, plong : ^single;
-		s, sdate1, sdate2, scoords, slat, slong : string;
+		s, scoords, slat, slong : string;
+		date1, date2, date0 : TDateTime;
 		crew : TCrew;
 		pp : Pointer;
 	begin
-		sdate1 := fields[1].AsString;
-		sdate2 := fields[2].AsString;
+		date1 := fields[1].AsDateTime;
+		date2 := fields[2].AsDateTime;
 		field := fields[3];
 		l := field.DataSize;
 		setlength(b, l);
+		// создаём условную дельту по времени для координат
+		date0 := (date2 - date1) / (l div 12);
 		b := field.AsBytes;
 		j := 0;
 		while j < l do
@@ -608,8 +616,9 @@ function TCrewList.get_crews_coords() : Integer;
 					crew := self.crew(self.Append(GpsId))
 				else
 					crew := self.crew(pp);
-				crew.append_coords(scoords, date_to_full(sdate2));
+				crew.append_coords(scoords, date_to_full(date1));
 			end;
+			date1 := date1 + date0;
 			j := j + 12;
 		end;
 		exit(0);
@@ -627,8 +636,7 @@ begin
 
 	stime := '''' + self.meausure_time + ''''; // время запроса координат
 	// теперь сохраняем текущее время для следующей выборки
-	// replace_time используем для корректности формата
-	self.meausure_time := replace_time('{Last_minute_0}', now());
+	self.meausure_time := date_to_full(now()); // replace_time('{Last_minute_0}', now());
 
 	if DEBUG then
 		stime := DEBUG_MEASURE_TIME; // for back-up DB
@@ -644,9 +652,13 @@ begin
 		coords_to_str(self.query.fields);
 		self.query.Next;
 	end;
+	// ???
+	self.query.Close();
+
 	self.get_crew_list();
 	self.set_current_crews_coord();
 	self.del_crews_old_coords();
+	self.del_all_none_crewId();
 	// self.del_all_none_coord(); self.del_all_none_coord();
 	exit(0);
 end;
@@ -944,7 +956,7 @@ begin
 	time_to_end := -1; // время до окончания заказа в минутах
 	self.query := IBQuery;
 
-	form := TFormOrder.Create(nil);
+//	form := TFormOrder.Create(nil);
 end;
 
 function TOrder.get_order_data() : string;

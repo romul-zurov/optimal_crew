@@ -78,6 +78,8 @@ begin
 	crew := TCrew(self.Pcrew);
 	if crew = nil then
 		exit();
+	self.Caption := 'Ёкипаж ' + inttostr(crew.CrewID);
+	self.GroupBox_crew.Caption := self.Caption + ' ' + crew.name;
 	with self.grid_crew do
 	begin
 		rowcount := 1;
@@ -86,13 +88,13 @@ begin
 		ColWidths[0] := 120;
 		ColWidths[1] := Width - ColWidths[0] - 20;
 	end;
-	add_row(self.grid_crew, 'ID', IntToStr(crew.CrewID));
-	add_row(self.grid_crew, 'GpsID', IntToStr(crew.GpsId));
-	add_row(self.grid_crew, 'State', IntToStr(crew.state));
+	add_row(self.grid_crew, 'ID', inttostr(crew.CrewID));
+	add_row(self.grid_crew, 'GpsID', inttostr(crew.GpsId));
+	add_row(self.grid_crew, 'State', inttostr(crew.state));
 	add_row(self.grid_crew, 'State_as_string', crew.state_as_string);
 	add_row(self.grid_crew, 'Name', crew.name);
 	add_row(self.grid_crew, 'Coord', crew.coord);
-	add_row(self.grid_crew, 'OrderID', IntToStr(crew.OrderId));
+	add_row(self.grid_crew, 'OrderID', inttostr(crew.OrderId));
 
 	// координаты
 	with self.grid_coords do

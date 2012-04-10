@@ -46,10 +46,6 @@ object FormCrew: TFormCrew
         Value = 100.000000000000000000
       end>
     TabOrder = 0
-    ExplicitLeft = 120
-    ExplicitTop = 176
-    ExplicitWidth = 185
-    ExplicitHeight = 41
     object GridPanel_grids: TGridPanel
       Left = 1
       Top = 1
@@ -80,10 +76,6 @@ object FormCrew: TFormCrew
           Value = 50.000000000000000000
         end>
       TabOrder = 0
-      ExplicitLeft = 272
-      ExplicitTop = 152
-      ExplicitWidth = 185
-      ExplicitHeight = 41
       object GroupBox_crew: TGroupBox
         Left = 1
         Top = 1
@@ -92,10 +84,6 @@ object FormCrew: TFormCrew
         Align = alClient
         Caption = 'GroupBox_crew'
         TabOrder = 0
-        ExplicitLeft = 208
-        ExplicitTop = 112
-        ExplicitWidth = 185
-        ExplicitHeight = 105
         object grid_crew: TStringGrid
           AlignWithMargins = True
           Left = 5
@@ -111,8 +99,6 @@ object FormCrew: TFormCrew
           FixedRows = 0
           ParentCtl3D = False
           TabOrder = 0
-          ExplicitWidth = 252
-          ExplicitHeight = 301
         end
       end
       object GroupBox_coords: TGroupBox
@@ -121,12 +107,8 @@ object FormCrew: TFormCrew
         Width = 333
         Height = 192
         Align = alClient
-        Caption = 'GroupBox_coords'
+        Caption = 'GPS-'#1090#1088#1077#1082' '#1101#1082#1080#1087#1072#1078#1072':'
         TabOrder = 1
-        ExplicitLeft = 160
-        ExplicitTop = 312
-        ExplicitWidth = 185
-        ExplicitHeight = 105
         object grid_coords: TStringGrid
           AlignWithMargins = True
           Left = 5
@@ -142,8 +124,6 @@ object FormCrew: TFormCrew
           FixedRows = 0
           ParentCtl3D = False
           TabOrder = 0
-          ExplicitWidth = 252
-          ExplicitHeight = 301
         end
       end
     end
@@ -178,22 +158,14 @@ object FormCrew: TFormCrew
           Value = 100.000000000000000000
         end>
       TabOrder = 1
-      ExplicitLeft = 512
-      ExplicitTop = 216
-      ExplicitWidth = 185
-      ExplicitHeight = 41
       object GroupBox_ctrls: TGroupBox
         Left = 1
         Top = 1
         Width = 333
         Height = 50
         Align = alClient
-        Caption = 'GroupBox_ctrls'
+        Caption = #1044#1077#1081#1089#1090#1074#1080#1103':'
         TabOrder = 0
-        ExplicitLeft = 40
-        ExplicitTop = 16
-        ExplicitWidth = 254
-        ExplicitHeight = 133
         DesignSize = (
           333
           50)
@@ -222,12 +194,8 @@ object FormCrew: TFormCrew
         Width = 333
         Height = 333
         Align = alClient
-        Caption = 'GroupBox_browser'
+        Caption = #1050#1072#1088#1090#1072':'
         TabOrder = 1
-        ExplicitLeft = 120
-        ExplicitTop = 288
-        ExplicitWidth = 185
-        ExplicitHeight = 105
         object browser: TWebBrowser
           Left = 2
           Top = 15
