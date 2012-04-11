@@ -11,6 +11,7 @@ uses crew_utils, // utils from robocap and mine
 function sort_crews_by_state_dist(p1, p2 : Pointer) : Integer;
 function sort_crews_by_time(p1, p2 : Pointer) : Integer;
 function sort_crews_by_crewid(p1, p2 : Pointer) : Integer;
+function sort_orders_by_source_time(p1, p2 : Pointer) : Integer;
 
 type
 	TCrewList = class;
@@ -29,14 +30,16 @@ type
 		time_to_end : Integer; // время до окончания заказа в минутах
 
 		query : TIBQuery;
-//		form : TFormOrder; // form to show order
+		// form : TFormOrder; // form to show order
 
 		// crews_list : TCrewList;
 
 		constructor Create(OrderId : Integer; var IBQuery : TIBQuery);
+		destructor Destroy(); override;
+		function get_time_to_end(var PCrew : Pointer) : Integer;
 		function get_order_data() : string;
 		function time_as_string() : string; // время до окончания заказа в виде часы-минуты;
-		function state_as_string() : string; // время до окончания заказа в виде часы-минуты;
+		function state_as_string() : string;
 	end;
 
 	TOrderList = class(TObject)
@@ -146,6 +149,26 @@ type
 	// end;
 
 implementation
+
+function sort_orders_by_source_time(p1, p2 : Pointer) : Integer;
+var s1, s2 : string;
+	id1, id2 : Integer;
+begin
+	s1 := TOrder(p1).source_time;
+	s2 := TOrder(p2).source_time;
+	id1 := TOrder(p1).ID;
+	id2 := TOrder(p2).ID;
+	if (s1 < s2) then
+		exit(-1)
+	else if (s1 > s2) then
+		exit(1)
+	else if (id1 < id2) then // если время подачи совпадает сортируем по OrderID
+		exit(-1)
+	else if (id1 > id2) then
+		exit(1)
+	else
+		exit(0);
+end;
 
 function sort_crews_by_crewid(p1, p2 : Pointer) : Integer;
 var id1, id2 : Integer;
@@ -550,15 +573,15 @@ end;
 function TCrewList.findById(ID : Integer; gps : boolean) : Pointer;
 var
 	crew : TCrew;
-	pcrew : ^TCrew;
+	PCrew : ^TCrew;
 begin
 	result := nil;
-	for pcrew in self.Crews do
+	for PCrew in self.Crews do
 	begin
-		crew := TCrew(pcrew);
+		crew := TCrew(PCrew);
 		if ((not gps) and (crew.CrewID = ID)) or (gps and (crew.GpsId = ID)) then
 		begin
-			result := pcrew;
+			result := PCrew;
 			exit();
 		end;
 	end;
@@ -956,7 +979,13 @@ begin
 	time_to_end := -1; // время до окончания заказа в минутах
 	self.query := IBQuery;
 
-//	form := TFormOrder.Create(nil);
+	// form := TFormOrder.Create(nil);
+end;
+
+destructor TOrder.Destroy;
+begin
+
+	inherited;
 end;
 
 function TOrder.get_order_data() : string;
@@ -992,6 +1021,95 @@ begin
 	return_adres(res.Strings[3], s, h, k); self.source.setAdres(s, h, k, '');
 	return_adres(res.Strings[4], s, h, k); self.dest.setAdres(s, h, k, '');
 
+	exit(result);
+end;
+
+function TOrder.get_time_to_end(var PCrew : Pointer) : Integer;
+	function get_set_gps(var adr : TAdres) : string;
+	begin
+		if adr.gps = '' then
+			with adr do
+				gps := get_gps_coords_for_adres(street, house, korpus);
+		exit(adr.gps);
+	end;
+
+var cur_pos : TAdres;
+	gps : string;
+	points : TList;
+	stops_time : Integer; // время на остановки для экипажа на заказе
+	crew : TCrew;
+begin
+
+	if (self.state = ORDER_DONE) or (self.CrewID = -1) or (self.source.isEmpty) or (self.dest.isEmpty) then
+		exit(-1);
+	crew := TCrew(PCrew);
+	if crew = nil then
+		exit(-1);
+	if (crew.coord = '') then
+	begin
+		self.state := ORDER_CREW_NO_COORD;
+		exit(ORDER_CREW_NO_COORD);
+	end;
+
+	stops_time := 0;
+	points := TList.Create(); // список точек маршрута
+	cur_pos := TAdres.Create('', '', '', crew.coord); // начало маршрута - текущая координата машины
+	points.Add(Pointer(cur_pos));
+
+	// если экипаж на заказе, то проверяем, был ли он в точках source и dest
+	// если нет - добавляем их в маршрут и прибавляем время на остановки
+	if (self.state <> ORDER_KLIENT_NA_BORTU) then // клиент НЕ на борту
+	begin
+		gps := get_set_gps(self.source);
+		if gps = '' then // нет координаты у адреса подачи
+		begin
+			self.state := ORDER_BAD_ADRES;
+			exit(ORDER_BAD_ADRES);
+		end;
+
+		if (not crew.is_crew_was_in_coord(gps)) then // и водитель в АП не был ещё
+		// т.е. если экипаж ещё не забрал клиента
+		begin
+			points.Add(Pointer(self.source));
+			points.Add(Pointer(self.dest));
+			stops_time := stops_time + 10 + 3;
+		end
+		else
+			self.state := ORDER_KLIENT_NA_BORTU;
+	end;
+
+	// если уже забрал, но не высадил
+	if (self.state = ORDER_KLIENT_NA_BORTU) then
+	begin
+		gps := get_set_gps(self.dest);
+		if gps = '' then // нет координаты у адреса высадки
+		begin
+			self.state := ORDER_BAD_ADRES;
+			exit(ORDER_BAD_ADRES);
+		end;
+		if not crew.is_crew_was_in_coord(gps) then // ещё не высадил
+		begin
+			points.Add(Pointer(self.dest));
+			stops_time := stops_time + 3;
+		end
+		else
+		begin
+			// забрал-высадил, то делаем заказ завёршенным и экипаж свободным
+			self.time_to_end := 0;
+			self.state := ORDER_DONE;
+			self.CrewID := -1; // сбрасываем экипаж в заказе
+			crew.OrderId := -1;
+			crew.state := CREW_SVOBODEN;
+			exit(0);
+		end;
+	end;
+
+	result := get_crew_way_time(points, crew.dist_way);
+	result := ifthen(result > -1, result + stops_time, -1);
+	self.time_to_end := result;
+	if result = -1 then
+		self.state := ORDER_WAY_ERROR;
+	FreeAndNil(points);
 	exit(result);
 end;
 
@@ -1041,11 +1159,17 @@ end;
 function TOrderList.delete_all_none_adres : Integer;
 var pp : Pointer;
 	order : TOrder;
+	i : Integer;
 begin
-	for pp in self.Orders do
-		with self.order(pp) do
-			if source.isEmpty() or dest.isEmpty() then
-				self.Orders.Delete(self.Orders.IndexOf(pp));
+	for i := self.Orders.Count - 1 downto 0 do
+	begin
+		order := self.order(self.Orders.Items[i]);
+		if order.source.isEmpty() or order.dest.isEmpty() then
+		begin
+			FreeMem(self.Orders.Items[i]);
+			self.Orders.Delete(i);
+		end;
+	end;
 	exit(0);
 end;
 
@@ -1114,7 +1238,8 @@ begin
 			result.Append(s1);
 		end;
 
-	self.delete_all_none_adres(); self.delete_all_none_adres();
+	self.delete_all_none_adres(); // self.delete_all_none_adres();
+	self.Orders.Sort(sort_orders_by_source_time);
 	exit(result);
 end;
 

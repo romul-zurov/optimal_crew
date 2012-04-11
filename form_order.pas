@@ -5,6 +5,7 @@ interface
 uses
 	crew_utils, //
 	crew, //
+	crew_globals, //
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
 	Dialogs, Grids, StdCtrls, ExtCtrls, OleCtrls, SHDocVw;
 
@@ -22,13 +23,21 @@ type
 		grid_order : TStringGrid;
 		Button_show_on_map : TButton;
 		GroupBox_order : TGroupBox;
+		Button_get_time : TButton;
 		procedure FormCreate(Sender : TObject);
 		procedure FormClose(Sender : TObject; var Action : TCloseAction);
+		procedure Button_get_timeClick(Sender : TObject);
+    procedure Button_get_crewClick(Sender: TObject);
+
 	private
 		{ Private declarations }
 		POrder : Pointer;
+
 	public
 		{ Public declarations }
+		PCrewList : Pointer;
+        POrderList : Pointer;
+        procedure get_show_crews(var order_list : TOrderList; var crew_list : TCrewList);
 		procedure show_crews(OrderId : integer; source, dest : string; var slist : tstringlist);
 		procedure show_order(); overload;
 		procedure show_order(POrd : Pointer); overload;
@@ -40,6 +49,64 @@ var
 implementation
 
 {$R *.dfm}
+// prprocedure TFormOrder.Button_get_timeClick(Sender: TObject);
+// begin
+//
+// end;
+
+procedure TFormOrder.get_show_crews(var order_list : TOrderList; var crew_list : TCrewList);
+var order : TOrder;
+	ordId : integer;
+	pp : Pointer;
+	crew : TCrew;
+	slist : tstringlist;
+
+begin
+	order := TOrder(POrder);
+    if order = Nil then exit();
+
+	if order.source.gps = '' then
+		with order.source do
+			gps := get_gps_coords_for_adres(street, house, korpus);
+	with order.source do
+		crew_list.set_ap(street, house, korpus, gps);
+	crew_list.set_crews_dist(crew_list.ap_gps);
+	crew_list.Crews.Sort(sort_crews_by_state_dist);
+
+	slist := tstringlist.Create();
+	for pp in crew_list.Crews do
+	begin
+		if not self.Visible then
+			break;
+
+		crew := crew_list.crew(pp);
+		crew.ap := order.source;
+		crew.get_time(order_list, true);
+		crew_list.Crews.Sort(sort_crews_by_time); // !!!!!!!!!!!!!!!!  :((
+		slist := crew_list.ret_crews_stringlist();
+		self.show_crews(order.id, order.source.get_as_string(), order.dest.get_as_string(), slist);
+		crew_list.Crews.Sort(sort_crews_by_state_dist); // !!!!!!!!!!  :)))
+	end;
+	FreeAndNil(slist);
+
+end;
+
+procedure TFormOrder.Button_get_crewClick(Sender: TObject);
+begin
+    self.get_show_crews(TOrderList(self.POrderList), TCrewList(self.PCrewList));
+end;
+
+procedure TFormOrder.Button_get_timeClick(Sender : TObject);
+var pc : Pointer;
+	order : TOrder;
+begin
+	order := TOrder(self.POrder);
+	if order.CrewID = -1 then
+		exit();
+	pc := TCrewList(PCrewList).findByCrewId(order.CrewID);
+	order.get_time_to_end(pc);
+	self.show_order();
+end;
 
 procedure TFormOrder.FormClose(Sender : TObject; var Action : TCloseAction);
 begin
@@ -125,7 +192,7 @@ begin
 		exit();
 	self.Resizing(wsMaximized);
 	self.Show();
-	self.Caption := 'Заказ № ' + inttostr(order.ID);
+	self.Caption := 'Заказ № ' + inttostr(order.id);
 	self.GroupBox_order.Caption := self.Caption;
 	with self.grid_order do
 	begin
@@ -135,16 +202,16 @@ begin
 		ColWidths[0] := 120;
 		ColWidths[1] := Width - ColWidths[0] - 20;
 	end;
-	add_row(self.grid_order, 'ID', inttostr(order.ID));
-	add_row(self.grid_order, 'Назначенный экипаж', inttostr(order.crewid));
+	add_row(self.grid_order, 'ID', inttostr(order.id));
+	add_row(self.grid_order, 'Назначенный экипаж', inttostr(order.CrewID));
 	add_row(self.grid_order, 'Предварительно назначенный экипаж', //
 		inttostr(order.prior_crewid));
 	add_row(self.grid_order, 'Предварительный заказ', da_net(order.prior));
 	add_row(self.grid_order, 'Состояние', order.state_as_string());
-    add_row(self.grid_order, 'Время подачи', order.source_time);
+	add_row(self.grid_order, 'Время подачи', order.source_time);
 	add_row(self.grid_order, 'Адрес подачи', order.source.get_as_string());
 	add_row(self.grid_order, 'Адрес назначения', order.dest.get_as_string());
-    add_row(self.grid_order, 'До окончания', order.time_as_string());
+	add_row(self.grid_order, 'До окончания', order.time_as_string());
 
 	// ID : Integer; // order main ID in ORDERS table, -1 if not defined
 	// CrewID : Integer; // crew ID for a order, -1 if not defined

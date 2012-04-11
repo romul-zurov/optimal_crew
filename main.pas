@@ -37,6 +37,7 @@ type
 		GroupBox_crew : TGroupBox;
 		button_show_sl : TButton;
 		Timer_coords : TTimer;
+		Button_show_order : TButton;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -46,6 +47,7 @@ type
 		procedure button_show_slClick(Sender : TObject);
 		procedure grid_crewsDblClick(Sender : TObject);
 		procedure Timer_coordsTimer(Sender : TObject);
+		procedure Button_show_orderClick(Sender : TObject);
 	private
 		{ Private declarations }
 	public
@@ -61,11 +63,10 @@ var
 	crew_list, res_crew_list, tmp_clist : TCrewList;
 	order_list : TOrderList;
 	Complete_Flag : boolean;
-	SDAY : string;
+	// SDAY : string;
 	// SCOORDTIME : string;
 	// order_crew : TOrderCrews;
-	acrews : array of TCrewList;
-	crews_count : integer;
+
 	form_cur_crew : TFormCrew;
 	form_cur_order : TFormOrder;
 
@@ -526,7 +527,7 @@ end;
 
 procedure show_orders_grid(var list : TOrderList);
 var pp : Pointer;
-	row, ord_id : integer;
+	row, ord_id, cur_col, cur_row : integer;
 	order : TOrder;
 	sord_id : string;
 begin
@@ -558,40 +559,68 @@ begin
 			Cells[6, 0] := 'Адрес назначения';
 		end;
 
+		// запоминаем, где был "курсор"
+		ord_id := -1;
+		cur_col := grid_order.Col; // !!
+		if grid_order.Cells[0, grid_order.row] = '' then
+		else
+			ord_id := StrToInt(grid_order.Cells[0, grid_order.row]);
+
 		// отображаем экипажи из списка
+		grid_order.RowCount := 2;
+		grid_order.Rows[1].Clear();
+		row := 1;
 		for pp in list.Orders do
 		begin
 			order := list.order(pp);
-			sord_id := IntToStr(order.id);
-			row := grid_order.Cols[0].IndexOf(sord_id);
-			if row > -1 then
-			begin
-				// если заказ уже есть в сетке то row - уже определена
-				show_status('заказ № ' + sord_id + ' найден')
-			end
-			else
-			begin
-				row := grid_order.RowCount;
-				if (row = 2) and (length(grid_order.Cells[0, 1]) = 0) then
-					// если в сетке ещё нет заказов
-					// то пишем со строки 1
-					row := 1
-				else
-					// иначе добавляем пустую строку в сетку и пишем в неё
-					with grid_order do
-						RowCount := RowCount + 1;
-			end;
-			grid_order.Cells[0, row] := sord_id;
+
+			// sord_id := IntToStr(order.id);
+			// row := grid_order.Cols[0].IndexOf(sord_id);
+			// if row > -1 then
+			// begin
+			// // если заказ уже есть в сетке то row - уже определена
+			// show_status('заказ № ' + sord_id + ' найден')
+			// end
+			// else
+			// begin
+			// row := grid_order.RowCount;
+			// if (row = 2) and (length(grid_order.Cells[0, 1]) = 0) then
+			// // если в сетке ещё нет заказов
+			// // то пишем со строки 1
+			// row := 1
+			// else
+			// // иначе добавляем пустую строку в сетку и пишем в неё
+			// with grid_order do
+			// RowCount := RowCount + 1;
+			// end;
+
+			grid_order.Cells[0, row] := IntToStr(order.id);
 			if crew_list.crew(order.CrewId) <> nil then
 				grid_order.Cells[1, row] := IntToStr(order.CrewId) + ' | ' + crew_list.crew(order.CrewId).name
 			else
-				grid_order.Cells[1, row] := '! ' + IntToStr(order.CrewId);
+				grid_order.Cells[1, row] := IntToStr(order.CrewId);
 			grid_order.Cells[2, row] := order.source_time;
 			grid_order.Cells[3, row] := order.time_as_string();
 			grid_order.Cells[4, row] := order.state_as_string();
 			grid_order.Cells[5, row] := order.source.get_as_string();
 			grid_order.Cells[6, row] := order.dest.get_as_string();
+
+			row := row + 1;
+			with grid_order do
+				RowCount := RowCount + 1;
 		end;
+		// убираем пустую строку в конце
+		with grid_order do
+			if RowCount > 2 then
+				RowCount := RowCount - 1;
+
+		// вертаем взад "курсор" сетки
+		row := grid_order.Cols[0].IndexOf(IntToStr(ord_id));
+		if row < 0 then
+			row := 1;
+		grid_order.row := row;
+		grid_order.Col := cur_col;
+
 		// теперь удаляем заказы из сетки, коих нет в списке
 		// remove all grid lines, which not in order_list :)
 		// for row := grid_order.RowCount - 1 downto 1 do
@@ -651,7 +680,7 @@ begin
 			inc(r);
 		end;
 	end;
-	show_status(list.meausure_time);
+	// show_status(list.meausure_time);
 end;
 
 procedure get_show_crews_times(var clist : TCrewList; var rlist : TCrewList);
@@ -745,16 +774,15 @@ end;
 
 procedure set_bd_times();
 begin
-	SDAY := '2011-10-03 00:00:00'; // for back-up base
-	DEBUG_SDATE_FROM := '2011-10-03 00:00:00';
-	DEBUG_SDATE_TO := '2011-10-04 00:00:00';
+	// SDAY := '2011-10-03 00:00:00'; // for back-up base
+
 	// SCOORDTIME := '2011-10-03 14:57:50'; // for back-up base
 
 	if form_main.cb_real_base.Checked then
 	begin
 		cur_time := now();
 		// SCOORDTIME := replace_time(COORDS_BUF_SIZE, cur_time); // for real database
-		SDAY := replace_time('{Last_hour_4}', cur_time); // for real database
+		// SDAY := replace_time('{Last_hour_4}', cur_time); // for real database
 	end;
 end;
 
@@ -814,7 +842,7 @@ begin
 
 		grid_crews.RowCount := 0; // clear grid
 
-		set_bd_times();
+		// set_bd_times();
 
 		// if edit_ap_gps.Text = '' then
 		// edit_ap_gps.Text := get_gps_coords_for_adres(edit_ap_street.Text, edit_ap_house.Text,
@@ -845,14 +873,14 @@ begin
 
 		// edit_adres.Text := IntToStr(crew_list.Crews.Count);
 
-		list_crew := get_crew_list(SDAY, crew_list);
+		// list_crew := get_crew_list(SDAY, crew_list);
 		// show_grid(list_crew, grid_crews);
 
 		list_tmp := ret_crews_stringlist(crew_list);
 		show_grid(list_tmp, grid_order);
 		// show_result_crews_grid(crew_list);
 
-		list_crew := get_order_list(SDAY, crew_list);
+		// list_crew := get_order_list(SDAY, crew_list);
 		// show_grid(list_crew, grid_crews);
 
 		// !---
@@ -870,6 +898,30 @@ begin
 		// sc2 := '30.363829,59.848945';
 		// edit_zakaz4ik.Text := sc1 + ' :: ' + sc2;
 		// edit_adres.Text := floattostr(get_dist_from_coord(sc1, sc2));
+	end;
+end;
+
+procedure show_order_time(row : integer);
+var order : TOrder;
+	ordId : integer;
+	pp, pc : Pointer;
+begin
+	if form_main.grid_order.Cells[0, row] = '' then
+		exit();
+	try
+		ordId := StrToInt(form_main.grid_order.Cells[0, row]);
+	except
+		exit();
+	end;
+	order := order_list.order(order_list.find_by_Id(ordId));
+	if order = nil then
+		exit();
+	if order.CrewId <> -1 then
+	begin
+		pc := crew_list.findByCrewId(order.CrewId);
+		order.get_time_to_end(pc);
+		show_orders_grid(order_list);
+		exit();
 	end;
 end;
 
@@ -908,40 +960,6 @@ begin
 		exit();
 	end;
 
-	// order.form.Show();
-	// set_bd_times();
-	// inc(crews_count);
-	// setlength(acrews, crews_count);
-	// acrews[crews_count - 1] := TCrewList.Create(form_main.ibquery_main);
-	// clist := TCrewList(Pointer(acrews[crews_count - 1]));
-	//
-	// clist.get_crew_list_by_order_list(order_list);
-	// clist.get_crews_coords();
-	// if clist.get_crew_list() = nil then
-	// pass;
-	// if order.source.gps = '' then
-	// with order.source do
-	// gps := get_gps_coords_for_adres(street, house, korpus);
-	// with order.source do
-	// clist.set_ap(street, house, korpus, gps);
-	// clist.set_crews_dist(clist.ap_gps);
-	// clist.Crews.Sort(sort_crews_by_state_dist);
-	//
-	// slist := TSTringList.Create();
-	// for pp in clist.Crews do
-	// begin
-	// if not order.form.Visible then
-	// break;
-	//
-	// crew := clist.crew(pp);
-	// crew.ap := order.source;
-	// crew.get_time(order_list, true);
-	// clist.Crews.Sort(sort_crews_by_time); // !!!!!!!!!!!!!!!!  :((
-	// slist := clist.ret_crews_stringlist();
-	// order.form.show_crews(order.id, order.source.get_as_string(), order.dest.get_as_string(), slist);
-	// clist.Crews.Sort(sort_crews_by_state_dist); // !!!!!!!!!!  :)))
-	// end;
-	// FreeAndNil(slist);
 end;
 
 function open_database() : boolean;
@@ -1005,6 +1023,11 @@ begin
 	show_tmp();
 end;
 
+procedure Tform_main.Button_show_orderClick(Sender : TObject);
+begin
+	show_order(self.grid_order.row);
+end;
+
 procedure Tform_main.button_show_slClick(Sender : TObject);
 begin
 	if form_debug.Showing then
@@ -1025,6 +1048,20 @@ end;
 
 procedure Tform_main.FormCreate(Sender : TObject);
 begin
+	browser_form := TForm.Create(nil);
+	with browser_form do
+	begin
+    	width := 0;
+        height := 0;
+        left := 0;
+        top := 600;
+		Show();
+	end;
+	// browser_form.Hide;
+
+	DEBUG_SDATE_FROM := '2011-10-03 00:00:00'; // for backup database
+	DEBUG_SDATE_TO := '2011-10-04 00:00:00'; // for backup database
+
 	with form_main do
 	begin
 		cb_real_base.Checked := true; // work with real base, not back-up
@@ -1044,8 +1081,10 @@ begin
 	form_main.grid_order.RowCount := 2;
 	PGlobalStatusBar := Pointer(form_main.stbar_main);
 	crew_list := TCrewList.Create(form_main.ibquery_main);
+	form_cur_order.PCrewList := Pointer(crew_list);
+    form_cur_order.POrderList := Pointer(order_list);
 	order_list := TOrderList.Create(ibquery_main);
-	crews_count := 0;
+//	crews_count := 0;
 
 	form_main.panel_ap.Show();
 
@@ -1076,7 +1115,7 @@ end;
 
 procedure Tform_main.grid_orderDblClick(Sender : TObject);
 begin
-	show_order(self.grid_order.row);
+	show_order_time(self.grid_order.row);
 end;
 
 procedure Tform_main.Timer_coordsTimer(Sender : TObject);

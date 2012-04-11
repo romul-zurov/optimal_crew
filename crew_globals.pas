@@ -55,6 +55,7 @@ var
 	order_states : Tstringlist;
 	crew_states : Tstringlist;
 	PGlobalStatusBar : Pointer;
+	browser_form : Tform;
 
 	main_db : TIBDatabase;
 	main_ta : TIBTransaction;
@@ -62,7 +63,6 @@ var
 	main_ibquery : TIBQuery;
 
 implementation
-
 
 function oooooooopen_database() : boolean;
 var MyPath, base, user, password : string;
@@ -222,23 +222,25 @@ begin
 end;
 
 function get_zapros(surl : string) : string;
-var form : TForm;
+var
+	// form : TForm;
 	browser : TWebBrowser;
 	s : string;
 begin
-	form := TForm.Create(nil);
+	// form := TForm.Create(nil);
 	browser := TWebBrowser.Create(nil);
 	try
 		InternetSetOption(nil, INTERNET_OPTION_END_BROWSER_SESSION, nil, 0); // end IE session
 		// sleep(900);
-		TWinControl(browser).Parent := form;
+		// TWinControl(browser).Parent := form;
+		TWinControl(browser).Parent := browser_form;
 		browser.Silent := true;
-		browser.Align := alClient;
-		form.Width := 400;
-		form.Height := 100;
-		form.Show;
-		if not DEBUG then
-			form.Hide;
+//		browser.Align := alClient;
+//		form.Width := 400;
+//		form.Height := 100;
+//		form.Show;
+//		if not DEBUG then
+//			form.Hide;
 		browser.Navigate(surl);
 		while browser.ReadyState < READYSTATE_COMPLETE do
 			Application.ProcessMessages;
@@ -247,7 +249,7 @@ begin
 			sleep(1000);
 	finally
 		browser.Free;
-		form.Free;
+//		form.Free;
 	end;
 	exit(s); // 'Foo String';
 end;
@@ -302,7 +304,7 @@ begin
 		exit;
 	end;
 	query.Open;
-	show_status('запрос произведён');
+	// show_status('запрос произведён');
 	result := 0;
 end;
 
@@ -383,6 +385,9 @@ end;
 procedure show_status(status : string);
 var stbar : TStatusBar;
 begin
+	// временно отключено
+	// exit();
+
 	if PGlobalStatusBar = nil then
 		exit();
 	stbar := TStatusBar(PGlobalStatusBar);

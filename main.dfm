@@ -180,7 +180,7 @@ object form_main: Tform_main
         Visible = False
       end
       object button_show_sl: TButton
-        Left = 487
+        Left = 301
         Top = 6
         Width = 75
         Height = 25
@@ -188,6 +188,16 @@ object form_main: Tform_main
         Caption = 'Debug'
         TabOrder = 7
         OnClick = button_show_slClick
+      end
+      object Button_show_order: TButton
+        Left = 448
+        Top = 6
+        Width = 114
+        Height = 25
+        Anchors = [akTop, akRight]
+        Caption = #1055#1086#1076#1088#1086#1073#1085#1086#1089#1090#1080' '#1079#1072#1082#1072#1079#1072
+        TabOrder = 8
+        OnClick = Button_show_orderClick
       end
     end
     object GridPanel_grids: TGridPanel
