@@ -323,4 +323,11 @@ object form_main: Tform_main
     Left = 264
     Top = 8
   end
+  object Timer_orders: TTimer
+    Enabled = False
+    Interval = 10000
+    OnTimer = Timer_ordersTimer
+    Left = 408
+    Top = 8
+  end
 end

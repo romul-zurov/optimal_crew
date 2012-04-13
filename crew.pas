@@ -69,7 +69,7 @@ type
 		coord : string; // текущая (самая свежая) координата GPS
 		dist : double; // расстояние до адреса подачи (АП) радиальное, по прямой, метров;
 		dist_way : double; // длина маршрута до АП, км;
-		dist_way_as_string : string; // то же;
+
 		time : Integer; // время подъезда к АП в минутах;
 		time_as_string : string; // оно же в виде часы-минуты;
 		coords : TStringList; // gps-трек за выбранный промежуток времени;
@@ -84,6 +84,7 @@ type
 
 		constructor Create(GpsId : Integer);
 		function state_as_string() : string;
+		function dist_way_as_string() : string;
 		function set_current_coord() : Integer;
 		function sort_coords_by_time_desc() : Integer;
 		function del_old_coords() : Integer;
@@ -285,6 +286,11 @@ begin
 	exit(0);
 end;
 
+function TCrew.dist_way_as_string : string;
+begin
+	result := FloatToStrF(self.dist_way, ffFixed, 8, 1) + ' км';
+end;
+
 function TCrew.get_time(var List : TOrderList; newOrder : boolean) : Integer;
 	function get_set_gps(var adr : TAdres) : string;
 	begin
@@ -404,10 +410,10 @@ begin
 		self.time := -1;
 		self.time_as_string := '';
 		self.dist_way := -1;
-		self.dist_way_as_string := '';
+		// self.dist_way_as_string := '';
 		exit();
 	end;
-	self.dist_way_as_string := FloatToStrF(self.dist_way, ffFixed, 8, 3) + 'км';
+
 	self.time := m;
 	self.time_as_string := IntToStr(m mod 60) + ' мин.';
 	if m > 59 then
@@ -1238,7 +1244,7 @@ begin
 	end
 	else
 	begin
-		sdate_from := replace_time('{Last_hour_2}', cur_time); // for real database
+		sdate_from := replace_time('{Last_day_1}', cur_time); // for real database
 		sdate_to := replace_time('{Last_hour_-4}', cur_time); // for real database
 	end;
 	sdate_from := '''' + sdate_from + '''';
@@ -1248,21 +1254,24 @@ begin
 		+ ' ORDERS.ID ' //
 		+ ' from ORDERS ' //
 		+ ' where ' //
-		+ ' (ORDERS.STATE in ' //
-		+ '   (select ORDER_STATES.ID from ORDER_STATES where ORDER_STATES.SYSTEMSTATE in (0, 1) ) ' //
-	// .         ^^^ только заказы с состоянием "принят", "в работе" и т.п.
-	// .             см. данные таблицы ORDER_STATES
-		+ ' ) ' //
+
 	// отбрасываем удалённые и отменённые заказы
-		+ ' and (ORDERS.DELETED is null   or ORDERS.DELETED = 0) '
+		+ ' (ORDERS.DELETED is null) ' // or ORDERS.DELETED = 0) '
+
+	// . только заказы с состоянием "принят", "в работе" и т.п.
+	// . см. данные таблицы ORDER_STATES
+		+ ' and (ORDERS.STATE in ' //
+		+ '   (select ORDER_STATES.ID from ORDER_STATES where ORDER_STATES.SYSTEMSTATE in (0, 1) ) ' //
+		+ ' ) ' //
 
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// + ' and ORDERS.SOURCE_TIME > ' + sdate_from // выбираем заказы
+	// + ' and ORDERS.SOURCE_TIME > ' + sdate_from // ну так, что б уж поменьше
 	// + ' and ORDERS.SOURCE_TIME < ' + sdate_to // по времени подачи
 
+	// . отбрасываем заказы с промежуточными остановками
 		+ ' and (ORDERS.STOPS_COUNT is null  or  ORDERS.STOPS_COUNT = 0) ' //
-	// .      ^^^ отбрасываем заказы с промежуточными остановками
-		+ ' order by ORDERS.SOURCE_TIME asc ';
+//		+ ' order by ORDERS.SOURCE_TIME asc ' //
+		;
 
 	res := get_sql_stringlist(self.query, sel);
 	// result := TStringList.Create();

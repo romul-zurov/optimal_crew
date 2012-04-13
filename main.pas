@@ -38,6 +38,7 @@ type
 		button_show_sl : TButton;
 		Timer_coords : TTimer;
 		Button_show_order : TButton;
+		Timer_orders : TTimer;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -48,6 +49,7 @@ type
 		procedure grid_crewsDblClick(Sender : TObject);
 		procedure Timer_coordsTimer(Sender : TObject);
 		procedure Button_show_orderClick(Sender : TObject);
+		procedure Timer_ordersTimer(Sender : TObject);
 	private
 		{ Private declarations }
 	public
@@ -63,6 +65,7 @@ var
 	crew_list, res_crew_list, tmp_clist : TCrewList;
 	order_list : TOrderList;
 	Complete_Flag : boolean;
+	deb_list : TSTringList;
 	// SDAY : string;
 	// SCOORDTIME : string;
 	// order_crew : TOrderCrews;
@@ -787,7 +790,6 @@ begin
 end;
 
 procedure first_request();
-var deb_list : TSTringList;
 begin
 	deb_list := order_list.get_current_orders();
 	crew_list.get_crew_list_by_order_list(order_list);
@@ -981,6 +983,8 @@ begin
 				password := FIniFile.ReadString('Base', 'Password', '');
 				// ac_taxi_url := 'http://test.robocab.ru/';
 				ac_taxi_url := FIniFile.ReadString('Url', 'Main_Url', '');
+				form_main.Timer_coords.Interval := StrToInt(FIniFile.ReadString('Const', 'Timer_Coords', ''));
+				form_main.Timer_orders.Interval := StrToInt(FIniFile.ReadString('Const', 'Timer_Orders', ''));
 			finally
 			end;
 		end;
@@ -1078,6 +1082,7 @@ begin
 	end;
 	// form_main.DBGrid1.Hide();
 
+	sql_string_list := TSTringList.Create();
 	form_cur_crew := TFormCrew.Create(nil);
 	form_cur_order := TFormOrder.Create(nil);
 	form_main.grid_order.RowCount := 2;
@@ -1099,6 +1104,7 @@ begin
 		first_request();
 	end;
 	form_main.Timer_coords.Enabled := true;
+	form_main.Timer_orders.Enabled := true;
 	// show_orders_grid(order_list);
 end;
 
@@ -1128,6 +1134,11 @@ begin
 	if form_cur_crew.Showing then
 		form_cur_crew.show_crew();
 
+end;
+
+procedure Tform_main.Timer_ordersTimer(Sender : TObject);
+begin
+	first_request();
 end;
 
 end.

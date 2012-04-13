@@ -47,6 +47,7 @@ type
 	end;
 
 var
+	sql_string_list : Tstringlist;
 	DEBUG : boolean;
 	DEBUG_SDATE_FROM : string;
 	DEBUG_SDATE_TO : string;
@@ -235,12 +236,12 @@ begin
 		// TWinControl(browser).Parent := form;
 		TWinControl(browser).Parent := browser_form;
 		browser.Silent := true;
-//		browser.Align := alClient;
-//		form.Width := 400;
-//		form.Height := 100;
-//		form.Show;
-//		if not DEBUG then
-//			form.Hide;
+		// browser.Align := alClient;
+		// form.Width := 400;
+		// form.Height := 100;
+		// form.Show;
+		// if not DEBUG then
+		// form.Hide;
 		browser.Navigate(surl);
 		while browser.ReadyState < READYSTATE_COMPLETE do
 			Application.ProcessMessages;
@@ -249,7 +250,7 @@ begin
 			sleep(1000);
 	finally
 		browser.Free;
-//		form.Free;
+		// form.Free;
 	end;
 	exit(s); // 'Foo String';
 end;
@@ -258,18 +259,19 @@ function create_order_and_crew_states(var IBQuery : TIBQuery) : Integer;
 	procedure set_states(var states : Tstringlist; table_name : string);
 	var sel, s : string;
 		i : Integer;
+		st : Tstringlist;
 	begin
 		sel := 'select ' //
 			+ ' ID, NAME ' //
 			+ ' from ' //
 			+ table_name;
-		states := get_sql_stringlist(IBQuery, sel);
-		for i := 0 to states.Count - 1 do
+		st := get_sql_stringlist(IBQuery, sel);
+		for i := 0 to st.Count - 1 do
 		begin
-			s := states.Strings[i];
+			s := st.Strings[i];
 			s := StringReplace(s, ' ', '_', [rfReplaceAll]);
 			s := StringReplace(s, '|', '=', [rfReplaceAll]);
-			states.Strings[i] := s;
+			states.Add(s);
 		end;
 		s := '-1=не_определено';
 		states.Append(s);
@@ -311,11 +313,23 @@ end;
 function get_sql_stringlist(var query : TIBQuery; sel : string) : Tstringlist;
 var
 	res : string;
-	list : Tstringlist;
+	// list : Tstringlist;
 	field : TField;
+	i : Integer;
 begin
 	sql_select(query, sel);
-	list := Tstringlist.Create;
+	// list := Tstringlist.Create;
+
+	// очищаем список вп-ду!
+	sql_string_list.Destroy();
+	sql_string_list := Tstringlist.Create();
+	// for i := sql_string_list.Count - 1 downto 0 do
+	// begin
+	// FreeMem(Pointer(sql_string_list.Strings[i]));
+	// sql_string_list.Delete(i);
+	// end;
+	// sql_string_list.Clear();
+
 	while (not query.Eof) do
 	begin
 		res := '';
@@ -324,11 +338,13 @@ begin
 			res := res + field.AsString + '|';
 		end;
 		if res[length(res)] = '|' then
-			delete(res, length(res), 1);
-		list.Append(res);
+			Delete(res, length(res), 1);
+		// list.Append(res);
+		sql_string_list.Append(res);
 		query.Next;
 	end;
-	result := list;
+	// result := list;
+	exit(sql_string_list);
 end;
 
 { TAdres }
