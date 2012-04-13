@@ -787,13 +787,15 @@ begin
 end;
 
 procedure first_request();
+var deb_list : TSTringList;
 begin
-	order_list.get_current_orders();
+	deb_list := order_list.get_current_orders();
 	crew_list.get_crew_list_by_order_list(order_list);
 	crew_list.get_crews_coords();
 	crew_list.Crews.Sort(sort_crews_by_crewid);
 
 	// Show orders:
+	form_debug.show_orders(deb_list); // for info
 	show_orders_grid(order_list);
 	show_result_crews_grid(crew_list);
 end;
@@ -1051,10 +1053,10 @@ begin
 	browser_form := TForm.Create(nil);
 	with browser_form do
 	begin
-    	width := 0;
-        height := 0;
-        left := 0;
-        top := 600;
+		Width := 0;
+		height := 0;
+		left := 0;
+		top := 600;
 		Show();
 	end;
 	// browser_form.Hide;
@@ -1082,9 +1084,9 @@ begin
 	PGlobalStatusBar := Pointer(form_main.stbar_main);
 	crew_list := TCrewList.Create(form_main.ibquery_main);
 	form_cur_order.PCrewList := Pointer(crew_list);
-    form_cur_order.POrderList := Pointer(order_list);
+	form_cur_order.POrderList := Pointer(order_list);
 	order_list := TOrderList.Create(ibquery_main);
-//	crews_count := 0;
+	// crews_count := 0;
 
 	form_main.panel_ap.Show();
 

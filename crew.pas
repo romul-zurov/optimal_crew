@@ -28,6 +28,7 @@ type
 		dest : TAdres; // address to
 		source_time : string; // время подачи экипажа
 		time_to_end : Integer; // время до окончания заказа в минутах
+		deleted : boolean;
 
 		query : TIBQuery;
 		// form : TFormOrder; // form to show order
@@ -47,6 +48,7 @@ type
 		query : TIBQuery;
 
 		constructor Create(var IBQuery : TIBQuery);
+		function del_order(ListIndex : Integer) : Integer;
 		function clear_order_list() : Integer;
 		function order(p : Pointer) : TOrder;
 		function find_by_Id(OrderId : Integer) : Pointer;
@@ -54,7 +56,8 @@ type
 		function Append(OrderId : Integer) : Pointer;
 		function get_current_orders() : TStringList;
 		function get_crews_id_as_string() : string;
-		function delete_all_none_adres() : Integer;
+		function del_bad_orders() : Integer;
+		function get_orders_data() : TStringList;
 	end;
 
 	TCrew = class(TObject)
@@ -379,18 +382,18 @@ begin
 end;
 
 function TCrew.set_current_coord() : Integer;
-var sl : TStringList;
-	s, s1, s2 : string;
-	crew : TCrew;
-	Count, i : Integer;
+var coord_stime, cur_stime : string;
 begin
 	if self.sort_coords_by_time_desc() < 0 then
 		exit(-1);
-	s := self.coords.Strings[0];
-	s1 := get_substr(s, '', ',');
-	s2 := get_substr(s, ',', '');
-	s := s1 + ',' + s2;
-	self.coord := s;
+
+	coord_stime := self.coords_times[0];
+	cur_stime := replace_time('{Last_minute_5}', now());
+	if coord_stime < cur_stime then
+		// координата экипажа "утстарела" на 5 минут и более
+		self.coord := ''
+	else
+		self.coord := self.coords.Strings[0];
 	exit(0);
 end;
 
@@ -978,7 +981,7 @@ begin
 	source_time := ''; // время подачи экипажа
 	time_to_end := -1; // время до окончания заказа в минутах
 	self.query := IBQuery;
-
+	self.deleted := false;
 	// form := TFormOrder.Create(nil);
 end;
 
@@ -1005,12 +1008,18 @@ begin
 	sel := 'select ' //
 		+ ' ORDERS.CREWID, ORDERS.STATE, ORDERS.SOURCE_TIME, ' //
 		+ ' ORDERS.SOURCE, ORDERS.DESTINATION ' //
+		+ ' , ORDERS.DELETED ' // deleted and canceled orders
+		+ ' , DELETE_TIME, DELETE_USER_ID ' //
+		+ ' , ORDER_COORDS.COORDS_ADDR   ' //
 		+ ' from ORDERS ' //
+		+ ' , ORDER_COORDS ' //
 		+ ' where ' //
-		+ ' ORDERS.ID = ' + IntToStr(self.ID); //
-
+		+ ' ORDERS.ID = ' + IntToStr(self.ID) //
+		+ ' and ORDER_COORDS.ORDER_ID = ' + IntToStr(self.ID) //
+		;
 	res := get_sql_stringlist(self.query, sel);
-	result := res.Text; // return raw data as string
+	// result := res.Text; // return raw data as string
+	result := res[0];
 
 	res.Text := StringReplace(res.Text, '|', #13#10, [rfReplaceAll]);
 
@@ -1020,6 +1029,12 @@ begin
 	self.source_time := date_to_full(res.Strings[2]);
 	return_adres(res.Strings[3], s, h, k); self.source.setAdres(s, h, k, '');
 	return_adres(res.Strings[4], s, h, k); self.dest.setAdres(s, h, k, '');
+
+	// проверяем удалённые и отменённые заказы
+	if (length(res.Strings[5]) = 0) or (res.Strings[5] = '0') then
+		self.deleted := false
+	else
+		self.deleted := true;
 
 	exit(result);
 end;
@@ -1156,7 +1171,7 @@ begin
 	self.query := IBQuery;
 end;
 
-function TOrderList.delete_all_none_adres : Integer;
+function TOrderList.del_bad_orders : Integer;
 var pp : Pointer;
 	order : TOrder;
 	i : Integer;
@@ -1164,13 +1179,29 @@ begin
 	for i := self.Orders.Count - 1 downto 0 do
 	begin
 		order := self.order(self.Orders.Items[i]);
-		if order.source.isEmpty() or order.dest.isEmpty() then
-		begin
-			FreeMem(self.Orders.Items[i]);
-			self.Orders.Delete(i);
-		end;
+		if //
+			order.source.isEmpty() // нет адреса подачи
+			or order.dest.isEmpty() // нет адреса назначения
+			or order.deleted // заказ удалён/отменён
+			or (order.state = ORDER_DONE) // заказ завершён
+			then
+			self.del_order(i); // удаляем заказ из списка
 	end;
 	exit(0);
+end;
+
+function TOrderList.del_order(ListIndex : Integer) : Integer;
+begin
+	if ListIndex in [0 .. self.Orders.Count - 1] then
+		try
+			FreeMem(self.Orders.Items[ListIndex]);
+			self.Orders.Delete(ListIndex);
+			exit(0);
+		except
+			exit(-2)
+		end
+	else
+		exit(-1);
 end;
 
 function TOrderList.find_by_Id(OrderId : Integer) : Pointer;
@@ -1222,24 +1253,42 @@ begin
 	// .         ^^^ только заказы с состоянием "принят", "в работе" и т.п.
 	// .             см. данные таблицы ORDER_STATES
 		+ ' ) ' //
-		+ ' and ORDERS.SOURCE_TIME > ' + sdate_from // выбираем заказы
-		+ ' and ORDERS.SOURCE_TIME < ' + sdate_to // по времени подачи
+	// отбрасываем удалённые и отменённые заказы
+		+ ' and (ORDERS.DELETED is null   or ORDERS.DELETED = 0) '
+
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// + ' and ORDERS.SOURCE_TIME > ' + sdate_from // выбираем заказы
+	// + ' and ORDERS.SOURCE_TIME < ' + sdate_to // по времени подачи
+
 		+ ' and (ORDERS.STOPS_COUNT is null  or  ORDERS.STOPS_COUNT = 0) ' //
 	// .      ^^^ отбрасываем заказы с промежуточными остановками
 		+ ' order by ORDERS.SOURCE_TIME asc ';
 
 	res := get_sql_stringlist(self.query, sel);
-	result := TStringList.Create();
+	// result := TStringList.Create();
 	for s in res do
 		if not self.is_defined(StrToInt(s)) then
-		begin
-			// если заказа нет в списке, то запрашиваем его данные
-			s1 := self.order(self.Append(StrToInt(s))).get_order_data();
-			result.Append(s1);
-		end;
+			// если заказа нет в списке, то добавляем
+			self.Append(StrToInt(s));
+	// запрашиваем его данные заказов
+	// если есть - всё равно зпрашиваем, а то вдруг обновились :))
+	// s1 := self.order(self.Append(StrToInt(s))).get_order_data();
+	// result.Append(s1);
 
-	self.delete_all_none_adres(); // self.delete_all_none_adres();
+	result := self.get_orders_data();
+	self.del_bad_orders(); // self.delete_all_none_adres();
 	self.Orders.Sort(sort_orders_by_source_time);
+	exit(result);
+end;
+
+function TOrderList.get_orders_data : TStringList;
+var pp : Pointer;
+begin
+	if self.Orders.Count = 0 then
+		exit();
+	result := TStringList.Create();
+	for pp in self.Orders do
+		result.Append(self.order(pp).get_order_data());
 	exit(result);
 end;
 
