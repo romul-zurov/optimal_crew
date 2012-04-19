@@ -41,6 +41,7 @@ type
 		function get_order_data() : string;
 		function time_as_string() : string; // время до окончания заказа в виде часы-минуты;
 		function state_as_string() : string;
+		function is_not_prior() : boolean;
 	end;
 
 	TOrderList = class(TObject)
@@ -67,6 +68,7 @@ type
 		Code : string;
 		name : string;
 		coord : string; // текущая (самая свежая) координата GPS
+		old_coord : string; // предыдущая координата
 		dist : double; // расстояние до адреса подачи (АП) радиальное, по прямой, метров;
 		dist_way : double; // длина маршрута до АП, км;
 
@@ -90,10 +92,12 @@ type
 		function del_old_coords() : Integer;
 		function append_coords(coord : string; time : string) : Integer;
 		function is_crew_was_in_coord(coord : string) : boolean;
+		function is_moved() : boolean; // сместился более чем на...
 		procedure calc_dist(coord : string);
 		procedure set_time(m : Integer); // set time and time_as_string;
 		function get_time(var List : TOrderList; newOrder : boolean) : Integer;
 		procedure show_status(s : string);
+		procedure reset_old_coord();
 	end;
 
 	TCrewList = class(TObject)
@@ -257,6 +261,7 @@ begin
 	self.name := '';
 	// self.state_as_string := '';
 	self.coord := ''; // текущая (самая свежая) координата GPS
+	old_coord := ''; // предыдущая координата
 	self.dist := -1.0; // расстояние до адреса подачи (АП)
 	self.time := -1; // время подъезда к АП в минутах;
 	self.OrderId := -1; // ID заказа занятого экипажа
@@ -387,6 +392,18 @@ begin
 	exit(false);
 end;
 
+function TCrew.is_moved : boolean;
+begin
+	if self.coord = '' then
+		exit(false);
+	if self.old_coord = '' then
+		result := true
+	else
+		result := get_dist_from_coord(self.coord, self.old_coord) > CREW_MOVE_DIST;
+	// if result then
+	// self.old_coord := self.coord;
+end;
+
 function TCrew.set_current_coord() : Integer;
 var coord_stime, cur_stime : string;
 begin
@@ -396,11 +413,21 @@ begin
 	coord_stime := self.coords_times[0];
 	cur_stime := replace_time('{Last_minute_5}', now());
 	if coord_stime < cur_stime then
-		// координата экипажа "утстарела" на 5 минут и более
-		self.coord := ''
+	begin
+		// координата экипажа "устарела" на 5 минут и более
+		self.coord := '';
+		self.old_coord := '';
+	end
 	else
+	begin
 		self.coord := self.coords.Strings[0];
+	end;
 	exit(0);
+end;
+
+procedure TCrew.reset_old_coord;
+begin
+	self.old_coord := self.coord;
 end;
 
 procedure TCrew.set_time(m : Integer);
@@ -1033,8 +1060,8 @@ begin
 		self.CrewID := StrToInt(res.Strings[0]);
 	self.state := StrToInt(res.Strings[1]);
 	self.source_time := date_to_full(res.Strings[2]);
-	return_adres(res.Strings[3], s, h, k); self.source.setAdres(s, h, k, '');
-	return_adres(res.Strings[4], s, h, k); self.dest.setAdres(s, h, k, '');
+	return_adres(res.Strings[3], s, h, k); self.source.setAdres(s, h, k, self.source.gps);
+	return_adres(res.Strings[4], s, h, k); self.dest.setAdres(s, h, k, self.dest.gps);
 
 	// проверяем удалённые и отменённые заказы
 	if (length(res.Strings[5]) = 0) or (res.Strings[5] = '0') then
@@ -1059,16 +1086,19 @@ var cur_pos : TAdres;
 	points : TList;
 	stops_time : Integer; // время на остановки для экипажа на заказе
 	crew : TCrew;
+	na_bortu : boolean;
 begin
-
-	if (self.state = ORDER_DONE) or (self.CrewID = -1) or (self.source.isEmpty) or (self.dest.isEmpty) then
+	if (self.state in [ORDER_DONE, ORDER_CANCEL, ORDER_DISCONTNUED]) //
+		or (self.CrewID = -1) //
+		or (self.source.isEmpty) or (self.dest.isEmpty) //
+		then
 		exit(-1);
 	crew := TCrew(PCrew);
 	if crew = nil then
 		exit(-1);
 	if (crew.coord = '') then
 	begin
-		self.state := ORDER_CREW_NO_COORD;
+		self.time_to_end := ORDER_CREW_NO_COORD;
 		exit(ORDER_CREW_NO_COORD);
 	end;
 
@@ -1079,12 +1109,13 @@ begin
 
 	// если экипаж на заказе, то проверяем, был ли он в точках source и dest
 	// если нет - добавляем их в маршрут и прибавляем время на остановки
+	na_bortu := false;
 	if (self.state <> ORDER_KLIENT_NA_BORTU) then // клиент НЕ на борту
 	begin
 		gps := get_set_gps(self.source);
 		if gps = '' then // нет координаты у адреса подачи
 		begin
-			self.state := ORDER_BAD_ADRES;
+			self.time_to_end := ORDER_BAD_ADRES;
 			exit(ORDER_BAD_ADRES);
 		end;
 
@@ -1096,16 +1127,17 @@ begin
 			stops_time := stops_time + 10 + 3;
 		end
 		else
-			self.state := ORDER_KLIENT_NA_BORTU;
+			na_bortu := true;
+		// self.state := ORDER_KLIENT_NA_BORTU;
 	end;
 
 	// если уже забрал, но не высадил
-	if (self.state = ORDER_KLIENT_NA_BORTU) then
+	if (na_bortu) or (self.state = ORDER_KLIENT_NA_BORTU) then
 	begin
 		gps := get_set_gps(self.dest);
 		if gps = '' then // нет координаты у адреса высадки
 		begin
-			self.state := ORDER_BAD_ADRES;
+			self.time_to_end := ORDER_BAD_ADRES;
 			exit(ORDER_BAD_ADRES);
 		end;
 		if not crew.is_crew_was_in_coord(gps) then // ещё не высадил
@@ -1117,8 +1149,8 @@ begin
 		begin
 			// забрал-высадил, то делаем заказ завёршенным и экипаж свободным
 			self.time_to_end := 0;
-			self.state := ORDER_DONE;
-			self.CrewID := -1; // сбрасываем экипаж в заказе
+			// self.state := ORDER_DONE;
+			// self.CrewID := -1; // сбрасываем экипаж в заказе
 			crew.OrderId := -1;
 			crew.state := CREW_SVOBODEN;
 			exit(0);
@@ -1129,9 +1161,14 @@ begin
 	result := ifthen(result > -1, result + stops_time, -1);
 	self.time_to_end := result;
 	if result = -1 then
-		self.state := ORDER_WAY_ERROR;
+		self.time_to_end := ORDER_WAY_ERROR;
 	FreeAndNil(points);
 	exit(result);
+end;
+
+function TOrder.is_not_prior : boolean;
+begin
+	result := self.source_time < replace_time('{Last_hour_-1}', now());
 end;
 
 function TOrder.state_as_string : string;
@@ -1143,13 +1180,28 @@ end;
 
 function TOrder.time_as_string : string;
 begin
-	if self.time_to_end < 0 then
-		exit('неизвестно')
-	else if self.time_to_end = 0 then
-		exit('завершён');
-	result := IntToStr(self.time_to_end mod 60) + ' мин.';
-	if self.time_to_end > 59 then
-		result := IntToStr(self.time_to_end div 60) + ' ч. ' + result;
+	case self.time_to_end of
+		- 1 :
+			exit('неизвестно');
+		0 :
+			exit('завершён');
+	else
+		if self.time_to_end < 0 then
+			exit(order_states.Values[IntToStr(self.time_to_end)])
+		else
+		begin
+			result := IntToStr(self.time_to_end mod 60) + ' мин.';
+			if self.time_to_end > 59 then
+				result := IntToStr(self.time_to_end div 60) + ' ч. ' + result;
+		end;
+	end;
+	// if self.time_to_end < 0 then
+	// exit('неизвестно')
+	// else if self.time_to_end = 0 then
+	// exit('завершён');
+	// result := IntToStr(self.time_to_end mod 60) + ' мин.';
+	// if self.time_to_end > 59 then
+	// result := IntToStr(self.time_to_end div 60) + ' ч. ' + result;
 end;
 
 { TOrder_List }
@@ -1190,6 +1242,9 @@ begin
 			or order.dest.isEmpty() // нет адреса назначения
 			or order.deleted // заказ удалён/отменён
 			or (order.state = ORDER_DONE) // заказ завершён
+			or (order.state = ORDER_CANCEL) // заказ отменён
+			or (order.state = ORDER_DISCONTNUED) // заказ прекращён
+			or (order.state = ORDER_NO_CREWS) // нет машин
 			then
 			self.del_order(i); // удаляем заказ из списка
 	end;
@@ -1270,7 +1325,7 @@ begin
 
 	// . отбрасываем заказы с промежуточными остановками
 		+ ' and (ORDERS.STOPS_COUNT is null  or  ORDERS.STOPS_COUNT = 0) ' //
-//		+ ' order by ORDERS.SOURCE_TIME asc ' //
+	// + ' order by ORDERS.SOURCE_TIME asc ' //
 		;
 
 	res := get_sql_stringlist(self.query, sel);

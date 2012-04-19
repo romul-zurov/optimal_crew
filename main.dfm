@@ -2,8 +2,8 @@ object form_main: Tform_main
   Left = 0
   Top = 0
   Caption = #1055#1086#1076#1073#1086#1088' '#1086#1087#1090#1080#1084#1072#1083#1100#1085#1086#1075#1086' '#1101#1082#1080#1087#1072#1078#1072' '#1040#1057'-'#1058#1072#1082#1089#1080
-  ClientHeight = 323
-  ClientWidth = 756
+  ClientHeight = 381
+  ClientWidth = 770
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -19,8 +19,8 @@ object form_main: Tform_main
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 750
-    Height = 317
+    Width = 764
+    Height = 375
     Align = alClient
     ColumnCollection = <
       item
@@ -53,13 +53,16 @@ object form_main: Tform_main
       item
         SizeStyle = ssAuto
         Value = 30.000000000000000000
+      end
+      item
+        SizeStyle = ssAuto
       end>
     TabOrder = 0
     object panel_ap: TPanel
       AlignWithMargins = True
       Left = 5
       Top = 5
-      Width = 740
+      Width = 754
       Height = 42
       Margins.Left = 4
       Margins.Top = 4
@@ -69,7 +72,7 @@ object form_main: Tform_main
       AutoSize = True
       TabOrder = 0
       DesignSize = (
-        740
+        754
         42)
       object Label2: TLabel
         Left = 164
@@ -120,7 +123,7 @@ object form_main: Tform_main
         Visible = False
       end
       object Button1: TButton
-        Left = 595
+        Left = 609
         Top = 6
         Width = 125
         Height = 25
@@ -130,7 +133,7 @@ object form_main: Tform_main
         OnClick = Button1Click
       end
       object cb_real_base: TCheckBox
-        Left = 568
+        Left = 582
         Top = 10
         Width = 30
         Height = 17
@@ -180,7 +183,7 @@ object form_main: Tform_main
         Visible = False
       end
       object button_show_sl: TButton
-        Left = 301
+        Left = 315
         Top = 6
         Width = 75
         Height = 25
@@ -190,7 +193,7 @@ object form_main: Tform_main
         OnClick = button_show_slClick
       end
       object Button_show_order: TButton
-        Left = 448
+        Left = 462
         Top = 6
         Width = 114
         Height = 25
@@ -203,8 +206,8 @@ object form_main: Tform_main
     object GridPanel_grids: TGridPanel
       Left = 1
       Top = 51
-      Width = 748
-      Height = 246
+      Width = 762
+      Height = 304
       Align = alClient
       ColumnCollection = <
         item
@@ -233,34 +236,67 @@ object form_main: Tform_main
       object GroupBox_order: TGroupBox
         Left = 1
         Top = 1
-        Width = 496
-        Height = 244
+        Width = 510
+        Height = 302
         Align = alClient
-        Caption = #1058#1077#1082#1091#1097#1080#1077' '#1079#1072#1082#1072#1079#1099':'
+        Caption = #1047#1072#1082#1072#1079#1099':'
         TabOrder = 0
-        object grid_order: TStringGrid
-          AlignWithMargins = True
-          Left = 5
-          Top = 18
-          Width = 486
-          Height = 221
+        object PageControl_orders: TPageControl
+          Left = 2
+          Top = 15
+          Width = 506
+          Height = 285
+          ActivePage = TabSheet_current
           Align = alClient
-          ColCount = 3
-          Ctl3D = False
-          DefaultRowHeight = 16
-          FixedCols = 0
-          RowCount = 1
-          FixedRows = 0
-          ParentCtl3D = False
           TabOrder = 0
-          OnDblClick = grid_orderDblClick
+          object TabSheet_current: TTabSheet
+            Caption = #1058#1077#1082#1091#1097#1080#1077':'
+            object grid_order_current: TStringGrid
+              AlignWithMargins = True
+              Left = 3
+              Top = 3
+              Width = 492
+              Height = 251
+              Align = alClient
+              ColCount = 3
+              Ctl3D = False
+              DefaultRowHeight = 16
+              FixedCols = 0
+              RowCount = 1
+              FixedRows = 0
+              ParentCtl3D = False
+              TabOrder = 0
+              OnDblClick = grid_order_currentDblClick
+            end
+          end
+          object TabSheet_prior: TTabSheet
+            Caption = #1055#1088#1077#1076#1074#1072#1088#1080#1090#1077#1083#1100#1085#1099#1077
+            ImageIndex = 1
+            object grid_order_prior: TStringGrid
+              AlignWithMargins = True
+              Left = 3
+              Top = 3
+              Width = 492
+              Height = 251
+              Align = alClient
+              ColCount = 3
+              Ctl3D = False
+              DefaultRowHeight = 16
+              FixedCols = 0
+              RowCount = 1
+              FixedRows = 0
+              ParentCtl3D = False
+              TabOrder = 0
+              OnDblClick = grid_order_currentDblClick
+            end
+          end
         end
       end
       object GroupBox_crew: TGroupBox
-        Left = 497
+        Left = 511
         Top = 1
         Width = 250
-        Height = 244
+        Height = 302
         Align = alClient
         Caption = #1044#1086#1089#1090#1091#1087#1085#1099#1077' '#1101#1082#1080#1087#1072#1078#1080':'
         TabOrder = 1
@@ -269,7 +305,7 @@ object form_main: Tform_main
           Left = 5
           Top = 18
           Width = 240
-          Height = 221
+          Height = 279
           Align = alClient
           ColCount = 4
           Ctl3D = False
@@ -285,8 +321,8 @@ object form_main: Tform_main
     end
     object stbar_main: TStatusBar
       Left = 1
-      Top = 297
-      Width = 748
+      Top = 355
+      Width = 762
       Height = 19
       Align = alClient
       Panels = <
@@ -297,8 +333,8 @@ object form_main: Tform_main
   end
   object db_main: TIBDatabase
     LoginPrompt = False
-    Left = 40
-    Top = 160
+    Left = 576
+    Top = 152
   end
   object ta_main: TIBTransaction
     DefaultDatabase = db_main
@@ -307,20 +343,20 @@ object form_main: Tform_main
       'rec_version'
       'nowait'
       'read')
-    Left = 112
-    Top = 168
+    Left = 616
+    Top = 248
   end
   object ibquery_main: TIBQuery
     Database = db_main
     Transaction = ta_main
-    Left = 192
-    Top = 168
+    Left = 648
+    Top = 152
   end
   object Timer_coords: TTimer
     Enabled = False
     Interval = 10000
     OnTimer = Timer_coordsTimer
-    Left = 264
+    Left = 280
     Top = 8
   end
   object Timer_orders: TTimer
@@ -328,6 +364,12 @@ object form_main: Tform_main
     Interval = 10000
     OnTimer = Timer_ordersTimer
     Left = 408
+    Top = 8
+  end
+  object Timer_get_time_order: TTimer
+    Enabled = False
+    OnTimer = Timer_get_time_orderTimer
+    Left = 232
     Top = 8
   end
 end

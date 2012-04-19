@@ -20,7 +20,7 @@ type
 		stbar_main : TStatusBar;
 		ta_main : TIBTransaction;
 		ibquery_main : TIBQuery;
-		grid_order : TStringGrid;
+		grid_order_current : TStringGrid;
 		Label6 : TLabel;
 		edit_ap_house : TEdit;
 		Label7 : TLabel;
@@ -39,17 +39,23 @@ type
 		Timer_coords : TTimer;
 		Button_show_order : TButton;
 		Timer_orders : TTimer;
+		PageControl_orders : TPageControl;
+		TabSheet_current : TTabSheet;
+		TabSheet_prior : TTabSheet;
+		grid_order_prior : TStringGrid;
+		Timer_get_time_order : TTimer;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
 		procedure cb_real_baseClick(Sender : TObject);
 		procedure FormClose(Sender : TObject; var Action : TCloseAction);
-		procedure grid_orderDblClick(Sender : TObject);
+		procedure grid_order_currentDblClick(Sender : TObject);
 		procedure button_show_slClick(Sender : TObject);
 		procedure grid_crewsDblClick(Sender : TObject);
 		procedure Timer_coordsTimer(Sender : TObject);
 		procedure Button_show_orderClick(Sender : TObject);
 		procedure Timer_ordersTimer(Sender : TObject);
+		procedure Timer_get_time_orderTimer(Sender : TObject);
 	private
 		{ Private declarations }
 	public
@@ -65,6 +71,8 @@ var
 	crew_list, res_crew_list, tmp_clist : TCrewList;
 	order_list : TOrderList;
 	Complete_Flag : boolean;
+	flag_order_get_time : boolean;
+	index_current_order : integer;
 	deb_list : TSTringList;
 	// SDAY : string;
 	// SCOORDTIME : string;
@@ -528,7 +536,7 @@ begin
 	result := 0;
 end;
 
-procedure show_orders_grid(var list : TOrderList);
+procedure show_orders(var list : TOrderList; var grid_order : TStringGrid; prior_flag : boolean);
 var pp : Pointer;
 	row, ord_id, cur_col, cur_row : integer;
 	order : TOrder;
@@ -576,6 +584,18 @@ begin
 		for pp in list.Orders do
 		begin
 			order := list.order(pp);
+			if ( //
+				prior_flag //
+					and (order.source_time < replace_time('{Last_hour_-1}', now())) //
+				) //
+				or //
+				( //
+				not prior_flag //
+					and (order.source_time >= replace_time('{Last_hour_-1}', now())) //
+				) //
+				then
+				continue;
+
 
 			// sord_id := IntToStr(order.id);
 			// row := grid_order.Cols[0].IndexOf(sord_id);
@@ -643,6 +663,12 @@ begin
 		// del_grid_row(grid_order, row);
 		// end;
 	end;
+end;
+
+procedure show_orders_grid();
+begin
+	show_orders(order_list, form_main.grid_order_current, false);
+	show_orders(order_list, form_main.grid_order_prior, true);
 end;
 
 procedure show_result_crews_grid(var list : TCrewList);
@@ -798,7 +824,7 @@ begin
 
 	// Show orders:
 	form_debug.show_orders(deb_list); // for info
-	show_orders_grid(order_list);
+	show_orders_grid();
 	show_result_crews_grid(crew_list);
 end;
 
@@ -865,7 +891,7 @@ begin
 		crew_list.Crews.Sort(sort_crews_by_crewid);
 
 		// Show orders:
-		show_orders_grid(order_list);
+		show_orders_grid();
 		show_result_crews_grid(crew_list);
 
 		exit(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -881,7 +907,7 @@ begin
 		// show_grid(list_crew, grid_crews);
 
 		list_tmp := ret_crews_stringlist(crew_list);
-		show_grid(list_tmp, grid_order);
+		// show_grid(list_tmp, grid_order);
 		// show_result_crews_grid(crew_list);
 
 		// list_crew := get_order_list(SDAY, crew_list);
@@ -905,15 +931,15 @@ begin
 	end;
 end;
 
-procedure show_order_time(row : integer);
+procedure show_order_time(var grid_order : TStringGrid);
 var order : TOrder;
 	ordId : integer;
 	pp, pc : Pointer;
 begin
-	if form_main.grid_order.Cells[0, row] = '' then
+	if grid_order.Cells[0, grid_order.row] = '' then
 		exit();
 	try
-		ordId := StrToInt(form_main.grid_order.Cells[0, row]);
+		ordId := StrToInt(grid_order.Cells[0, grid_order.row]);
 	except
 		exit();
 	end;
@@ -924,47 +950,104 @@ begin
 	begin
 		pc := crew_list.findByCrewId(order.CrewId);
 		order.get_time_to_end(pc);
-		show_orders_grid(order_list);
+		show_orders_grid();
 		exit();
 	end;
 end;
 
-procedure show_order(row : integer);
+procedure get_show_order_time();
 var order : TOrder;
-	ordId : integer;
-	pp : Pointer;
 	crew : TCrew;
-	slist : TSTringList;
-	clist : TCrewList;
-
+	pc : Pointer;
 begin
-	if form_main.grid_order.Cells[0, row] = '' then
+	if order_list.Orders.Count = 0 then
 		exit();
 
-	try
-		ordId := StrToInt(form_main.grid_order.Cells[0, row]);
-	except
-		exit();
-	end;
+	flag_order_get_time := true; // блокируем таймер вп-ду :)
+	if not(index_current_order in [0 .. order_list.Orders.Count - 1]) then
+		index_current_order := 0;
 
-	pp := order_list.find_by_Id(ordId);
-	form_cur_order.show_order(pp);
-	exit();
-
-	order := order_list.order(order_list.find_by_Id(ordId));
-	if order = nil then
-		exit();
-
-	if order.CrewId <> -1 then
+	while true do
 	begin
-		crew := TCrew(crew_list.findByCrewId(order.CrewId));
-		order.time_to_end := crew.get_time(order_list, false);
-		show_orders_grid(order_list);
+		order := order_list.order(order_list.Orders.Items[index_current_order]);
+		if order <> nil then
+		begin
+			show_status('Расчёт заказа № ' + IntToStr(order.id));
+			if order.CrewId > -1 then
+			begin
+				if order.is_not_prior() then //
+				begin
+					pc := crew_list.findByCrewId(order.CrewId);
+					crew := crew_list.crew(pc);
+					if (order.time_to_end = -1) // ещё не считалось,
+						or (order.time_to_end = ORDER_CREW_NO_COORD) // не было координат,
+						or (order.time_to_end = ORDER_WAY_ERROR) // была ошибка расчёта
+						or ( //
+						(order.time_to_end > 0) //
+							and //
+							crew.is_moved() // или имело место перемещение экипажа
+						) //
+						then
+					begin
+						if order.get_time_to_end(pc) >= 0 then
+							// при удачном просчёте сбрасываем "старую координату"
+							crew.reset_old_coord();
 
-		exit();
+						show_orders_grid();
+						// выходим
+						inc(index_current_order);
+						flag_order_get_time := false;
+						exit();
+					end;
+				end;
+			end;
+		end;
+		// переходим к след. заказу
+		inc(index_current_order);
+		if index_current_order >= order_list.Orders.Count then
+		begin
+			flag_order_get_time := false;
+			exit();
+		end;
 	end;
-
 end;
+
+// procedure show_order(row : integer);
+// var order : TOrder;
+// ordId : integer;
+// pp : Pointer;
+// crew : TCrew;
+// slist : TSTringList;
+// clist : TCrewList;
+//
+// begin
+// if form_main.grid_order.Cells[0, row] = '' then
+// exit();
+//
+// try
+// ordId := StrToInt(form_main.grid_order.Cells[0, row]);
+// except
+// exit();
+// end;
+//
+// pp := order_list.find_by_Id(ordId);
+// form_cur_order.show_order(pp);
+// exit();
+//
+// order := order_list.order(order_list.find_by_Id(ordId));
+// if order = nil then
+// exit();
+//
+// if order.CrewId <> -1 then
+// begin
+// crew := TCrew(crew_list.findByCrewId(order.CrewId));
+// order.time_to_end := crew.get_time(order_list, false);
+// show_orders_grid(order_list);
+//
+// exit();
+// end;
+//
+// end;
 
 function open_database() : boolean;
 var MyPath, base, user, password : string;
@@ -1031,7 +1114,7 @@ end;
 
 procedure Tform_main.Button_show_orderClick(Sender : TObject);
 begin
-	show_order(self.grid_order.row);
+	// show_order(self.grid_order.row);
 end;
 
 procedure Tform_main.button_show_slClick(Sender : TObject);
@@ -1054,6 +1137,8 @@ end;
 
 procedure Tform_main.FormCreate(Sender : TObject);
 begin
+	flag_order_get_time := false;
+	index_current_order := 0;
 	browser_form := TForm.Create(nil);
 	with browser_form do
 	begin
@@ -1085,7 +1170,8 @@ begin
 	sql_string_list := TSTringList.Create();
 	form_cur_crew := TFormCrew.Create(nil);
 	form_cur_order := TFormOrder.Create(nil);
-	form_main.grid_order.RowCount := 2;
+	form_main.grid_order_current.RowCount := 2;
+	form_main.grid_order_prior.RowCount := 2;
 	PGlobalStatusBar := Pointer(form_main.stbar_main);
 	crew_list := TCrewList.Create(form_main.ibquery_main);
 	form_cur_order.PCrewList := Pointer(crew_list);
@@ -1105,6 +1191,10 @@ begin
 	end;
 	form_main.Timer_coords.Enabled := true;
 	form_main.Timer_orders.Enabled := true;
+	form_main.Timer_get_time_order.Enabled := true;
+	// прячем список экипажей
+	// form_main.GridPanel_grids.ColumnCollection.Items[1].Value := 0;
+
 	// show_orders_grid(order_list);
 end;
 
@@ -1121,9 +1211,9 @@ begin
 	form_cur_crew.show_crew(pp);
 end;
 
-procedure Tform_main.grid_orderDblClick(Sender : TObject);
+procedure Tform_main.grid_order_currentDblClick(Sender : TObject);
 begin
-	show_order_time(self.grid_order.row);
+	show_order_time(grid_order_current);
 end;
 
 procedure Tform_main.Timer_coordsTimer(Sender : TObject);
@@ -1133,7 +1223,13 @@ begin
 	show_result_crews_grid(crew_list);
 	if form_cur_crew.Showing then
 		form_cur_crew.show_crew();
+end;
 
+procedure Tform_main.Timer_get_time_orderTimer(Sender : TObject);
+begin
+	if flag_order_get_time then
+		exit();
+	get_show_order_time();
 end;
 
 procedure Tform_main.Timer_ordersTimer(Sender : TObject);
