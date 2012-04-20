@@ -91,7 +91,8 @@ type
 		function sort_coords_by_time_desc() : Integer;
 		function del_old_coords() : Integer;
 		function append_coords(coord : string; time : string) : Integer;
-		function is_crew_was_in_coord(coord : string) : boolean;
+		function was_in_coord(coord : string) : boolean;
+		function now_in_coord(coord : string) : boolean;
 		function is_moved() : boolean; // сместился более чем на...
 		procedure calc_dist(coord : string);
 		procedure set_time(m : Integer); // set time and time_as_string;
@@ -335,7 +336,7 @@ begin
 	begin
 		order := List.order(List.find_by_Id(self.OrderId));
 		if (order.state <> ORDER_KLIENT_NA_BORTU) // клиент НЕ на борту
-			and (not self.is_crew_was_in_coord(get_set_gps(order.source))) // и водитель в АП не был ещё
+			and (not self.was_in_coord(get_set_gps(order.source))) // и водитель в АП не был ещё
 			then
 		begin
 			// т.е. если экипаж ещё не забрал клиента
@@ -343,7 +344,7 @@ begin
 			points.Add(Pointer(order.dest));
 			stops_time := stops_time + 10 + 3;
 		end
-		else if not self.is_crew_was_in_coord(get_set_gps(order.dest)) then
+		else if not self.was_in_coord(get_set_gps(order.dest)) then
 		begin
 			// если уже забрал, но не высадил
 			points.Add(Pointer(order.dest));
@@ -378,15 +379,14 @@ begin
 	exit(result);
 end;
 
-function TCrew.is_crew_was_in_coord(coord : string) : boolean;
-const RADIUS = 150.0;
+function TCrew.was_in_coord(coord : string) : boolean;
 var cc : string;
 	d : double;
 begin
 	for cc in self.coords do
 	begin
 		d := get_dist_from_coord(coord, cc);
-		if (d >= 0) and (d < RADIUS) then
+		if (d >= 0) and (d < CREW_RADIUS) then
 			exit(true);
 	end;
 	exit(false);
@@ -402,6 +402,13 @@ begin
 		result := get_dist_from_coord(self.coord, self.old_coord) > CREW_MOVE_DIST;
 	// if result then
 	// self.old_coord := self.coord;
+end;
+
+function TCrew.now_in_coord(coord : string) : boolean;
+begin
+	if self.coord = '' then
+		exit(false);
+	result := get_dist_from_coord(coord, self.coord) < CREW_RADIUS;
 end;
 
 function TCrew.set_current_coord() : Integer;
@@ -1088,14 +1095,29 @@ var cur_pos : TAdres;
 	crew : TCrew;
 	na_bortu : boolean;
 begin
-	if (self.state in [ORDER_DONE, ORDER_CANCEL, ORDER_DISCONTNUED]) //
-		or (self.CrewID = -1) //
-		or (self.source.isEmpty) or (self.dest.isEmpty) //
+	// проверяем состояние заказа, возможен ли вообще расчёт
+	if not(self.state in [ //
+			ORDER_VODITEL_PODTVERDIL, ORDER_KLIENT_NA_BORTU, //
+		ORDER_PRIGLASITE_KILIENTA, ORDER_KLIENT_NE_VYSHEL, //
+		ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
+			]) //
 		then
 		exit(-1);
+
+	// проверяем назначенность экипажа и адресов
+	if
+	// (self.state in [ORDER_DONE, ORDER_CANCEL, ORDER_DISCONTNUED]) //
+	// or
+		(self.CrewID = -1) //
+		or (self.source.isEmpty) //
+		or (self.dest.isEmpty) //
+		then
+		exit(-1);
+
 	crew := TCrew(PCrew);
 	if crew = nil then
 		exit(-1);
+
 	if (crew.coord = '') then
 	begin
 		self.time_to_end := ORDER_CREW_NO_COORD;
@@ -1110,7 +1132,8 @@ begin
 	// если экипаж на заказе, то проверяем, был ли он в точках source и dest
 	// если нет - добавляем их в маршрут и прибавляем время на остановки
 	na_bortu := false;
-	if (self.state <> ORDER_KLIENT_NA_BORTU) then // клиент НЕ на борту
+	// if (self.state <> ORDER_KLIENT_NA_BORTU) then // клиент НЕ на борту
+	if (self.state = ORDER_VODITEL_PODTVERDIL) then // клиент НЕ на борту
 	begin
 		gps := get_set_gps(self.source);
 		if gps = '' then // нет координаты у адреса подачи
@@ -1119,7 +1142,7 @@ begin
 			exit(ORDER_BAD_ADRES);
 		end;
 
-		if (not crew.is_crew_was_in_coord(gps)) then // и водитель в АП не был ещё
+		if (not crew.was_in_coord(gps)) then // и водитель в АП не был ещё
 		// т.е. если экипаж ещё не забрал клиента
 		begin
 			points.Add(Pointer(self.source));
@@ -1127,8 +1150,22 @@ begin
 			stops_time := stops_time + 10 + 3;
 		end
 		else
+		begin
 			na_bortu := true;
-		// self.state := ORDER_KLIENT_NA_BORTU;
+			if crew.now_in_coord(gps) then
+				// если водитель ожидает клиента, накидываем время на ожидание
+				stops_time := stops_time + 10;
+		end;
+	end
+	else if (self.state in [ //
+			ORDER_PRIGLASITE_KILIENTA, ORDER_KLIENT_NE_VYSHEL, //
+		ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
+			]) //
+		then
+	begin
+		// если водитель ожидает клиента, накидываем время на ожидание
+		na_bortu := true;
+		stops_time := stops_time + 10;
 	end;
 
 	// если уже забрал, но не высадил
@@ -1140,7 +1177,7 @@ begin
 			self.time_to_end := ORDER_BAD_ADRES;
 			exit(ORDER_BAD_ADRES);
 		end;
-		if not crew.is_crew_was_in_coord(gps) then // ещё не высадил
+		if not crew.was_in_coord(gps) then // ещё не высадил
 		begin
 			points.Add(Pointer(self.dest));
 			stops_time := stops_time + 3;

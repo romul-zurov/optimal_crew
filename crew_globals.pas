@@ -11,11 +11,30 @@ const CREW_SVOBODEN = 1;
 
 const CREW_NAZAKAZE = 3;
 
-const CREW_MOVE_DIST = 100.0;
+const CREW_MOVE_DIST = 100.0; // если экипаж изменил координаты более чем -
+	// . 							пересчитываем время заказа
+
+const CREW_RADIUS = 150.0; //  радиус "попадания" экипажа в адрес, метров
 
 const ORDER_DONE = 4; // согласно ORDER_STATES
 
+const ORDER_CANCEL = 37; // "отменён", согласно ORDER_STATES
+
+const ORDER_DISCONTNUED = 5; // "прекращён", согласно ORDER_STATES
+
+const ORDER_NO_CREWS = 6; // "нет машин", согласно ORDER_STATES
+
+const ORDER_VODITEL_PODTVERDIL = 2; // согласно ORDER_STATES
+
 const ORDER_KLIENT_NA_BORTU = 29; // согласно ORDER_STATES
+
+const ORDER_PRIGLASITE_KILIENTA = 31; // согласно ORDER_STATES
+
+const ORDER_KLIENT_NE_VYSHEL = 32; // согласно ORDER_STATES
+
+const ORDER_SMS_PRIGL = 38; // согласно ORDER_STATES
+
+const ORDER_TEL_PRIGL = 40; // согласно ORDER_STATES
 
 const ORDER_CREW_NO_COORD = -2; // у экипажа нет координат, просчёт маршрута невозможен
 
@@ -23,12 +42,6 @@ const ORDER_BAD_ADRES = -4; // адрес(а) маршрута заказа не определются картой,
 	// . 						просчёт маршрута невозможен
 
 const ORDER_WAY_ERROR = -8; // ошибка при просчёте маршрута, время не определено
-
-const ORDER_CANCEL = 37; // "отменён", согласно ORDER_STATES
-
-const ORDER_DISCONTNUED = 5; // "прекращён", согласно ORDER_STATES
-
-const ORDER_NO_CREWS = 6; // "нет машин", согласно ORDER_STATES
 
 const COORDS_BUF_SIZE = '{Last_hour_2}'; // размер буфера координат экипажа, в часах
 
