@@ -357,7 +357,7 @@ object form_main: Tform_main
     Interval = 10000
     OnTimer = Timer_coordsTimer
     Left = 280
-    Top = 8
+    Top = 120
   end
   object Timer_orders: TTimer
     Enabled = False

@@ -211,7 +211,7 @@ begin
 	add_row(self.grid_order, 'Время подачи', order.source_time);
 	add_row(self.grid_order, 'Адрес подачи', order.source.get_as_string());
 	add_row(self.grid_order, 'Адрес назначения', order.dest.get_as_string());
-	add_row(self.grid_order, 'До окончания', order.time_as_string());
+	add_row(self.grid_order, 'До окончания', order.time_to_end_as_string());
 
 	// ID : Integer; // order main ID in ORDERS table, -1 if not defined
 	// CrewID : Integer; // crew ID for a order, -1 if not defined

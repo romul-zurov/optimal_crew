@@ -623,7 +623,7 @@ begin
 			else
 				grid_order.Cells[1, row] := IntToStr(order.CrewId);
 			grid_order.Cells[2, row] := order.source_time;
-			grid_order.Cells[3, row] := order.time_as_string();
+			grid_order.Cells[3, row] := order.time_to_end_as_string();
 			grid_order.Cells[4, row] := order.state_as_string();
 			grid_order.Cells[5, row] := order.source.get_as_string();
 			grid_order.Cells[6, row] := order.dest.get_as_string();
@@ -1066,6 +1066,7 @@ begin
 				password := FIniFile.ReadString('Base', 'Password', '');
 				// ac_taxi_url := 'http://test.robocab.ru/';
 				ac_taxi_url := FIniFile.ReadString('Url', 'Main_Url', '');
+				PHP_Url := FIniFile.ReadString('Url', 'PHP_Url', '');
 				form_main.Timer_coords.Interval := StrToInt(FIniFile.ReadString('Const', 'Timer_Coords', ''));
 				form_main.Timer_orders.Interval := StrToInt(FIniFile.ReadString('Const', 'Timer_Orders', ''));
 			finally
@@ -1229,7 +1230,7 @@ procedure Tform_main.Timer_get_time_orderTimer(Sender : TObject);
 begin
 	if flag_order_get_time then
 		exit();
-	get_show_order_time();
+	 get_show_order_time();
 end;
 
 procedure Tform_main.Timer_ordersTimer(Sender : TObject);

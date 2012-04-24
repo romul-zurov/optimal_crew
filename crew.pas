@@ -28,6 +28,7 @@ type
 		dest : TAdres; // address to
 		source_time : string; // время подачи экипажа
 		time_to_end : Integer; // время до окончания заказа в минутах
+		time_to_ap : Integer; // время до подъезда к адресу подачи в минутах
 		deleted : boolean;
 
 		query : TIBQuery;
@@ -39,9 +40,13 @@ type
 		destructor Destroy(); override;
 		function get_time_to_end(var PCrew : Pointer) : Integer;
 		function get_order_data() : string;
-		function time_as_string() : string; // время до окончания заказа в виде часы-минуты;
+		function time_to_end_as_string() : string; // время до окончания заказа в виде часы-минуты;
+		function time_to_ap_as_string() : string; // время до подъезда к АП в мин/часах;
+//        function color
 		function state_as_string() : string;
 		function is_not_prior() : boolean;
+	private
+		function time_as_string(time : Integer) : string;
 	end;
 
 	TOrderList = class(TObject)
@@ -1020,6 +1025,7 @@ begin
 	dest := TAdres.Create('', '', '', ''); // address to
 	source_time := ''; // время подачи экипажа
 	time_to_end := -1; // время до окончания заказа в минутах
+	time_to_ap := -1; // время до подъезда к адресу подачи в минутах
 	self.query := IBQuery;
 	self.deleted := false;
 	// form := TFormOrder.Create(nil);
@@ -1215,7 +1221,24 @@ begin
 	result := StringReplace(result, '_', ' ', [rfReplaceAll]);
 end;
 
-function TOrder.time_as_string : string;
+function TOrder.time_as_string(time : Integer) : string;
+begin
+	result := IntToStr(time mod 60) + ' мин.';
+	if time > 59 then
+		result := IntToStr(time div 60) + ' ч. ' + result;
+end;
+
+function TOrder.time_to_ap_as_string : string;
+begin
+	if self.time_to_ap < 0 then
+		result := '-'
+	else if self.time_to_ap = 0 then
+		result := 'на месте'
+	else
+		result := self.time_as_string(self.time_to_ap);
+end;
+
+function TOrder.time_to_end_as_string : string;
 begin
 	case self.time_to_end of
 		- 1 :
@@ -1226,19 +1249,13 @@ begin
 		if self.time_to_end < 0 then
 			exit(order_states.Values[IntToStr(self.time_to_end)])
 		else
-		begin
-			result := IntToStr(self.time_to_end mod 60) + ' мин.';
-			if self.time_to_end > 59 then
-				result := IntToStr(self.time_to_end div 60) + ' ч. ' + result;
-		end;
-	end;
-	// if self.time_to_end < 0 then
-	// exit('неизвестно')
-	// else if self.time_to_end = 0 then
-	// exit('завершён');
-	// result := IntToStr(self.time_to_end mod 60) + ' мин.';
-	// if self.time_to_end > 59 then
-	// result := IntToStr(self.time_to_end div 60) + ' ч. ' + result;
+			result := self.time_as_string(self.time_to_end);
+		// begin
+		// result := IntToStr(self.time_to_end mod 60) + ' мин.';
+		// if self.time_to_end > 59 then
+		// result := IntToStr(self.time_to_end div 60) + ' ч. ' + result;
+		// end;
+	end; // case
 end;
 
 { TOrder_List }

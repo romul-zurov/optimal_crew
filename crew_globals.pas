@@ -14,7 +14,7 @@ const CREW_NAZAKAZE = 3;
 const CREW_MOVE_DIST = 100.0; // если экипаж изменил координаты более чем -
 	// . 							пересчитываем время заказа
 
-const CREW_RADIUS = 150.0; //  радиус "попадания" экипажа в адрес, метров
+const CREW_RADIUS = 150.0; // радиус "попадания" экипажа в адрес, метров
 
 const ORDER_DONE = 4; // согласно ORDER_STATES
 
@@ -75,6 +75,7 @@ var
 	DEBUG_SDATE_TO : string;
 	cur_time : TDateTime;
 	ac_taxi_url : string;
+	PHP_Url : string;
 	order_states : Tstringlist;
 	crew_states : Tstringlist;
 	PGlobalStatusBar : Pointer;
@@ -177,7 +178,7 @@ begin
 	show_status(surl);
 	surl := '"' + surl + '"' + ' "DayVremyaPuti" "</td>"';
 	surl := param64(surl);
-	surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
+	surl := PHP_Url + '?param=' + surl;
 	res := get_zapros(surl);
 
 	show_status(res);
@@ -245,11 +246,61 @@ begin
 	result := res;
 end;
 
+function get_zapros_tmp_QWERTYUI(surl : string) : string;
+var
+	form : Tform;
+	browser : TWebBrowser;
+	s : string;
+	hSession, hfile, hRequest, hUrl : hInternet;
+begin
+	form := Tform.Create(nil);
+	browser := TWebBrowser.Create(nil);
+	try
+		InternetSetOption(nil, INTERNET_OPTION_END_BROWSER_SESSION, nil, 0); // end IE session
+		sleep(900);
+		TWinControl(browser).Parent := form;
+		// TWinControl(browser).Parent := browser_form;
+		browser.Silent := false;
+		browser.Align := alClient;
+		form.Width := 400;
+		form.Height := 100;
+		form.Show;
+		// if not DEBUG then
+		// form.Hide;
+		hSession := InternetOpen('InetURL:/1.0', INTERNET_OPEN_TYPE_PRECONFIG, nil, nil, 0);
+		hUrl := InternetOpenURL(hSession, PChar(PHP_Url), nil, 0, 0, 0);
+		// if IsConnectedToInternet() then
+		// if assigned(hSession) then
+		if hUrl <> nil then
+		begin
+			browser.Navigate(surl);
+			while browser.ReadyState < READYSTATE_COMPLETE do
+				Application.ProcessMessages;
+			s := html_to_string(browser);
+			InternetCloseHandle(hSession);
+		end
+		else
+		begin
+			s := '';
+			show_status('Нет соединения с интернетом');
+		end;
+
+		if DEBUG then
+			sleep(1000);
+	finally
+		// InternetSetOption(nil, INTERNET_OPTION_END_BROWSER_SESSION, nil, 0); // end IE session
+		browser.Free;
+		form.Free;
+	end;
+	exit(s); // 'Foo String';
+end;
+
 function get_zapros(surl : string) : string;
 var
 	// form : TForm;
 	browser : TWebBrowser;
 	s : string;
+	hSession, hUrl : hInternet;
 begin
 	// form := TForm.Create(nil);
 	browser := TWebBrowser.Create(nil);
@@ -265,12 +316,23 @@ begin
 		// form.Show;
 		// if not DEBUG then
 		// form.Hide;
-		browser.Navigate(surl);
-		while browser.ReadyState < READYSTATE_COMPLETE do
-			Application.ProcessMessages;
-		s := html_to_string(browser);
-		if DEBUG then
-			sleep(1000);
+		hSession := InternetOpen('InetURL:/1.0', INTERNET_OPEN_TYPE_PRECONFIG, nil, nil, 0);
+		hUrl := InternetOpenURL(hSession, PChar(PHP_Url), nil, 0, 0, 0);
+		// if IsConnectedToInternet() then
+		// if assigned(hSession) then
+		if hUrl <> nil then
+		begin
+			browser.Navigate(surl);
+			while browser.ReadyState < READYSTATE_COMPLETE do
+				Application.ProcessMessages;
+			s := html_to_string(browser);
+			InternetCloseHandle(hSession);
+		end
+		else
+		begin
+			s := '';
+			show_status('Нет соединения с интернетом');
+		end;
 	finally
 		browser.Free;
 		// form.Free;
