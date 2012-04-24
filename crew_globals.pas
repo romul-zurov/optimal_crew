@@ -5,7 +5,7 @@ interface
 uses crew_utils, // utils from robocap and mine
 	Generics.Collections, // for forward class definition
 	Controls, Forms, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX, //
-	IBQuery, IBDataBase, DB, WinInet, StrUtils, ComCtrls, IniFiles;
+	IBQuery, IBDataBase, DB, WinInet, StrUtils, ComCtrls, IniFiles, ExtCtrls;
 
 const CREW_SVOBODEN = 1;
 
@@ -79,7 +79,8 @@ var
 	order_states : Tstringlist;
 	crew_states : Tstringlist;
 	PGlobalStatusBar : Pointer;
-	browser_form : Tform;
+//	browser_form : Tform;
+    browser_panel : TPanel;
 
 	main_db : TIBDatabase;
 	main_ta : TIBTransaction;
@@ -308,8 +309,10 @@ begin
 		InternetSetOption(nil, INTERNET_OPTION_END_BROWSER_SESSION, nil, 0); // end IE session
 		// sleep(900);
 		// TWinControl(browser).Parent := form;
-		TWinControl(browser).Parent := browser_form;
+		TWinControl(browser).Parent := browser_panel;//browser_form;
 		browser.Silent := true;
+        browser.Width := 10;
+        browser.Height := 10;
 		// browser.Align := alClient;
 		// form.Width := 400;
 		// form.Height := 100;

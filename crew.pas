@@ -42,7 +42,7 @@ type
 		function get_order_data() : string;
 		function time_to_end_as_string() : string; // время до окончания заказа в виде часы-минуты;
 		function time_to_ap_as_string() : string; // время до подъезда к АП в мин/часах;
-//        function color
+		// function color
 		function state_as_string() : string;
 		function is_not_prior() : boolean;
 	private
@@ -1245,16 +1245,14 @@ begin
 			exit('неизвестно');
 		0 :
 			exit('завершён');
-	else
+	else // case
 		if self.time_to_end < 0 then
-			exit(order_states.Values[IntToStr(self.time_to_end)])
+		begin
+			result := order_states.Values[IntToStr(self.time_to_end)];
+			result := StringReplace(result, '_', ' ', [rfReplaceAll]);
+		end
 		else
 			result := self.time_as_string(self.time_to_end);
-		// begin
-		// result := IntToStr(self.time_to_end mod 60) + ' мин.';
-		// if self.time_to_end > 59 then
-		// result := IntToStr(self.time_to_end div 60) + ' ч. ' + result;
-		// end;
 	end; // case
 end;
 

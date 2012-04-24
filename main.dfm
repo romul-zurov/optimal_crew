@@ -183,7 +183,7 @@ object form_main: Tform_main
         Visible = False
       end
       object button_show_sl: TButton
-        Left = 315
+        Left = 381
         Top = 6
         Width = 75
         Height = 25
@@ -201,6 +201,16 @@ object form_main: Tform_main
         Caption = #1055#1086#1076#1088#1086#1073#1085#1086#1089#1090#1080' '#1079#1072#1082#1072#1079#1072
         TabOrder = 8
         OnClick = Button_show_orderClick
+      end
+      object cb_show_crews: TCheckBox
+        Left = 310
+        Top = 10
+        Width = 65
+        Height = 17
+        Anchors = [akTop, akRight]
+        Caption = #1069#1082#1080#1087#1072#1078#1080
+        TabOrder = 9
+        OnClick = cb_show_crewsClick
       end
     end
     object GridPanel_grids: TGridPanel
@@ -356,20 +366,20 @@ object form_main: Tform_main
     Enabled = False
     Interval = 10000
     OnTimer = Timer_coordsTimer
-    Left = 280
-    Top = 120
+    Left = 120
+    Top = 160
   end
   object Timer_orders: TTimer
     Enabled = False
     Interval = 10000
     OnTimer = Timer_ordersTimer
-    Left = 408
-    Top = 8
+    Left = 176
+    Top = 192
   end
   object Timer_get_time_order: TTimer
     Enabled = False
     OnTimer = Timer_get_time_orderTimer
-    Left = 232
-    Top = 8
+    Left = 56
+    Top = 192
   end
 end

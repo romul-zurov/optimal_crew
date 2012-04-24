@@ -44,6 +44,7 @@ type
 		TabSheet_prior : TTabSheet;
 		grid_order_prior : TStringGrid;
 		Timer_get_time_order : TTimer;
+		cb_show_crews : TCheckBox;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -56,6 +57,7 @@ type
 		procedure Button_show_orderClick(Sender : TObject);
 		procedure Timer_ordersTimer(Sender : TObject);
 		procedure Timer_get_time_orderTimer(Sender : TObject);
+		procedure cb_show_crewsClick(Sender : TObject);
 	private
 		{ Private declarations }
 	public
@@ -550,24 +552,26 @@ begin
 			// !!!
 			// RowCount := 2;
 			FixedRows := 1;
-			ColCount := 7;
+			ColCount := 8;
 			ColWidths[0] := 50;
-			ColWidths[1] := 220;
-			ColWidths[2] := 120;
-			ColWidths[3] := 80;
-			ColWidths[4] := 120;
-			ColWidths[5] := 200; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
-			ColWidths[6] := ColWidths[5];
+			ColWidths[1] := 100;
+			ColWidths[2] := 200;
+			ColWidths[3] := 250; // 80;
+			ColWidths[4] := 120; // 80;
+			ColWidths[5] := 120;
+			ColWidths[6] := 200; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
+			ColWidths[7] := ColWidths[6];
 			// ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
 			// - ColWidths[3] - ColWidths[4] - ColWidths[5];
 
 			Cells[0, 0] := '№';
-			Cells[1, 0] := 'Экипаж';
-			Cells[2, 0] := 'Время подачи';
-			Cells[3, 0] := 'До окончания';
-			Cells[4, 0] := 'Состояние';
-			Cells[5, 0] := 'Адрес подачи';
-			Cells[6, 0] := 'Адрес назначения';
+			Cells[1, 0] := 'До подачи';
+			Cells[2, 0] := 'До окончания';
+			Cells[3, 0] := 'Экипаж';
+			Cells[4, 0] := 'Время подачи';
+			Cells[5, 0] := 'Состояние';
+			Cells[6, 0] := 'Адрес подачи';
+			Cells[7, 0] := 'Адрес назначения';
 		end;
 
 		// запоминаем, где был "курсор"
@@ -618,15 +622,16 @@ begin
 			// end;
 
 			grid_order.Cells[0, row] := IntToStr(order.id);
+			grid_order.Cells[1, row] := order.time_to_ap_as_string();
+			grid_order.Cells[2, row] := order.time_to_end_as_string();
 			if crew_list.crew(order.CrewId) <> nil then
-				grid_order.Cells[1, row] := IntToStr(order.CrewId) + ' | ' + crew_list.crew(order.CrewId).name
+				grid_order.Cells[3, row] := IntToStr(order.CrewId) + ' | ' + crew_list.crew(order.CrewId).name
 			else
-				grid_order.Cells[1, row] := IntToStr(order.CrewId);
-			grid_order.Cells[2, row] := order.source_time;
-			grid_order.Cells[3, row] := order.time_to_end_as_string();
-			grid_order.Cells[4, row] := order.state_as_string();
-			grid_order.Cells[5, row] := order.source.get_as_string();
-			grid_order.Cells[6, row] := order.dest.get_as_string();
+				grid_order.Cells[3, row] := IntToStr(order.CrewId);
+			grid_order.Cells[4, row] := order.source_time;
+			grid_order.Cells[5, row] := order.state_as_string();
+			grid_order.Cells[6, row] := order.source.get_as_string();
+			grid_order.Cells[7, row] := order.dest.get_as_string();
 
 			row := row + 1;
 			with grid_order do
@@ -1131,6 +1136,16 @@ begin
 	DEBUG := not form_main.cb_real_base.Checked;
 end;
 
+procedure Tform_main.cb_show_crewsClick(Sender : TObject);
+var w : integer;
+begin
+	if self.cb_show_crews.Checked then
+		w := 250
+	else
+		w := 0;
+	self.GridPanel_grids.ColumnCollection.Items[1].value := w;
+end;
+
 procedure Tform_main.FormClose(Sender : TObject; var Action : TCloseAction);
 begin
 	halt(0);
@@ -1138,17 +1153,19 @@ end;
 
 procedure Tform_main.FormCreate(Sender : TObject);
 begin
+	browser_panel := TPanel(Pointer(self.panel_ap));
+	self.GridPanel_grids.ColumnCollection.Items[1].value := 0;
 	flag_order_get_time := false;
 	index_current_order := 0;
-	browser_form := TForm.Create(nil);
-	with browser_form do
-	begin
-		Width := 0;
-		height := 0;
-		left := 0;
-		top := 600;
-		Show();
-	end;
+	// browser_form := TForm.Create(nil);
+	// with browser_form do
+	// begin
+	// Width := 0;
+	// height := 0;
+	// left := 0;
+	// top := 600;
+	// Show();
+	// end;
 	// browser_form.Hide;
 
 	DEBUG_SDATE_FROM := '2011-10-03 00:00:00'; // for backup database
@@ -1230,7 +1247,7 @@ procedure Tform_main.Timer_get_time_orderTimer(Sender : TObject);
 begin
 	if flag_order_get_time then
 		exit();
-	 get_show_order_time();
+	get_show_order_time();
 end;
 
 procedure Tform_main.Timer_ordersTimer(Sender : TObject);
