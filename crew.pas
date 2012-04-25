@@ -316,7 +316,9 @@ var cur_pos : TAdres;
 	stops_time : Integer; // время на остановки для экипажа на заказе
 	order : TOrder;
 begin
-	if (self.state = -1) //
+	if //
+		not(self.state in [CREW_SVOBODEN, CREW_NAZAKAZE]) //
+	// .....считаем только свободные и занятые экипажи, исключая нерабочие и т.п.
 		or (self.coord = '') //
 		or (newOrder and self.ap.isEmpty()) //
 		or ( //
@@ -839,15 +841,17 @@ begin
 		crew := self.crew(pp);
 		if crew.time > -1 then
 		begin
-			s := IntToStr(crew.CrewID) + '|' //
+			s := '' //
+			// + IntToStr(crew.time) + '$' //
+				+ IntToStr(crew.CrewID) + '|' //
 				+ crew.name + '||' //
 				+ crew.state_as_string + '|||' //
 				+ crew.time_as_string + '||||' //
 				+ crew.dist_way_as_string;
-			// + FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
 			result.Append(s);
 		end;
 	end;
+
 end;
 
 function TCrewList.set_ap(street, house, korpus, gps : string) : Integer;

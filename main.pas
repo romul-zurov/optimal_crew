@@ -12,22 +12,11 @@ uses
 type
 	Tform_main = class(TForm)
 		grid_crews : TStringGrid;
-		Label1 : TLabel;
-		Label2 : TLabel;
-		edit_zakaz4ik : TEdit;
-		edit_ap_street : TEdit;
 		db_main : TIBDatabase;
 		stbar_main : TStatusBar;
 		ta_main : TIBTransaction;
 		ibquery_main : TIBQuery;
 		grid_order_current : TStringGrid;
-		Label6 : TLabel;
-		edit_ap_house : TEdit;
-		Label7 : TLabel;
-		edit_ap_korpus : TEdit;
-		Label8 : TLabel;
-		edit_ap_gps : TEdit;
-		Label9 : TLabel;
 		GridPanel_main : TGridPanel;
 		panel_ap : TPanel;
 		Button1 : TButton;
@@ -45,6 +34,7 @@ type
 		grid_order_prior : TStringGrid;
 		Timer_get_time_order : TTimer;
 		cb_show_crews : TCheckBox;
+		Panel_browser : TPanel;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -261,53 +251,6 @@ begin
 			list.Sorted := true;
 	end;
 	result := list;
-end;
-
-function get_crew_list(sdate : string; var clist : TCrewList) : TSTringList;
-// извлекаем экипажи по gps_id
-	function get_list(sz : string) : TSTringList;
-	begin
-		form_main.edit_zakaz4ik.Text := sz;
-		exit(get_sql_list(sz, false));
-	end;
-
-var
-	sel, s, sid, screws_gpsid : string;
-	res, sl : TSTringList;
-	id, GpsId : integer;
-begin
-
-	sdate := '''' + sdate + '''';
-	res := TSTringList.Create();
-	{
-	  sel := 'select CREWS.IDENTIFIER, CREWS.ID, CREWS_H.TOSTATE, CREWS.CODE, CREWS.NAME' +
-	  ' from CREWS_H, CREWS where' + ' CREWS_H.STATETIME > ' + sdate +
-	  ' and (CREWS_H.TOSTATE = 1 or CREWS_H.TOSTATE = 3) ';
-	  sel := sel + ' and CREWS.IDENTIFIER in (' + clist.get_gpsid_list_as_string() + ') ';
-	  sel := sel + ' and CREWS_H.CREWID = CREWS.ID ' + ' order by CREWS_H.STATETIME desc';
-	  }
-
-	// !!
-	screws_gpsid := clist.get_gpsid_list_as_string();
-	if length(screws_gpsid) = 0 then
-		exit(res);
-	sel := //
-		'select CREWS.IDENTIFIER, CREWS.ID, CREWS.CODE, CREWS.NAME, CREWS.STATE from CREWS where ' //
-		+ ' CREWS.IDENTIFIER in (' + screws_gpsid + ') ' //
-	// только экипажи из crews по gpsId
-		+ ' and CREWS.STATE in (1,3) '; // в состоянии "свободен" и "на заказе", согласно таблице CREW_STATE
-	// + ' and LEFT(CREWS.CODE, 1) !=''Э'' '; // отбрасываем эвакуаторы - пока не нужно;
-	res := get_list(sel);
-	clist.set_crewId_by_gpsId(res);
-
-	// sel := 'select CREWS.ID, CREWS_H.TOSTATE from CREWS, CREWS_H where ' + ' CREWS.ID in (' +
-	// clist.get_crewid_list_as_string() + ') ' + ' and CREWS_H.STATETIME > ' + sdate +
-	// ' and CREWS_H.CREWID = CREWS.ID ' + ' order by CREWS_H.STATETIME desc';
-	// res := get_list(sel);
-	// clist.set_crews_state_by_crewId(res); // - не нужно, т.к. State заполняется в set_crewId_by_gpsId
-
-	clist.Crews.Sort(sort_crews_by_state_dist);
-	result := res;
 end;
 
 function get_order_list(sdate : string; var clist : TCrewList) : TSTringList;
@@ -609,8 +552,8 @@ begin
 		form_debug.show_orders(list_order);
 		crew_list.get_crew_list_by_order_list(order_list);
 		crew_list.get_crews_coords();
-		if crew_list.get_crew_list() = nil then
-			edit_zakaz4ik.Text := 'Nil!';
+		// if crew_list.get_crew_list() = nil then
+		// edit_zakaz4ik.Text := 'Nil!';
 		crew_list.Crews.Sort(sort_crews_by_crewid);
 
 		// Show orders:
@@ -703,42 +646,44 @@ begin
 	end;
 end;
 
-// procedure show_order(row : integer);
-// var order : TOrder;
-// ordId : integer;
-// pp : Pointer;
-// crew : TCrew;
-// slist : TSTringList;
-// clist : TCrewList;
-//
-// begin
-// if form_main.grid_order.Cells[0, row] = '' then
-// exit();
-//
-// try
-// ordId := StrToInt(form_main.grid_order.Cells[0, row]);
-// except
-// exit();
-// end;
-//
-// pp := order_list.find_by_Id(ordId);
-// form_cur_order.show_order(pp);
-// exit();
-//
-// order := order_list.order(order_list.find_by_Id(ordId));
-// if order = nil then
-// exit();
-//
-// if order.CrewId <> -1 then
-// begin
-// crew := TCrew(crew_list.findByCrewId(order.CrewId));
-// order.time_to_end := crew.get_time(order_list, false);
-// show_orders_grid(order_list);
-//
-// exit();
-// end;
-//
-// end;
+procedure show_order();
+var order : TOrder;
+	sid : string;
+	ordId : integer;
+	pp : Pointer;
+	crew : TCrew;
+	slist : TSTringList;
+	clist : TCrewList;
+
+begin
+	sid := form_main.grid_order_current.Cells[0, form_main.grid_order_current.row];
+	if sid = '' then
+		exit();
+
+	try
+		ordId := StrToInt(sid);
+	except
+		exit();
+	end;
+
+	pp := order_list.find_by_Id(ordId);
+	form_cur_order.show_order(pp);
+	exit();
+
+	// order := order_list.order(order_list.find_by_Id(ordId));
+	// if order = nil then
+	// exit();
+	//
+	// if order.CrewId <> -1 then
+	// begin
+	// crew := TCrew(crew_list.findByCrewId(order.CrewId));
+	// order.time_to_end := crew.get_time(order_list, false);
+	// show_orders_grid(order_list);
+	//
+	// exit();
+	// end;
+
+end;
 
 function open_database() : boolean;
 var MyPath, base, user, password : string;
@@ -805,7 +750,7 @@ end;
 
 procedure Tform_main.Button_show_orderClick(Sender : TObject);
 begin
-	// show_order(self.grid_order.row);
+	show_order();
 end;
 
 procedure Tform_main.button_show_slClick(Sender : TObject);
@@ -838,7 +783,7 @@ end;
 
 procedure Tform_main.FormCreate(Sender : TObject);
 begin
-	browser_panel := TPanel(Pointer(self.panel_ap));
+	browser_panel := TPanel(Pointer(self.Panel_browser));
 	self.GridPanel_grids.ColumnCollection.Items[1].value := 0;
 	flag_order_get_time := false;
 	index_current_order := 0;
@@ -863,10 +808,6 @@ begin
 		grid_crews.ColWidths[1] := 180;
 		grid_crews.ColWidths[2] := 180;
 		grid_crews.ColWidths[3] := 280;
-		edit_ap_street.Text := 'улица Самойловой';
-		edit_ap_house.Text := '7';
-		edit_ap_korpus.Text := '';
-		edit_ap_gps.Text := '30.375401,59.902930';
 	end;
 	// form_main.DBGrid1.Hide();
 

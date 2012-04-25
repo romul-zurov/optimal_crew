@@ -63,7 +63,7 @@ object form_main: Tform_main
       Left = 5
       Top = 5
       Width = 754
-      Height = 42
+      Height = 27
       Margins.Left = 4
       Margins.Top = 4
       Margins.Right = 4
@@ -73,58 +73,10 @@ object form_main: Tform_main
       TabOrder = 0
       DesignSize = (
         754
-        42)
-      object Label2: TLabel
-        Left = 164
-        Top = 1
-        Width = 51
-        Height = 13
-        Caption = #1047#1072#1082#1072#1079#1095#1080#1082':'
-        Visible = False
-      end
-      object Label1: TLabel
-        Left = 2
-        Top = 1
-        Width = 75
-        Height = 13
-        Caption = #1040#1076#1088#1077#1089' '#1087#1086#1076#1072#1095#1080':'
-        Visible = False
-      end
-      object Label6: TLabel
-        Left = 33
-        Top = 1
-        Width = 35
-        Height = 13
-        Caption = #1059#1083#1080#1094#1072':'
-        Visible = False
-      end
-      object Label7: TLabel
-        Left = 63
-        Top = 1
-        Width = 24
-        Height = 13
-        Caption = #1044#1086#1084':'
-        Visible = False
-      end
-      object Label8: TLabel
-        Left = 63
-        Top = 1
-        Width = 40
-        Height = 13
-        Caption = #1050#1086#1088#1087#1091#1089':'
-        Visible = False
-      end
-      object Label9: TLabel
-        Left = 93
-        Top = 1
-        Width = 90
-        Height = 13
-        Caption = 'GPS-'#1082#1086#1086#1088#1076#1080#1085#1072#1090#1099':'
-        Visible = False
-      end
+        27)
       object Button1: TButton
         Left = 609
-        Top = 6
+        Top = 1
         Width = 125
         Height = 25
         Anchors = [akTop, akRight]
@@ -134,7 +86,7 @@ object form_main: Tform_main
       end
       object cb_real_base: TCheckBox
         Left = 582
-        Top = 10
+        Top = 5
         Width = 30
         Height = 17
         Anchors = [akTop, akRight]
@@ -142,75 +94,42 @@ object form_main: Tform_main
         TabOrder = 1
         OnClick = cb_real_baseClick
       end
-      object edit_zakaz4ik: TEdit
-        Left = 119
-        Top = 20
-        Width = 18
-        Height = 21
-        TabOrder = 2
-        Visible = False
-      end
-      object edit_ap_street: TEdit
-        Left = 2
-        Top = 20
-        Width = 25
-        Height = 21
-        TabOrder = 3
-        Visible = False
-      end
-      object edit_ap_house: TEdit
-        Left = 33
-        Top = 20
-        Width = 24
-        Height = 21
-        TabOrder = 4
-        Visible = False
-      end
-      object edit_ap_korpus: TEdit
-        Left = 63
-        Top = 20
-        Width = 24
-        Height = 21
-        TabOrder = 5
-        Visible = False
-      end
-      object edit_ap_gps: TEdit
-        Left = 93
-        Top = 20
-        Width = 20
-        Height = 21
-        TabOrder = 6
-        Visible = False
-      end
       object button_show_sl: TButton
         Left = 381
-        Top = 6
+        Top = 1
         Width = 75
         Height = 25
         Anchors = [akTop, akRight]
         Caption = 'Debug'
-        TabOrder = 7
+        TabOrder = 2
         OnClick = button_show_slClick
       end
       object Button_show_order: TButton
         Left = 462
-        Top = 6
+        Top = 1
         Width = 114
         Height = 25
         Anchors = [akTop, akRight]
         Caption = #1055#1086#1076#1088#1086#1073#1085#1086#1089#1090#1080' '#1079#1072#1082#1072#1079#1072
-        TabOrder = 8
+        TabOrder = 3
         OnClick = Button_show_orderClick
       end
       object cb_show_crews: TCheckBox
         Left = 310
-        Top = 10
+        Top = 5
         Width = 65
         Height = 17
         Anchors = [akTop, akRight]
         Caption = #1069#1082#1080#1087#1072#1078#1080
-        TabOrder = 9
+        TabOrder = 4
         OnClick = cb_show_crewsClick
+      end
+      object Panel_browser: TPanel
+        Left = 6
+        Top = 4
+        Width = 17
+        Height = 17
+        TabOrder = 5
       end
     end
     object GridPanel_grids: TGridPanel

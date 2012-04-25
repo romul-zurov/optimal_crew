@@ -27,7 +27,7 @@ type
 		procedure FormCreate(Sender : TObject);
 		procedure FormClose(Sender : TObject; var Action : TCloseAction);
 		procedure Button_get_timeClick(Sender : TObject);
-    procedure Button_get_crewClick(Sender: TObject);
+		procedure Button_get_crewClick(Sender : TObject);
 
 	private
 		{ Private declarations }
@@ -36,8 +36,8 @@ type
 	public
 		{ Public declarations }
 		PCrewList : Pointer;
-        POrderList : Pointer;
-        procedure get_show_crews(var order_list : TOrderList; var crew_list : TCrewList);
+		POrderList : Pointer;
+		procedure get_show_crews(var order_list : TOrderList; var crew_list : TCrewList);
 		procedure show_crews(OrderId : integer; source, dest : string; var slist : tstringlist);
 		procedure show_order(); overload;
 		procedure show_order(POrd : Pointer); overload;
@@ -63,7 +63,8 @@ var order : TOrder;
 
 begin
 	order := TOrder(POrder);
-    if order = Nil then exit();
+	if order = nil then
+		exit();
 
 	if order.source.gps = '' then
 		with order.source do
@@ -82,18 +83,17 @@ begin
 		crew := crew_list.crew(pp);
 		crew.ap := order.source;
 		crew.get_time(order_list, true);
-		crew_list.Crews.Sort(sort_crews_by_time); // !!!!!!!!!!!!!!!!  :((
+//		crew_list.Crews.Sort(sort_crews_by_time); // !!!!!!!!!!!!!!!!  :((
 		slist := crew_list.ret_crews_stringlist();
 		self.show_crews(order.id, order.source.get_as_string(), order.dest.get_as_string(), slist);
-		crew_list.Crews.Sort(sort_crews_by_state_dist); // !!!!!!!!!!  :)))
+//		crew_list.Crews.Sort(sort_crews_by_state_dist); // !!!!!!!!!!  :)))
 	end;
 	FreeAndNil(slist);
-
 end;
 
-procedure TFormOrder.Button_get_crewClick(Sender: TObject);
+procedure TFormOrder.Button_get_crewClick(Sender : TObject);
 begin
-    self.get_show_crews(TOrderList(self.POrderList), TCrewList(self.PCrewList));
+	self.get_show_crews(TOrderList(self.POrderList), TCrewList(self.PCrewList));
 end;
 
 procedure TFormOrder.Button_get_timeClick(Sender : TObject);
