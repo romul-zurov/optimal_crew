@@ -5,6 +5,7 @@ interface
 uses crew_utils, // utils from robocap and mine
 	Generics.Collections, // for forward class definition
 	Controls, Forms, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX, //
+	windows, //
 	IBQuery, IBDataBase, DB, WinInet, StrUtils, ComCtrls, IniFiles, ExtCtrls;
 
 const CREW_SVOBODEN = 1;
@@ -79,8 +80,8 @@ var
 	order_states : Tstringlist;
 	crew_states : Tstringlist;
 	PGlobalStatusBar : Pointer;
-//	browser_form : Tform;
-    browser_panel : TPanel;
+	// browser_form : Tform;
+	browser_panel : TPanel;
 
 	main_db : TIBDatabase;
 	main_ta : TIBTransaction;
@@ -88,55 +89,6 @@ var
 	main_ibquery : TIBQuery;
 
 implementation
-
-function oooooooopen_database() : boolean;
-var MyPath, base, user, password : string;
-	FIniFile : TIniFile;
-begin
-	try
-		MyPath := ExtractFilePath(Application.ExeName);
-		// read configure
-		if fileexists(MyPath + 'config.ini') then
-		begin
-			show_status('reading conf.ini');
-			FIniFile := TIniFile.Create(MyPath + 'config.ini');
-			try
-				base := FIniFile.ReadString('Base', 'Path', '');
-				user := FIniFile.ReadString('Base', 'User', '');
-				password := FIniFile.ReadString('Base', 'Password', '');
-				// ac_taxi_url := 'http://test.robocab.ru/';
-				ac_taxi_url := FIniFile.ReadString('Url', 'Main_Url', '');
-			finally
-			end;
-		end;
-	finally
-	end;
-
-	main_ta.DefaultDatabase := main_db;
-	main_ibquery.Database := main_db;
-	main_ibquery.Transaction := main_ta;
-	main_ds.DataSet := main_ibquery;
-
-	with main_db do
-	begin
-		SQLDialect := 3;
-		DatabaseName := base; // 'localhost:D:\fbdb\tme.fdb';
-		// DatabaseName := 'localhost:c:\Program Files\TMEnterpriseDemo\tme_demo_db.fdb';
-		LoginPrompt := false; { off window-prompt user and passwd }
-		Params.Clear; { see dfm.form_main.db_main.Params }
-		Params.Add('user_name=' + user);
-		Params.Add('password=' + password);
-		Params.Add('lc_ctype=WIN1251');
-	end;
-	try
-		main_db.Connected := true;
-		show_status('успешное подключение к БД');
-		result := true;
-	except
-		show_status('ошибка при открытии БД');
-		result := false;
-	end;
-end;
 
 function get_crew_way_time(var points : TList; var dist_way : double) : Integer;
 	procedure add_s(var s : string; s1, s2, s3, s4 : string; num : Integer);
@@ -210,8 +162,7 @@ function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
 
 		surl := '"' + surl + '"' + ' "DayGPSKoordinatPoAdresu" "foo"';
 		surl := param64(surl);
-		surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
-
+		surl := PHP_Url + '?param=' + surl;
 		show_status('Запрос координат для адреса ' + ulica + ' ' + dom + ' ' + korpus + '...');
 		result := get_zapros(surl);
 		show_status(result);
@@ -297,11 +248,36 @@ begin
 end;
 
 function get_zapros(surl : string) : string;
+	function CheckUrl(url : string) : boolean;
+	var
+		hSession, hfile, hRequest : hInternet;
+		dwindex, dwcodelen : dword;
+		dwcode : array [1 .. 20] of char;
+		res : PChar;
+	begin
+		if pos('http://', lowercase(url)) = 0 then
+			url := 'http://' + url;
+		result := false;
+		hSession := InternetOpen('InetURL:/1.0', INTERNET_OPEN_TYPE_PRECONFIG, nil, nil, 0);
+		if assigned(hSession) then
+		begin
+			hfile := InternetOpenURL(hSession, PChar(url), nil, 0, INTERNET_FLAG_RELOAD, 0);
+			dwindex := 0;
+			dwcodelen := 10;
+			HttpQueryInfo(hfile, HTTP_QUERY_STATUS_CODE, @dwcode, dwcodelen, dwindex);
+			res := PChar(@dwcode);
+			result := (res = '200') or (res = '302'); //'200'(ОК) или '302' (Редирект)
+			if assigned(hfile) then
+				InternetCloseHandle(hfile);
+			InternetCloseHandle(hSession);
+		end;
+	end;
+
 var
 	// form : TForm;
 	browser : TWebBrowser;
 	s : string;
-	hSession, hUrl : hInternet;
+	// hSession, hUrl, hRequest : hInternet;
 begin
 	// form := TForm.Create(nil);
 	browser := TWebBrowser.Create(nil);
@@ -309,27 +285,28 @@ begin
 		InternetSetOption(nil, INTERNET_OPTION_END_BROWSER_SESSION, nil, 0); // end IE session
 		// sleep(900);
 		// TWinControl(browser).Parent := form;
-		TWinControl(browser).Parent := browser_panel;//browser_form;
+		TWinControl(browser).Parent := browser_panel; // browser_form;
 		browser.Silent := true;
-        browser.Width := 10;
-        browser.Height := 10;
+		browser.Width := 10;
+		browser.Height := 10;
 		// browser.Align := alClient;
 		// form.Width := 400;
 		// form.Height := 100;
 		// form.Show;
 		// if not DEBUG then
 		// form.Hide;
-		hSession := InternetOpen('InetURL:/1.0', INTERNET_OPEN_TYPE_PRECONFIG, nil, nil, 0);
-		hUrl := InternetOpenURL(hSession, PChar(PHP_Url), nil, 0, 0, 0);
+		// hSession := InternetOpen('InetURL:/1.0', INTERNET_OPEN_TYPE_PRECONFIG, nil, nil, 0);
+		// hUrl := InternetOpenURL(hSession, PChar(PHP_Url), nil, 0, 0, 0);
 		// if IsConnectedToInternet() then
 		// if assigned(hSession) then
-		if hUrl <> nil then
+		// if hUrl <> nil then
+		if CheckUrl(surl) then
 		begin
 			browser.Navigate(surl);
 			while browser.ReadyState < READYSTATE_COMPLETE do
 				Application.ProcessMessages;
 			s := html_to_string(browser);
-			InternetCloseHandle(hSession);
+			// InternetCloseHandle(hSession);
 		end
 		else
 		begin

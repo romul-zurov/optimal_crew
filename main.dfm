@@ -378,6 +378,7 @@ object form_main: Tform_main
   end
   object Timer_get_time_order: TTimer
     Enabled = False
+    Interval = 500
     OnTimer = Timer_get_time_orderTimer
     Left = 56
     Top = 192

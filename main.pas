@@ -373,163 +373,6 @@ begin
 	exit(res);
 end;
 
-// function html_to_string(WB : TWebBrowser) : string;
-// var
-// StringStream : TStringStream;
-// Stream : IStream;
-// PersistStream : IPersistStreamInit;
-// res : string;
-// begin
-// res := 'Error';
-// PersistStream := WB.Document as IPersistStreamInit;
-// StringStream := TStringStream.Create('');
-// Stream := TStreamAdapter.Create(StringStream, soReference) as IStream;
-// try
-// PersistStream.Save(Stream, true);
-// res := StringStream.DataString;
-// finally
-// StringStream.Free;
-// end;
-// res := get_substr(res, '&lt;&lt;&lt;', '&gt;&gt;&gt;');
-// result := res;
-// end;
-//
-// function get_zapros(surl : string) : string;
-// var Form : TForm;
-// browser : TWebBrowser;
-// s : string;
-// begin
-// Form := TForm.Create(nil);
-// browser := TWebBrowser.Create(nil);
-// try
-// InternetSetOption(nil, INTERNET_OPTION_END_BROWSER_SESSION, nil, 0); // end IE session
-// // sleep(900);
-// TWinControl(browser).Parent := Form;
-// browser.Silent := true;
-// browser.Align := alClient;
-// Form.Width := 400;
-// Form.Height := 100;
-// Form.Show;
-// if not DEBUG then
-// Form.Hide;
-// browser.Navigate(surl);
-// while browser.ReadyState < READYSTATE_COMPLETE do
-// Application.ProcessMessages;
-// s := html_to_string(browser);
-// if DEBUG then
-// sleep(1000);
-// finally
-// browser.Free;
-// Form.Free;
-// end;
-// exit(s); // 'Foo String';
-// end;
-
-// function get_zapros_old(surl : string) : string;
-// var
-// Doc : IHTMLDocument2;
-// s : string;
-// begin
-// with form_main do
-// begin
-// browser.Navigate(surl);
-// Complete_Flag := false;
-// Doc := browser.Document as IHTMLDocument2;
-// while browser.ReadyState < READYSTATE_COMPLETE do
-// Application.ProcessMessages;
-// // while not browser.OnDocumentComplete do
-// // pass;
-// // Complete_Flag := false;
-// s := html_to_string(browser);
-// result := s; // 'Foo String';
-// end;
-// end;
-
-function get_crew_way_time(var points : Tlist) : integer;
-	procedure add_s(var s : string; s1, s2, s3, s4 : string; num : integer);
-	var ss : string;
-	begin
-		case num of
-			0 :
-				ss := 'from';
-			1 :
-				ss := 'int';
-			-1 :
-				ss := 'to';
-		end;
-		s := s + 'point_' + ss + '[obj][]=' + s1 + '&';
-		s := s + 'point_' + ss + '[house][]=' + s2 + '&';
-		s := s + 'point_' + ss + '[corp][]=' + s3 + '&';
-		s := s + 'point_' + ss + '[coords][]=' + s4 + '&';
-	end;
-
-var i, c, n, t : integer;
-	a : TAdres;
-	surl, res : string;
-begin
-	c := points.Count;
-	if c < 2 then
-		exit(-1);
-	surl := ac_taxi_url + 'order?i_generate_address=1&service=0&';
-	for i := 0 to c - 1 do
-	begin
-		if i = 0 then
-			n := 0
-		else if i = (c - 1) then
-			n := -1
-		else
-			n := 1;
-		a := TAdres(points.Items[i]);
-		add_s(surl, a.street, a.house, a.korpus, a.gps, n);
-	end;
-	// surl := '"' + surl + '"' + ' "id=\"recalcOutput\" align=\"left\">" "</td>"';
-	surl := '"' + surl + '"' + ' "DayVremyaPuti" "</td>"';
-	form_main.edit_zakaz4ik.Text := surl;
-	// form_main.Memo1.Text := form_main.Memo1.Text + '\n' + surl;
-	surl := param64(surl);
-	surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
-	res := get_zapros(surl);
-
-	// ------
-	show_status(res);
-	res := get_substr(res, 'Время (с учетом пробок): ', ' мин.');
-	if (length(res) > 0) and (pos('Error', res) < 1) then
-		try
-			t := StrToInt(res);
-			exit(t);
-		except
-			exit(-1);
-		end;
-	exit(-1);
-end;
-
-function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
-	function get_coords() : string;
-	var surl : string;
-	begin
-		surl := ac_taxi_url + 'order?i_generate_address=1&service=0&';
-		surl := surl + 'point_from[obj][]=' + ulica + '&';
-		surl := surl + 'point_from[house][]=' + dom + '&';
-		surl := surl + 'point_from[corp][]=' + korpus + '&';
-		surl := surl + 'point_to[obj][]=' + ulica + '&';
-		surl := surl + 'point_to[house][]=' + dom + '&';
-		surl := surl + 'point_to[corp][]=' + korpus + '&';
-
-		surl := '"' + surl + '"' + ' "DayGPSKoordinatPoAdresu" "foo"';
-		surl := param64(surl);
-		surl := 'http://robocab.ru/ac-taxi.php?param=' + surl;
-
-		result := get_zapros(surl);
-	end;
-
-var surl, res : string;
-begin
-	res := get_coords();
-	if pos('Error', res) > 0 then
-		res := 'Error';
-	result := res;
-end;
-
 function get_track_time(surl : string) : integer;
 begin
 	with form_main do
@@ -717,89 +560,6 @@ begin
 	// show_status(list.meausure_time);
 end;
 
-procedure get_show_crews_times(var clist : TCrewList; var rlist : TCrewList);
-	procedure copy_list();
-	var cr : TCrew;
-		pp : Pointer;
-	begin
-		rlist.Crews.Clear;
-		for pp in clist.Crews do
-		begin
-			cr := clist.crew(pp);
-			if cr.Time >= 0 then
-				rlist.Crews.Add(Pointer(cr));
-		end;
-	end;
-
-	procedure ret_adr(value : string; var s, h, k : string);
-	begin
-		s := get_substr(value, '', ',');
-		h := get_substr(value, ',', '');
-		if pos('/', h) > 0 then
-		begin
-			k := get_substr(h, '/', '');
-			h := get_substr(h, '', '/');
-			if pos('-', k) > 0 then
-				k := get_substr(k, '', '-');
-		end
-		else
-			k := '';
-	end;
-
-var a1, a2, a3, a4 : TAdres;
-	alist : Tlist;
-	pp : Pointer;
-	t, t_stops : integer;
-	ss2, ss3, s2, s3, h2, h3, k2, k3 : string;
-	crew : TCrew;
-begin
-	// !!
-	a1 := TAdres.Create('', '', '', '');
-	a2 := TAdres.Create('', '', '', '');
-	a3 := TAdres.Create('', '', '', '');
-	with clist do
-		a4 := TAdres.Create(ap_street, ap_house, ap_korpus, ap_gps);
-	alist := Tlist.Create();
-	rlist.Crews.Clear();
-
-	while (clist.Crews.Count > rlist.Crews.Count) do
-		for pp in clist.Crews do
-			if (clist.crew(pp).Time < 0) { and (clist.crew(pp).State = 1) } then
-			begin
-				crew := clist.crew(pp);
-				alist.Clear();
-				a1.Clear();
-				a1.setAdres('', '', '', crew_list.crew(pp).Coord);
-				alist.Add(Pointer(a1));
-				t_stops := 0;
-
-				a2.Clear(); a3.Clear();
-				if (crew_list.crew(pp).State = CREW_NAZAKAZE) then
-				begin
-					ss2 := get_substr(crew.order_way, '', ';');
-					ss3 := get_substr(crew.order_way, ';', '');
-					ret_adr(ss2, s2, h2, k2);
-					ret_adr(ss3, s3, h3, k3);
-					a2.setAdres(s2, h2, k2, '');
-					a3.setAdres(s3, h3, k3, '');
-					alist.Add(Pointer(a2));
-					alist.Add(Pointer(a3));
-					t_stops := 10 + 3;
-				end;
-
-				alist.Add(Pointer(a4));
-				show_status('запрос времени для экипажа ' + IntToStr(clist.crew(pp).CrewId));
-				t := get_crew_way_time(alist);
-				if (t >= 0) then
-				begin
-					crew.set_time(t + t_stops);
-					copy_list();
-					rlist.Crews.Sort(sort_crews_by_time);
-					show_result_crews_grid(rlist);
-				end;
-			end;
-end;
-
 procedure show_grid(var list : TSTringList; var grid : TStringGrid);
 begin
 	grid.ColCount := 1; grid.RowCount := list.Count; grid.ColWidths[0] := grid.Width;
@@ -842,97 +602,22 @@ var list_coord, list_crew, list_order, list_tmp : TSTringList;
 	crew : TCrew;
 begin
 	cur_time := now();
-	// !!----------------------------------------------------------------------
-	// form_main.edit_zakaz4ik.Text := //
-	// replace_time('{Last_minute_0}', cur_time) //
-	// + ' ' + replace_time('{Last_hour_10}', cur_time) //
-	// + ' ' + replace_time('{Last_day_31}', cur_time) //
-	// + ' ' + replace_time('{Last_minute_10}', cur_time) //
-	// ;
-	// exit();
-	// ------------------------------------------------------------------------
-
-	// !!!
-	// crew_list.clear_crew_list();
-
-	// !!!
-	// order_list.clear_order_list();
-
-	// !!!!!!  ПЕРЕДЕЛАТЬ ЭТОТ ПЕСЕНЦ!!!
-	// if not reconnect_db() then
-	// exit();
-
 	with form_main do
 	begin
-
-		// 30.628900,60.031448       - crew 55
-		// 30.362589,59.848299
-		// 30.375401,59.90293 - самойловой 7
-
-		// маршрут для " занятых " экипажей;
-		// ID    SOURCE                       DESTINATION         STARTTIME            FINISHTIME
-		// 143 | АКАДЕМИКА ЛЕБЕДЕВА УЛ., 6 | КОРОЛЕВА ПРОСП., 34 | 03.10.2011 14:22:44 | <null>     |
-		// STATE_TIME           SOURCE_TIME          CREW_ACCEPT_TIME     GPRS_STATE_TIME
-		// | 03.10.2011 14:48:57 | 03.10.2011 14:42:26 | 03.10.2011 14:22:44 | 03.10.2011 14:48:57 |
-
 		grid_crews.RowCount := 0; // clear grid
-
-		// set_bd_times();
-
-		// if edit_ap_gps.Text = '' then
-		// edit_ap_gps.Text := get_gps_coords_for_adres(edit_ap_street.Text, edit_ap_house.Text,
-		// edit_ap_korpus.Text);
-
-		// try to get current orders
-
 		list_order := order_list.get_current_orders();
 		form_debug.show_orders(list_order);
 		crew_list.get_crew_list_by_order_list(order_list);
 		crew_list.get_crews_coords();
 		if crew_list.get_crew_list() = nil then
 			edit_zakaz4ik.Text := 'Nil!';
-		// crew_list.delete_all_none_coord();
-
 		crew_list.Crews.Sort(sort_crews_by_crewid);
 
 		// Show orders:
 		show_orders_grid();
 		show_result_crews_grid(crew_list);
 
-		exit(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-		// set AP for crew_list and get coords for crews
-		crew_list.set_ap(edit_ap_street.Text, edit_ap_house.Text, edit_ap_korpus.Text, edit_ap_gps.Text);
-		// list_coord := get_coord_list(SCOORDTIME, crew_list);
-		// show_grid(list_coord, grid_gps);
-
-		// edit_adres.Text := IntToStr(crew_list.Crews.Count);
-
-		// list_crew := get_crew_list(SDAY, crew_list);
-		// show_grid(list_crew, grid_crews);
-
-		list_tmp := ret_crews_stringlist(crew_list);
-		// show_grid(list_tmp, grid_order);
-		// show_result_crews_grid(crew_list);
-
-		// list_crew := get_order_list(SDAY, crew_list);
-		// show_grid(list_crew, grid_crews);
-
-		// !---
-		get_show_crews_times(crew_list, res_crew_list);
-		show_status('Request of crew times complete.');
-
-		// if crew_list.crewByGpsId(9).is_crew_was_in_coord('30.3088703155518,59.9947509765625') then
-		// edit_zakaz4ik.Text := 'ASDFGHJKL!';
-
-		// list_order := get_order_list(SDAY); show_grid(list_order, grid_order);
-
-		// sc1 := get_gps_coords_for_adres('ВИТЕБСКИЙ ПРОСП.', '53', '3');
-		// sc2 := get_gps_coords_for_adres('МОСКОВСКИЙ ПРОСП.', '194', '');
-		// sc1 := '30.362589,59.848299';
-		// sc2 := '30.363829,59.848945';
-		// edit_zakaz4ik.Text := sc1 + ' :: ' + sc2;
-		// edit_adres.Text := floattostr(get_dist_from_coord(sc1, sc2));
+		exit(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	end;
 end;
 
@@ -986,6 +671,7 @@ begin
 					crew := crew_list.crew(pc);
 					if (order.time_to_end = -1) // ещё не считалось,
 						or (order.time_to_end = ORDER_CREW_NO_COORD) // не было координат,
+						or (order.time_to_end = ORDER_BAD_ADRES) // не было координат адреса
 						or (order.time_to_end = ORDER_WAY_ERROR) // была ошибка расчёта
 						or ( //
 						(order.time_to_end > 0) //
@@ -1069,7 +755,6 @@ begin
 				base := FIniFile.ReadString('Base', 'Path', '');
 				user := FIniFile.ReadString('Base', 'User', '');
 				password := FIniFile.ReadString('Base', 'Password', '');
-				// ac_taxi_url := 'http://test.robocab.ru/';
 				ac_taxi_url := FIniFile.ReadString('Url', 'Main_Url', '');
 				PHP_Url := FIniFile.ReadString('Url', 'PHP_Url', '');
 				form_main.Timer_coords.Interval := StrToInt(FIniFile.ReadString('Const', 'Timer_Coords', ''));
