@@ -56,10 +56,10 @@ implementation
 
 procedure TFormOrder.get_show_crews(var order_list : TOrderList; var crew_list : TCrewList);
 var order : TOrder;
-	ordId : integer;
+	ordId, i : integer;
 	pp : Pointer;
 	crew : TCrew;
-	slist : tstringlist;
+	slist, cr_slist : tstringlist;
 
 begin
 	order := TOrder(POrder);
@@ -69,24 +69,34 @@ begin
 	if order.source.gps = '' then
 		with order.source do
 			gps := get_gps_coords_for_adres(street, house, korpus);
-	with order.source do
-		crew_list.set_ap(street, house, korpus, gps);
-	crew_list.set_crews_dist(crew_list.ap_gps);
-	crew_list.Crews.Sort(sort_crews_by_state_dist);
+
+	// with order.source do
+	// crew_list.set_ap(street, house, korpus, gps);
+	// crew_list.set_crews_dist(crew_list.ap_gps);
+	// crew_list.Crews.Sort(sort_crews_by_state_dist);
+
+	cr_slist := crew_list.get_crew_list_for_ap(order.source);
+	if cr_slist.Count = 0 then
+	begin
+		ShowMessage('Нет подходящих экипажей!');
+		exit();
+	end;
 
 	slist := tstringlist.Create();
-	for pp in crew_list.Crews do
+	// for pp in crew_list.Crews do
+	for i := 0 to cr_slist.Count - 1 do
 	begin
 		if not self.Visible then
 			break;
 
-		crew := crew_list.crew(pp);
+		// crew := crew_list.crew(pp);
+		crew := crew_list.crewByCrewId(StrToInt(cr_slist.Strings[i]));
 		crew.ap := order.source;
 		crew.get_time(order_list, true);
-//		crew_list.Crews.Sort(sort_crews_by_time); // !!!!!!!!!!!!!!!!  :((
+		// crew_list.Crews.Sort(sort_crews_by_time); // !!!!!!!!!!!!!!!!  :((
 		slist := crew_list.ret_crews_stringlist();
 		self.show_crews(order.id, order.source.get_as_string(), order.dest.get_as_string(), slist);
-//		crew_list.Crews.Sort(sort_crews_by_state_dist); // !!!!!!!!!!  :)))
+		// crew_list.Crews.Sort(sort_crews_by_state_dist); // !!!!!!!!!!  :)))
 	end;
 	FreeAndNil(slist);
 end;

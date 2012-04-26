@@ -143,6 +143,7 @@ type
 		function clear_crew_list() : Integer;
 		function get_crew_list_by_crewid_string(screws_id : string) : TStringList;
 		function get_crew_list_by_order_list(var List : TOrderList) : TStringList;
+		function get_crew_list_for_ap(new_ap : TAdres) : TStringList;
 		function get_crew_list() : TStringList;
 		function set_crews_data(List : TStringList) : Integer;
 		function get_crews_coords() : Integer;
@@ -316,8 +317,8 @@ var cur_pos : TAdres;
 	stops_time : Integer; // время на остановки для экипажа на заказе
 	order : TOrder;
 begin
-	if //
-		not(self.state in [CREW_SVOBODEN, CREW_NAZAKAZE]) //
+	if // ПОКА ТОЛЬКО СВОБОДНЫЕ!!!
+		not(self.state in [CREW_SVOBODEN , !!!!!! CREW_NAZAKAZE]) //
 	// .....считаем только свободные и занятые экипажи, исключая нерабочие и т.п.
 		or (self.coord = '') //
 		or (newOrder and self.ap.isEmpty()) //
@@ -770,6 +771,26 @@ begin
 	end;
 end;
 
+function TCrewList.get_crew_list_for_ap(new_ap : TAdres) : TStringList;
+var pp : Pointer;
+	crew : TCrew;
+begin
+	with new_ap do
+		self.set_ap(street, house, korpus, gps);
+	self.set_crews_dist(self.ap_gps);
+	self.Crews.Sort(sort_crews_by_state_dist);
+	result := TStringList.Create();
+	for pp in self.Crews do
+	begin
+		crew := self.crew(pp);
+		if //
+			(crew.state in [CREW_SVOBODEN, CREW_NAZAKAZE]) //
+			and (crew.coord <> '') //
+			then
+			result.Add(IntToStr(crew.CrewID));
+	end;
+end;
+
 function TCrewList.get_crew_list() : TStringList;
 var sel, screws_gpsid : string;
 begin
@@ -926,10 +947,11 @@ function TCrewList.set_crews_dist(coord : string) : Integer;
 var pp : Pointer;
 begin
 	if length(coord) = 0 then
-		exit(-1);
+		result := -1
+	else
+		result := 0;
 	for pp in self.Crews do
 		self.crew(pp).calc_dist(coord);
-	exit(0);
 end;
 
 function TCrewList.set_crews_orderId(List : TStringList) : Integer;
@@ -1059,13 +1081,13 @@ begin
 		+ ' ORDERS.CREWID, ORDERS.STATE, ORDERS.SOURCE_TIME, ' //
 		+ ' ORDERS.SOURCE, ORDERS.DESTINATION ' //
 		+ ' , ORDERS.DELETED ' // deleted and canceled orders
-		+ ' , DELETE_TIME, DELETE_USER_ID ' //
-		+ ' , ORDER_COORDS.COORDS_ADDR   ' //
+		+ ' , ORDERS.PRIOR_CREW_ID ' // prior_crew
+	// + ' , ORDER_COORDS.COORDS_ADDR   ' // координаты адресов заказа, пока не исп.
 		+ ' from ORDERS ' //
-		+ ' , ORDER_COORDS ' //
+	// + ' , ORDER_COORDS ' //
 		+ ' where ' //
 		+ ' ORDERS.ID = ' + IntToStr(self.ID) //
-		+ ' and ORDER_COORDS.ORDER_ID = ' + IntToStr(self.ID) //
+	// + ' and ORDER_COORDS.ORDER_ID = ' + IntToStr(self.ID) //
 		;
 	res := get_sql_stringlist(self.query, sel);
 	// result := res.Text; // return raw data as string
@@ -1085,6 +1107,13 @@ begin
 		self.deleted := false
 	else
 		self.deleted := true;
+	// предварительно назначенный экипаж:
+	if (length(res.Strings[6]) > 0) then
+		try
+			self.prior_CrewId := StrToInt(res.Strings[6]);
+		except
+			self.prior_CrewId := -1;
+		end;
 
 	exit(result);
 end;
