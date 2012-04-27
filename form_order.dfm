@@ -46,8 +46,6 @@ object FormOrder: TFormOrder
         Value = 100.000000000000000000
       end>
     TabOrder = 0
-    ExplicitWidth = 743
-    ExplicitHeight = 473
     object GridPanel_order: TGridPanel
       Left = 1
       Top = 1
@@ -79,8 +77,6 @@ object FormOrder: TFormOrder
           Value = 100.000000000000000000
         end>
       TabOrder = 0
-      ExplicitWidth = 246
-      ExplicitHeight = 471
       object GroupBox_controls: TGroupBox
         Left = 1
         Top = 1
@@ -89,7 +85,6 @@ object FormOrder: TFormOrder
         Align = alClient
         Caption = 'GroupBox_controls'
         TabOrder = 0
-        ExplicitWidth = 244
         object Button_get_crew: TButton
           Left = 127
           Top = 15
@@ -125,8 +120,6 @@ object FormOrder: TFormOrder
         Align = alClient
         Caption = 'GroupBox_order'
         TabOrder = 1
-        ExplicitWidth = 244
-        ExplicitHeight = 389
         object grid_order: TStringGrid
           Left = 2
           Top = 15
@@ -137,8 +130,6 @@ object FormOrder: TFormOrder
           DefaultRowHeight = 16
           FixedCols = 0
           TabOrder = 0
-          ExplicitWidth = 240
-          ExplicitHeight = 372
         end
       end
     end
@@ -173,9 +164,6 @@ object FormOrder: TFormOrder
           Value = 100.000000000000000000
         end>
       TabOrder = 1
-      ExplicitLeft = 247
-      ExplicitWidth = 495
-      ExplicitHeight = 471
       object GroupBox_crews: TGroupBox
         Left = 1
         Top = 1
@@ -184,8 +172,6 @@ object FormOrder: TFormOrder
         Align = alClient
         Caption = #1055#1086#1076#1073#1086#1088' '#1101#1082#1080#1087#1072#1078#1072' '#1076#1083#1103' '#1079#1072#1082#1072#1079#1072
         TabOrder = 0
-        ExplicitWidth = 246
-        ExplicitHeight = 469
         object grid_crews: TStringGrid
           Left = 2
           Top = 15
@@ -195,8 +181,6 @@ object FormOrder: TFormOrder
           DefaultRowHeight = 16
           FixedCols = 0
           TabOrder = 0
-          ExplicitWidth = 242
-          ExplicitHeight = 452
         end
       end
       object GroupBox1: TGroupBox
@@ -207,9 +191,6 @@ object FormOrder: TFormOrder
         Align = alClient
         Caption = #1052#1072#1088#1096#1088#1091#1090' '#1085#1072' '#1082#1072#1088#1090#1077':'
         TabOrder = 1
-        ExplicitLeft = 247
-        ExplicitWidth = 247
-        ExplicitHeight = 469
         object WebBrowser1: TWebBrowser
           Left = 2
           Top = 15

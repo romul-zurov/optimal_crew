@@ -48,14 +48,6 @@ const COORDS_BUF_SIZE = '{Last_hour_2}'; // размер буфера координат экипажа, в ч
 
 const DEBUG_MEASURE_TIME = '''2011-10-03 13:57:50'''; // for back-up base
 
-function get_zapros(surl : string) : string;
-function create_order_and_crew_states(var IBQuery : TIBQuery) : Integer;
-function sql_select(var query : TIBQuery; sel : string) : Integer;
-function get_sql_stringlist(var query : TIBQuery; sel : string) : Tstringlist;
-function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
-function get_crew_way_time(var points : TList; var dist_way : double) : Integer;
-procedure show_status(status : string);
-
 type
 	TAdres = class(TObject)
 		street : string;
@@ -68,6 +60,15 @@ type
 		function isEmpty() : boolean;
 		function get_as_string() : string;
 	end;
+
+function get_zapros(surl : string) : string;
+function create_order_and_crew_states(var IBQuery : TIBQuery) : Integer;
+function sql_select(var query : TIBQuery; sel : string) : Integer;
+function get_sql_stringlist(var query : TIBQuery; sel : string) : Tstringlist;
+function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
+function get_crew_way_time(var points : TList; var dist_way : double) : Integer;
+procedure show_status(status : string);
+function get_set_gps(var adr : TAdres) : string;
 
 var
 	sql_string_list : Tstringlist;
@@ -266,7 +267,7 @@ function get_zapros(surl : string) : string;
 			dwcodelen := 10;
 			HttpQueryInfo(hfile, HTTP_QUERY_STATUS_CODE, @dwcode, dwcodelen, dwindex);
 			res := PChar(@dwcode);
-			result := (res = '200') or (res = '302'); //'200'(ОК) или '302' (Редирект)
+			result := (res = '200') or (res = '302'); // '200'(ОК) или '302' (Редирект)
 			if assigned(hfile) then
 				InternetCloseHandle(hfile);
 			InternetCloseHandle(hSession);
@@ -351,9 +352,9 @@ begin
 
 	with order_states do
 	begin
-		Append(IntToStr(ORDER_CREW_NO_COORD) + '=нет_координат_экипажа');
-		Append(IntToStr(ORDER_BAD_ADRES) + '=невозможно_определить_координаты_адреса');
-		Append(IntToStr(ORDER_WAY_ERROR) + '=просчёт_маршрута_неудачен');
+		Append(IntToStr(ORDER_CREW_NO_COORD) + '=нет_координат');
+		Append(IntToStr(ORDER_BAD_ADRES) + '=ошибка_адреса');
+		Append(IntToStr(ORDER_WAY_ERROR) + '=ошибка_маршрута');
 	end;
 
 	exit(0);
@@ -473,6 +474,14 @@ begin
 		exit();
 	stbar := TStatusBar(PGlobalStatusBar);
 	stbar.Panels[0].Text := status;
+end;
+
+function get_set_gps(var adr : TAdres) : string;
+begin
+	if adr.gps = '' then
+		with adr do
+			gps := get_gps_coords_for_adres(street, house, korpus);
+	exit(adr.gps);
 end;
 
 end.

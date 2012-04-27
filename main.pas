@@ -48,6 +48,7 @@ type
 		procedure Timer_ordersTimer(Sender : TObject);
 		procedure Timer_get_time_orderTimer(Sender : TObject);
 		procedure cb_show_crewsClick(Sender : TObject);
+		procedure grid_order_priorDblClick(Sender : TObject);
 	private
 		{ Private declarations }
 	public
@@ -341,11 +342,11 @@ begin
 			ColCount := 8;
 			ColWidths[0] := 50;
 			ColWidths[1] := 100;
-			ColWidths[2] := 200;
+			ColWidths[2] := 100;
 			ColWidths[3] := 250; // 80;
 			ColWidths[4] := 120; // 80;
 			ColWidths[5] := 120;
-			ColWidths[6] := 200; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
+			ColWidths[6] := 250; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
 			ColWidths[7] := ColWidths[6];
 			// ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
 			// - ColWidths[3] - ColWidths[4] - ColWidths[5];
@@ -408,7 +409,9 @@ begin
 			// end;
 
 			grid_order.Cells[0, row] := IntToStr(order.id);
+
 			grid_order.Cells[1, row] := order.time_to_ap_as_string();
+
 			grid_order.Cells[2, row] := order.time_to_end_as_string();
 			if crew_list.crew(order.CrewId) <> nil then
 				grid_order.Cells[3, row] := IntToStr(order.CrewId) + ' | ' + crew_list.crew(order.CrewId).name
@@ -612,6 +615,15 @@ begin
 				begin
 					pc := crew_list.findByCrewId(order.CrewId);
 					crew := crew_list.crew(pc);
+					if order.State = ORDER_VODITEL_PODTVERDIL then
+					begin
+						// считаем время до прибытия
+						order.get_time_to_ap(pc);
+						show_orders_grid();
+					end
+					else
+						order.time_to_ap := -1;
+
 					if (order.time_to_end = -1) // ещё не считалось,
 						or (order.time_to_end = ORDER_CREW_NO_COORD) // не было координат,
 						or (order.time_to_end = ORDER_BAD_ADRES) // не было координат адреса
@@ -646,7 +658,7 @@ begin
 	end;
 end;
 
-procedure show_order();
+procedure show_order(var grid : TStringGrid);
 var order : TOrder;
 	sid : string;
 	ordId : integer;
@@ -656,7 +668,8 @@ var order : TOrder;
 	clist : TCrewList;
 
 begin
-	sid := form_main.grid_order_current.Cells[0, form_main.grid_order_current.row];
+	// sid := form_main.grid_order_current.Cells[0, form_main.grid_order_current.row];
+	sid := grid.Cells[0, grid.row];
 	if sid = '' then
 		exit();
 
@@ -667,7 +680,15 @@ begin
 	end;
 
 	pp := order_list.find_by_Id(ordId);
-	form_cur_order.show_order(pp);
+	if pp = nil then
+		exit();
+
+	with form_cur_order do
+	begin
+		POrderList := Pointer(order_list);
+		PCrewList := Pointer(crew_list);
+		show_order(pp);
+	end;
 	exit();
 
 	// order := order_list.order(order_list.find_by_Id(ordId));
@@ -750,7 +771,7 @@ end;
 
 procedure Tform_main.Button_show_orderClick(Sender : TObject);
 begin
-	show_order();
+	// show_order();
 end;
 
 procedure Tform_main.button_show_slClick(Sender : TObject);
@@ -857,7 +878,13 @@ end;
 
 procedure Tform_main.grid_order_currentDblClick(Sender : TObject);
 begin
-	show_order_time(grid_order_current);
+	// show_order_time(grid_order_current);
+	show_order(grid_order_current);
+end;
+
+procedure Tform_main.grid_order_priorDblClick(Sender : TObject);
+begin
+	show_order(grid_order_prior);
 end;
 
 procedure Tform_main.Timer_coordsTimer(Sender : TObject);

@@ -55,16 +55,35 @@ implementation
 // end;
 
 procedure TFormOrder.get_show_crews(var order_list : TOrderList; var crew_list : TCrewList);
+	procedure ret_sl(var cr_sl : tstringlist; first : boolean; var sl : tstringlist);
+	var j : integer;
+		cr : TCRew;
+	begin
+		sl.Clear();
+		sl.Sorted := True;
+		for j := 0 to cr_sl.Count - 1 do
+		begin
+			cr := crew_list.crewByCrewId(StrToInt(cr_sl.Strings[j]));
+			if first then
+				cr.set_time(-1);
+			if cr.state in [CREW_SVOBODEN, CREW_NAZAKAZE] then
+				sl.Add(cr.ret_data());
+		end;
+	end;
+
 var order : TOrder;
 	ordId, i : integer;
 	pp : Pointer;
-	crew : TCrew;
+	crew : TCRew;
 	slist, cr_slist : tstringlist;
 
 begin
 	order := TOrder(POrder);
 	if order = nil then
 		exit();
+	slist := tstringlist.Create();
+	// выводим пстую шапку
+	self.show_crews(order.id, order.source.get_as_string(), order.dest.get_as_string(), slist);
 
 	if order.source.gps = '' then
 		with order.source do
@@ -82,7 +101,10 @@ begin
 		exit();
 	end;
 
-	slist := tstringlist.Create();
+	ret_sl(cr_slist, True, slist);
+	// выводим шапку
+	self.show_crews(order.id, order.source.get_as_string(), order.dest.get_as_string(), slist);
+
 	// for pp in crew_list.Crews do
 	for i := 0 to cr_slist.Count - 1 do
 	begin
@@ -92,9 +114,11 @@ begin
 		// crew := crew_list.crew(pp);
 		crew := crew_list.crewByCrewId(StrToInt(cr_slist.Strings[i]));
 		crew.ap := order.source;
-		crew.get_time(order_list, true);
+		// crew.get_time(order_list, true);
+		crew.get_time_for_ap(order_list, order.source);
 		// crew_list.Crews.Sort(sort_crews_by_time); // !!!!!!!!!!!!!!!!  :((
-		slist := crew_list.ret_crews_stringlist();
+		// slist := crew_list.ret_crews_stringlist();
+		ret_sl(cr_slist, false, slist);
 		self.show_crews(order.id, order.source.get_as_string(), order.dest.get_as_string(), slist);
 		// crew_list.Crews.Sort(sort_crews_by_state_dist); // !!!!!!!!!!  :)))
 	end;
@@ -161,7 +185,7 @@ begin
 		with self.grid_crews do
 		begin
 			RowCount := r + 1;
-			Cells[0, r] := get_substr(s, '', '|');
+			Cells[0, r] := get_substr(s, '$', '|');
 			Cells[1, r] := get_substr(s, '|', '||');
 			Cells[2, r] := get_substr(s, '||', '|||');
 			Cells[3, r] := get_substr(s, '|||', '||||');

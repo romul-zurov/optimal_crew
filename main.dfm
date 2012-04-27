@@ -134,9 +134,9 @@ object form_main: Tform_main
     end
     object GridPanel_grids: TGridPanel
       Left = 1
-      Top = 51
+      Top = 36
       Width = 762
-      Height = 304
+      Height = 319
       Align = alClient
       ColumnCollection = <
         item
@@ -166,7 +166,7 @@ object form_main: Tform_main
         Left = 1
         Top = 1
         Width = 510
-        Height = 302
+        Height = 317
         Align = alClient
         Caption = #1047#1072#1082#1072#1079#1099':'
         TabOrder = 0
@@ -174,7 +174,7 @@ object form_main: Tform_main
           Left = 2
           Top = 15
           Width = 506
-          Height = 285
+          Height = 300
           ActivePage = TabSheet_current
           Align = alClient
           TabOrder = 0
@@ -185,7 +185,7 @@ object form_main: Tform_main
               Left = 3
               Top = 3
               Width = 492
-              Height = 251
+              Height = 266
               Align = alClient
               ColCount = 3
               Ctl3D = False
@@ -206,7 +206,7 @@ object form_main: Tform_main
               Left = 3
               Top = 3
               Width = 492
-              Height = 251
+              Height = 266
               Align = alClient
               ColCount = 3
               Ctl3D = False
@@ -216,7 +216,7 @@ object form_main: Tform_main
               FixedRows = 0
               ParentCtl3D = False
               TabOrder = 0
-              OnDblClick = grid_order_currentDblClick
+              OnDblClick = grid_order_priorDblClick
             end
           end
         end
@@ -225,7 +225,7 @@ object form_main: Tform_main
         Left = 511
         Top = 1
         Width = 250
-        Height = 302
+        Height = 317
         Align = alClient
         Caption = #1044#1086#1089#1090#1091#1087#1085#1099#1077' '#1101#1082#1080#1087#1072#1078#1080':'
         TabOrder = 1
@@ -234,7 +234,7 @@ object form_main: Tform_main
           Left = 5
           Top = 18
           Width = 240
-          Height = 279
+          Height = 294
           Align = alClient
           ColCount = 4
           Ctl3D = False
