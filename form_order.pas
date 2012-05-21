@@ -138,7 +138,7 @@ begin
 	if order.CrewID = -1 then
 		exit();
 	pc := TCrewList(PCrewList).findByCrewId(order.CrewID);
-	order.get_time_to_end(pc);
+//	order.get_time_to_end(pc);
 	self.show_order();
 end;
 

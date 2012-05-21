@@ -35,6 +35,10 @@ type
 		Timer_get_time_order : TTimer;
 		cb_show_crews : TCheckBox;
 		Panel_browser : TPanel;
+		Timer_show_order_grid : TTimer;
+		Button_get_time_to_ap : TButton;
+		Timer_get_time_order_to_ap : TTimer;
+		Button_get_time_to_end : TButton;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -49,6 +53,10 @@ type
 		procedure Timer_get_time_orderTimer(Sender : TObject);
 		procedure cb_show_crewsClick(Sender : TObject);
 		procedure grid_order_priorDblClick(Sender : TObject);
+		procedure Timer_show_order_gridTimer(Sender : TObject);
+		procedure Button_get_time_to_apClick(Sender : TObject);
+		procedure Timer_get_time_order_to_apTimer(Sender : TObject);
+		procedure Button_get_time_to_endClick(Sender : TObject);
 	private
 		{ Private declarations }
 	public
@@ -526,17 +534,30 @@ begin
 	end;
 end;
 
-procedure first_request();
+procedure crews_request();
+begin
+	crew_list.get_crews_coords();
+	crew_list.Crews.Sort(sort_crews_by_crewid);
+	show_result_crews_grid(crew_list);
+	if form_cur_crew.Showing then
+		form_cur_crew.show_crew();
+end;
+
+procedure orders_request();
 begin
 	deb_list := order_list.get_current_orders();
 	crew_list.get_crew_list_by_order_list(order_list);
-	crew_list.get_crews_coords();
-	crew_list.Crews.Sort(sort_crews_by_crewid);
+
+	// координаты экипажей берутся по таймеру
+	// crew_list.get_crews_coords();
+	// crew_list.Crews.Sort(sort_crews_by_crewid);
 
 	// Show orders:
 	form_debug.show_orders(deb_list); // for info
-	show_orders_grid();
-	show_result_crews_grid(crew_list);
+
+	// отображение сетки - по таймеру Timer_show_order_grid
+	// show_orders_grid(); - не нужно, сетка обновляется по таймеру
+	// show_result_crews_grid(crew_list); // - не нужно, сетка обновляется по таймеру
 end;
 
 procedure show_tmp();
@@ -560,7 +581,8 @@ begin
 		crew_list.Crews.Sort(sort_crews_by_crewid);
 
 		// Show orders:
-		show_orders_grid();
+		// отображение сетки - по таймеру Timer_show_order_grid
+		// show_orders_grid();
 		show_result_crews_grid(crew_list);
 
 		exit(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -585,9 +607,105 @@ begin
 	if order.CrewId <> -1 then
 	begin
 		pc := crew_list.findByCrewId(order.CrewId);
-		order.get_time_to_end(pc);
-		show_orders_grid();
+		// order.get_time_to_end(pc);
+		// отображение сетки - по таймеру Timer_show_order_grid
+		// show_orders_grid();
 		exit();
+	end;
+end;
+
+procedure get_show_order_time_to_ap();
+var order : TOrder;
+	crew : TCrew;
+	pc : Pointer;
+	pp : Pointer;
+begin
+	if order_list.Orders.Count = 0 then
+		exit();
+
+	for pp in order_list.Orders do
+	begin
+		order := order_list.order(pp);
+		if order <> nil then
+		begin
+			if order.CrewId > -1 then
+			begin
+				if order.is_not_prior() then //
+				begin
+					pc := crew_list.findByCrewId(order.CrewId);
+					crew := crew_list.crew(pc);
+					if order.State = ORDER_VODITEL_PODTVERDIL then
+					begin
+						// считаем время до прибытия
+						show_status('Расчёт времени подачи заказа № ' + IntToStr(order.id));
+						order.def_time_to_ap(pc);
+						// order.get_time_to_ap(pc);
+						// show_orders_grid();
+					end;
+				end;
+			end;
+		end;
+	end;
+end;
+
+procedure get_show_order_time_to_end();
+var order : TOrder;
+	crew : TCrew;
+	pc, pp : Pointer;
+begin
+	if order_list.Orders.Count = 0 then
+		exit();
+
+	if not(index_current_order in [0 .. order_list.Orders.Count - 1]) then
+		index_current_order := 0;
+
+	for pp in order_list.Orders do
+	begin
+		order := order_list.order(pp);
+		if order <> nil then
+		begin
+			if order.CrewId > -1 then
+			begin
+				if order.is_not_prior() then //
+				begin
+					show_status('Расчёт окончания заказа № ' + IntToStr(order.id));
+					pc := crew_list.findByCrewId(order.CrewId);
+					crew := crew_list.crew(pc);
+					order.def_time_to_end(pc);
+
+					// if (order.time_to_end = -1) // ещё не считалось,
+					// or (order.time_to_end = ORDER_CREW_NO_COORD) // не было координат,
+					// or (order.time_to_end = ORDER_BAD_ADRES) // не было координат адреса
+					// or (order.time_to_end = ORDER_WAY_ERROR) // была ошибка расчёта
+					// or ( //
+					// (order.time_to_end > 0) //
+					// and //
+					// crew.is_moved() // или имело место перемещение экипажа
+					// ) //
+					// then
+					// begin
+					// if order.get_time_to_end(pc) >= 0 then
+					// // при удачном просчёте сбрасываем "старую координату"
+					// crew.reset_old_coord();
+
+					// отображение сетки - по таймеру Timer_show_order_grid
+					// show_orders_grid();
+
+					// выходим
+					// inc(index_current_order);
+					// flag_order_get_time := false;
+					// exit();
+					// end;
+				end;
+			end;
+		end;
+		// переходим к след. заказу
+		// inc(index_current_order);
+		// if index_current_order >= order_list.Orders.Count then
+		// begin
+		// flag_order_get_time := false;
+		// exit();
+		// end;
 	end;
 end;
 
@@ -618,8 +736,9 @@ begin
 					if order.State = ORDER_VODITEL_PODTVERDIL then
 					begin
 						// считаем время до прибытия
-						order.get_time_to_ap(pc);
-						show_orders_grid();
+						// order.get_time_to_ap(pc);
+						// отображение сетки - по таймеру Timer_show_order_grid
+						// show_orders_grid();
 					end
 					else
 						order.time_to_ap := -1;
@@ -635,11 +754,13 @@ begin
 						) //
 						then
 					begin
-						if order.get_time_to_end(pc) >= 0 then
-							// при удачном просчёте сбрасываем "старую координату"
-							crew.reset_old_coord();
+						// if order.get_time_to_end(pc) >= 0 then
+						// // при удачном просчёте сбрасываем "старую координату"
+						// crew.reset_old_coord();
 
-						show_orders_grid();
+						// отображение сетки - по таймеру Timer_show_order_grid
+						// show_orders_grid();
+
 						// выходим
 						inc(index_current_order);
 						flag_order_get_time := false;
@@ -762,11 +883,20 @@ end;
 
 procedure Tform_main.Button1Click(Sender : TObject);
 begin
-	// form_main.GridPanel_main.RowCollection.Items[0].SizeStyle := ssAbsolute;
-	// form_main.GridPanel_main.RowCollection.Items[0].Value := 0;
-	// exit();
-	form_cur_crew.Close();
-	show_tmp();
+	// form_cur_crew.Close();
+	// show_tmp();
+	self.Timer_ordersTimer(Sender);
+end;
+
+procedure Tform_main.Button_get_time_to_apClick(Sender : TObject);
+begin
+	// get_show_order_time_to_ap();
+	self.Timer_get_time_order_to_apTimer(Sender);
+end;
+
+procedure Tform_main.Button_get_time_to_endClick(Sender : TObject);
+begin
+	self.Timer_get_time_orderTimer(Sender);
 end;
 
 procedure Tform_main.Button_show_orderClick(Sender : TObject);
@@ -799,6 +929,8 @@ end;
 
 procedure Tform_main.FormClose(Sender : TObject; var Action : TCloseAction);
 begin
+	FreeAndNil(order_list);
+	FreeAndNil(crew_list);
 	halt(0);
 end;
 
@@ -834,7 +966,7 @@ begin
 
 	sql_string_list := TSTringList.Create();
 	form_cur_crew := TFormCrew.Create(nil);
-	form_cur_order := TFormOrder.Create(nil);
+	form_cur_order := TFormOrder.Create(self);
 	form_main.grid_order_current.RowCount := 2;
 	form_main.grid_order_prior.RowCount := 2;
 	PGlobalStatusBar := Pointer(form_main.stbar_main);
@@ -852,11 +984,15 @@ begin
 	begin
 		// show_tmp();
 		create_order_and_crew_states(ibquery_main);
-		first_request();
+		self.Timer_ordersTimer(Sender); // читаем заказы
+		self.Timer_coordsTimer(Sender); // читаем координаты экипажефф
+		// first_request(); - не нужно, всё  и так сработает по таймерам
 	end;
-	form_main.Timer_coords.Enabled := true;
 	form_main.Timer_orders.Enabled := true;
+	form_main.Timer_coords.Enabled := true;
 	form_main.Timer_get_time_order.Enabled := true;
+	form_main.Timer_show_order_grid.Enabled := true;
+	form_main.Timer_get_time_order_to_ap.Enabled := true;
 	// прячем список экипажей
 	// form_main.GridPanel_grids.ColumnCollection.Items[1].Value := 0;
 
@@ -889,23 +1025,27 @@ end;
 
 procedure Tform_main.Timer_coordsTimer(Sender : TObject);
 begin
-	crew_list.get_crews_coords();
-	crew_list.Crews.Sort(sort_crews_by_crewid);
-	show_result_crews_grid(crew_list);
-	if form_cur_crew.Showing then
-		form_cur_crew.show_crew();
+	crews_request();
 end;
 
 procedure Tform_main.Timer_get_time_orderTimer(Sender : TObject);
 begin
-	if flag_order_get_time then
-		exit();
-	get_show_order_time();
+	get_show_order_time_to_end();
+end;
+
+procedure Tform_main.Timer_get_time_order_to_apTimer(Sender : TObject);
+begin
+	get_show_order_time_to_ap();
 end;
 
 procedure Tform_main.Timer_ordersTimer(Sender : TObject);
 begin
-	first_request();
+	orders_request();
+end;
+
+procedure Tform_main.Timer_show_order_gridTimer(Sender : TObject);
+begin
+	show_orders_grid();
 end;
 
 end.

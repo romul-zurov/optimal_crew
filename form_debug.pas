@@ -41,7 +41,9 @@ end;
 
 procedure TFormDebug.show_grid(var list : TSTringList; var grid : TStringGrid);
 begin
-	grid.ColCount := 1; grid.RowCount := list.Count; grid.ColWidths[0] := grid.Width;
+	grid.ColCount := 1;
+	grid.RowCount := list.Count;
+	grid.ColWidths[0] := grid.Width;
 	grid.Cols[0].Assign(list);
 end;
 

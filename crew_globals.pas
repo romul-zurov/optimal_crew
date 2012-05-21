@@ -45,28 +45,68 @@ const ORDER_BAD_ADRES = -4; // адрес(а) маршрута заказа не определются картой,
 const ORDER_WAY_ERROR = -8; // ошибка при просчёте маршрута, время не определено
 
 const COORDS_BUF_SIZE = '{Last_hour_2}'; // размер буфера координат экипажа, в часах
+	// const COORDS_BUF_SIZE = '{Last_minute_10}'; // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 const DEBUG_MEASURE_TIME = '''2011-10-03 13:57:50'''; // for back-up base
 
 type
+	TZapros = class(TObject)
+		// базовый класс для запроса времени, координат и прочего через php-скрипты
+		// метод ZaporsComplete переопределяется при необходимости
+		otvet : string;
+		browser : TWebBrowser;
+		timer : TTimer;
+		constructor Create();
+		destructor Destroy; override;
+		procedure get_zapros(surl : string);
+		procedure timeout_error(Sender : TObject);
+		procedure zapros_complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+	end;
+
 	TAdres = class(TObject)
 		street : string;
 		house : string;
 		korpus : string;
 		gps : string;
+		zapros : TZapros;
 		constructor Create(street, house, korpus, gps : string);
+		destructor Destroy; override;
 		procedure setAdres(street, house, korpus, gps : string);
 		procedure Clear();
 		function isEmpty() : boolean;
 		function get_as_string() : string;
+		procedure get_gps();
+	private
+		procedure gps_complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+		// procedure complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+	end;
+
+	TWay = class(TObject)
+		time : integer;
+		dist_way : double;
+		zapros : TZapros;
+		constructor Create();
+		destructor Destroy; override;
+		procedure get_way_time_dist(var points : TList);
+		procedure set_way_time_dist(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+	end;
+
+	TBrowserComplete2Event = procedure(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+
+	TBrowserComplete2Provider = class
+	public
+		constructor Create(AEvent : TBrowserComplete2Event);
+		procedure NavigateComplete2(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+	private
+		FEvent : TBrowserComplete2Event;
 	end;
 
 function get_zapros(surl : string) : string;
-function create_order_and_crew_states(var IBQuery : TIBQuery) : Integer;
-function sql_select(var query : TIBQuery; sel : string) : Integer;
+function create_order_and_crew_states(var IBQuery : TIBQuery) : integer;
+function sql_select(var query : TIBQuery; sel : string) : integer;
 function get_sql_stringlist(var query : TIBQuery; sel : string) : Tstringlist;
 function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
-function get_crew_way_time(var points : TList; var dist_way : double) : Integer;
+function get_crew_way_time(var points : TList; var dist_way : double) : integer;
 procedure show_status(status : string);
 function get_set_gps(var adr : TAdres) : string;
 
@@ -91,8 +131,38 @@ var
 
 implementation
 
-function get_crew_way_time(var points : TList; var dist_way : double) : Integer;
-	procedure add_s(var s : string; s1, s2, s3, s4 : string; num : Integer);
+type
+	TIEProgressEvent2 = procedure(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+
+	TProgressProvider = class
+	public
+		flag : boolean;
+		constructor Create(AEvent : TIEProgressEvent2);
+		procedure IOProgress(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+	private
+		FEvent : TIEProgressEvent2;
+	end;
+
+constructor TProgressProvider.Create(AEvent : TIEProgressEvent2);
+begin
+	inherited Create;
+	FEvent := AEvent;
+	self.flag := true;
+end;
+
+procedure TProgressProvider.IOProgress(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+begin
+	if Assigned(FEvent) then
+		self.flag := false;
+end;
+
+procedure IOProgress(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+begin
+
+end;
+
+function get_crew_way_time(var points : TList; var dist_way : double) : integer;
+	procedure add_s(var s : string; s1, s2, s3, s4 : string; num : integer);
 	var ss : string;
 	begin
 		case num of
@@ -109,7 +179,7 @@ function get_crew_way_time(var points : TList; var dist_way : double) : Integer;
 		s := s + 'point_' + ss + '[coords][]=' + s4 + '&';
 	end;
 
-var i, c, n, t : Integer;
+var i, c, n, t : integer;
 	a : TAdres;
 	surl, res, dist_res : string;
 begin
@@ -162,9 +232,12 @@ function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
 		surl := surl + 'point_to[corp][]=' + korpus + '&';
 
 		surl := '"' + surl + '"' + ' "DayGPSKoordinatPoAdresu" "foo"';
+		// !!!!!!
+		surl := surl + ' "cp1251"';
+		show_status(surl);
 		surl := param64(surl);
 		surl := PHP_Url + '?param=' + surl;
-		show_status('Запрос координат для адреса ' + ulica + ' ' + dom + ' ' + korpus + '...');
+		// show_status('Запрос координат для адреса ' + ulica + ' ' + dom + ' ' + korpus + '...');
 		result := get_zapros(surl);
 		show_status(result);
 	end;
@@ -248,6 +321,13 @@ begin
 	exit(s); // 'Foo String';
 end;
 
+procedure BrowserNavigateComplete2(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+begin
+	// ShowMessage('Ку-ку :) !');
+	pass();
+	// flag := false;
+end;
+
 function get_zapros(surl : string) : string;
 	function CheckUrl(url : string) : boolean;
 	var
@@ -260,7 +340,7 @@ function get_zapros(surl : string) : string;
 			url := 'http://' + url;
 		result := false;
 		hSession := InternetOpen('InetURL:/1.0', INTERNET_OPEN_TYPE_PRECONFIG, nil, nil, 0);
-		if assigned(hSession) then
+		if Assigned(hSession) then
 		begin
 			hfile := InternetOpenURL(hSession, PChar(url), nil, 0, INTERNET_FLAG_RELOAD, 0);
 			dwindex := 0;
@@ -268,17 +348,19 @@ function get_zapros(surl : string) : string;
 			HttpQueryInfo(hfile, HTTP_QUERY_STATUS_CODE, @dwcode, dwcodelen, dwindex);
 			res := PChar(@dwcode);
 			result := (res = '200') or (res = '302'); // '200'(ОК) или '302' (Редирект)
-			if assigned(hfile) then
+			if Assigned(hfile) then
 				InternetCloseHandle(hfile);
 			InternetCloseHandle(hSession);
 		end;
 	end;
 
 var
+	Provider : TProgressProvider;
 	// form : TForm;
 	browser : TWebBrowser;
 	s : string;
 	// hSession, hUrl, hRequest : hInternet;
+
 begin
 	// form := TForm.Create(nil);
 	browser := TWebBrowser.Create(nil);
@@ -290,6 +372,10 @@ begin
 		browser.Silent := true;
 		browser.Width := 10;
 		browser.Height := 10;
+
+		// @#$%^&*(!!!
+		Provider := TProgressProvider.Create(IOProgress);
+		browser.OnNavigateComplete2 := Provider.IOProgress;
 		// browser.Align := alClient;
 		// form.Width := 400;
 		// form.Height := 100;
@@ -301,11 +387,17 @@ begin
 		// if IsConnectedToInternet() then
 		// if assigned(hSession) then
 		// if hUrl <> nil then
-		if CheckUrl(surl) then
+
+		// if True then
+		// if CheckUrl(surl) then
+		if CheckUrl(PHP_Url) then
 		begin
 			browser.Navigate(surl);
-			while browser.ReadyState < READYSTATE_COMPLETE do
+			while Provider.flag do
 				Application.ProcessMessages;
+
+			// while browser.ReadyState < READYSTATE_COMPLETE do
+			// Application.ProcessMessages;
 			s := html_to_string(browser);
 			// InternetCloseHandle(hSession);
 		end
@@ -321,10 +413,10 @@ begin
 	exit(s); // 'Foo String';
 end;
 
-function create_order_and_crew_states(var IBQuery : TIBQuery) : Integer;
+function create_order_and_crew_states(var IBQuery : TIBQuery) : integer;
 	procedure set_states(var states : Tstringlist; table_name : string);
 	var sel, s : string;
-		i : Integer;
+		i : integer;
 		st : Tstringlist;
 	begin
 		sel := 'select ' //
@@ -360,7 +452,7 @@ begin
 	exit(0);
 end;
 
-function sql_select(var query : TIBQuery; sel : string) : Integer;
+function sql_select(var query : TIBQuery; sel : string) : integer;
 begin
 	query.SQL.Clear;
 	query.SQL.Add(sel);
@@ -381,7 +473,7 @@ var
 	res : string;
 	// list : Tstringlist;
 	field : TField;
-	i : Integer;
+	i : integer;
 begin
 	sql_select(query, sel);
 	// list := Tstringlist.Create;
@@ -430,6 +522,14 @@ begin
 	self.house := house;
 	self.korpus := korpus;
 	self.gps := gps;
+	self.zapros := TZapros.Create();
+	self.zapros.browser.OnNavigateComplete2 := self.gps_complete;
+end;
+
+destructor TAdres.Destroy;
+begin
+    self.zapros.Free();
+	inherited;
 end;
 
 function TAdres.get_as_string : string;
@@ -445,6 +545,35 @@ begin
 			result := result + '/' + self.korpus;
 	end;
 	exit(result);
+end;
+
+procedure TAdres.get_gps;
+var surl : string;
+begin
+	surl := ac_taxi_url + 'order?i_generate_address=1&service=0&';
+	surl := surl + 'point_from[obj][]=' + self.street + '&';
+	surl := surl + 'point_from[house][]=' + self.house + '&';
+	surl := surl + 'point_from[corp][]=' + self.korpus + '&';
+	surl := surl + 'point_to[obj][]=' + self.street + '&';
+	surl := surl + 'point_to[house][]=' + self.house + '&';
+	surl := surl + 'point_to[corp][]=' + self.korpus + '&';
+
+	surl := '"' + surl + '"' + ' "DayGPSKoordinatPoAdresu" "foo"';
+	surl := surl + ' "cp1251"';
+	show_status(surl);
+	surl := param64(surl);
+	surl := PHP_Url + '?param=' + surl;
+	self.zapros.get_zapros(surl);
+end;
+
+procedure TAdres.gps_complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+begin
+	// self.gps := html_to_string(self.zapros.browser);
+	self.zapros.zapros_complete(ASender, pDisp, url);
+	// if pos('Error', self.zapros.otvet) > 0 then
+	// self.gps := ''
+	// else
+	self.gps := self.zapros.otvet;
 end;
 
 function TAdres.isEmpty : boolean;
@@ -482,6 +611,161 @@ begin
 		with adr do
 			gps := get_gps_coords_for_adres(street, house, korpus);
 	exit(adr.gps);
+end;
+
+{ TBrowserComplete2Provider }
+
+constructor TBrowserComplete2Provider.Create(AEvent : TBrowserComplete2Event);
+begin
+
+end;
+
+procedure TBrowserComplete2Provider.NavigateComplete2(ASender : TObject; const pDisp : IDispatch;
+	var url : OleVariant);
+begin
+
+end;
+
+{ TZapros }
+
+constructor TZapros.Create;
+begin
+	self.otvet := '';
+	self.browser := TWebBrowser.Create(nil);
+	TWinControl(self.browser).Parent := browser_panel; // global panel
+
+	self.browser.Silent := true;
+	self.browser.Width := 10;
+	self.browser.Height := 10;
+
+	self.timer := TTimer.Create(browser_panel);
+	self.timer.Interval := 120000;
+	self.timer.Enabled := false;
+
+	// определяем обработчики по умолчанию,
+	// можно переопределить, если нужно
+	self.browser.OnNavigateComplete2 := self.zapros_complete;
+	self.timer.OnTimer := self.timeout_error;
+end;
+
+destructor TZapros.Destroy;
+begin
+	self.browser.Free();
+	self.timer.Free();
+	inherited;
+end;
+
+procedure TZapros.get_zapros(surl : string);
+begin
+	if self.browser.ReadyState < READYSTATE_COMPLETE then
+		// если уже идёт запрос, выходим
+		exit();
+	self.timer.Enabled := true;
+	self.otvet := '';
+	self.browser.Navigate(surl);
+end;
+
+procedure TZapros.timeout_error(Sender : TObject);
+begin
+	self.timer.Enabled := false;
+	self.otvet := 'ErrorTimeout';
+	self.browser.Stop();
+end;
+
+procedure TZapros.zapros_complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+begin
+	self.timer.Enabled := false;
+	if self.otvet = 'ErrorTimeout' then
+		exit();
+	self.otvet := html_to_string(self.browser);
+	if self.otvet = '' then
+		self.otvet := 'ErrorNetwork';
+end;
+
+{ TWay }
+
+constructor TWay.Create;
+begin
+	self.time := -1;
+	self.dist_way := -1.0;
+	self.zapros := TZapros.Create();
+	self.zapros.browser.OnNavigateComplete2 := self.set_way_time_dist;
+end;
+
+destructor TWay.Destroy;
+begin
+	self.zapros.Free();
+	inherited;
+end;
+
+procedure TWay.get_way_time_dist(var points : TList);
+	procedure add_s(var s : string; s1, s2, s3, s4 : string; num : integer);
+	var ss : string;
+	begin
+		case num of
+			0 :
+				ss := 'from';
+			1 :
+				ss := 'int';
+			-1 :
+				ss := 'to';
+		end;
+		s := s + 'point_' + ss + '[obj][]=' + s1 + '&';
+		s := s + 'point_' + ss + '[house][]=' + s2 + '&';
+		s := s + 'point_' + ss + '[corp][]=' + s3 + '&';
+		s := s + 'point_' + ss + '[coords][]=' + s4 + '&';
+	end;
+
+var i, c, n, t : integer;
+	a : TAdres;
+	surl, res, dist_res : string;
+begin
+	c := points.Count;
+	if c < 2 then
+		exit();
+	surl := ac_taxi_url + 'order?i_generate_address=1&service=0&';
+	for i := 0 to c - 1 do
+	begin
+		if i = 0 then
+			n := 0
+		else if i = (c - 1) then
+			n := -1
+		else
+			n := 1;
+		a := TAdres(points.Items[i]);
+		add_s(surl, a.street, a.house, a.korpus, a.gps, n);
+	end;
+	// show_status(surl);
+	surl := '"' + surl + '"' + ' "DayVremyaPuti" "</td>"';
+	surl := param64(surl);
+	surl := PHP_Url + '?param=' + surl;
+	// res := get_zapros(surl);
+	self.zapros.get_zapros(surl);
+end;
+
+procedure TWay.set_way_time_dist(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+var res, dist_res : string;
+begin
+	self.zapros.zapros_complete(ASender, pDisp, url);
+	res := self.zapros.otvet;
+	if pos('Error', res) > 0 then
+	begin
+		self.time := -1;
+		self.dist_way := -1.0;
+		exit();
+	end;
+	dist_res := get_substr(res, 'Маршрут (без учета пробок): ', ' км.');
+	res := get_substr(res, 'Время (с учетом пробок): ', ' мин.');
+	if (length(res) > 0) and (length(dist_res) > 0) then
+		try
+			self.dist_way := dotStrtoFloat(dist_res);
+			self.time := StrToInt(res);
+			exit();
+		except
+			self.time := -1;
+			self.dist_way := -1.0;
+			exit();
+		end;
 end;
 
 end.

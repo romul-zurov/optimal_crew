@@ -63,7 +63,7 @@ object form_main: Tform_main
       Left = 5
       Top = 5
       Width = 754
-      Height = 27
+      Height = 28
       Margins.Left = 4
       Margins.Top = 4
       Margins.Right = 4
@@ -73,14 +73,14 @@ object form_main: Tform_main
       TabOrder = 0
       DesignSize = (
         754
-        27)
+        28)
       object Button1: TButton
         Left = 609
-        Top = 1
-        Width = 125
+        Top = 2
+        Width = 144
         Height = 25
         Anchors = [akTop, akRight]
-        Caption = #1054#1073#1085#1086#1074#1080#1090#1100' '#1089#1087#1080#1089#1086#1082
+        Caption = #1054#1073#1085#1086#1074#1080#1090#1100' '#1089#1087#1080#1089#1086#1082' '#1079#1072#1082#1072#1079#1086#1074
         TabOrder = 0
         OnClick = Button1Click
       end
@@ -95,7 +95,7 @@ object form_main: Tform_main
         OnClick = cb_real_baseClick
       end
       object button_show_sl: TButton
-        Left = 381
+        Left = 69
         Top = 1
         Width = 75
         Height = 25
@@ -106,7 +106,7 @@ object form_main: Tform_main
       end
       object Button_show_order: TButton
         Left = 462
-        Top = 1
+        Top = 2
         Width = 114
         Height = 25
         Anchors = [akTop, akRight]
@@ -115,8 +115,8 @@ object form_main: Tform_main
         OnClick = Button_show_orderClick
       end
       object cb_show_crews: TCheckBox
-        Left = 310
-        Top = 5
+        Left = 391
+        Top = 4
         Width = 65
         Height = 17
         Anchors = [akTop, akRight]
@@ -126,17 +126,35 @@ object form_main: Tform_main
       end
       object Panel_browser: TPanel
         Left = 6
-        Top = 4
+        Top = 5
         Width = 17
         Height = 17
         TabOrder = 5
       end
+      object Button_get_time_to_ap: TButton
+        Left = 269
+        Top = 2
+        Width = 108
+        Height = 24
+        Caption = #1074#1088#1077#1084#1103' '#1076#1086' '#1087#1086#1076#1072#1095#1080
+        TabOrder = 6
+        OnClick = Button_get_time_to_apClick
+      end
+      object Button_get_time_to_end: TButton
+        Left = 150
+        Top = 2
+        Width = 113
+        Height = 24
+        Caption = #1074#1088#1077#1084#1103' '#1076#1086' '#1086#1082#1086#1085#1095#1072#1085#1080#1103
+        TabOrder = 7
+        OnClick = Button_get_time_to_endClick
+      end
     end
     object GridPanel_grids: TGridPanel
       Left = 1
-      Top = 36
+      Top = 37
       Width = 762
-      Height = 319
+      Height = 318
       Align = alClient
       ColumnCollection = <
         item
@@ -166,7 +184,7 @@ object form_main: Tform_main
         Left = 1
         Top = 1
         Width = 510
-        Height = 317
+        Height = 316
         Align = alClient
         Caption = #1047#1072#1082#1072#1079#1099':'
         TabOrder = 0
@@ -174,7 +192,7 @@ object form_main: Tform_main
           Left = 2
           Top = 15
           Width = 506
-          Height = 300
+          Height = 299
           ActivePage = TabSheet_current
           Align = alClient
           TabOrder = 0
@@ -185,7 +203,7 @@ object form_main: Tform_main
               Left = 3
               Top = 3
               Width = 492
-              Height = 266
+              Height = 265
               Align = alClient
               ColCount = 3
               Ctl3D = False
@@ -201,12 +219,16 @@ object form_main: Tform_main
           object TabSheet_prior: TTabSheet
             Caption = #1055#1088#1077#1076#1074#1072#1088#1080#1090#1077#1083#1100#1085#1099#1077
             ImageIndex = 1
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object grid_order_prior: TStringGrid
               AlignWithMargins = True
               Left = 3
               Top = 3
               Width = 492
-              Height = 266
+              Height = 265
               Align = alClient
               ColCount = 3
               Ctl3D = False
@@ -225,7 +247,7 @@ object form_main: Tform_main
         Left = 511
         Top = 1
         Width = 250
-        Height = 317
+        Height = 316
         Align = alClient
         Caption = #1044#1086#1089#1090#1091#1087#1085#1099#1077' '#1101#1082#1080#1087#1072#1078#1080':'
         TabOrder = 1
@@ -234,7 +256,7 @@ object form_main: Tform_main
           Left = 5
           Top = 18
           Width = 240
-          Height = 294
+          Height = 293
           Align = alClient
           ColCount = 4
           Ctl3D = False
@@ -297,9 +319,23 @@ object form_main: Tform_main
   end
   object Timer_get_time_order: TTimer
     Enabled = False
-    Interval = 500
+    Interval = 19000
     OnTimer = Timer_get_time_orderTimer
     Left = 56
     Top = 192
+  end
+  object Timer_show_order_grid: TTimer
+    Enabled = False
+    Interval = 2048
+    OnTimer = Timer_show_order_gridTimer
+    Left = 224
+    Top = 144
+  end
+  object Timer_get_time_order_to_ap: TTimer
+    Enabled = False
+    Interval = 31000
+    OnTimer = Timer_get_time_order_to_apTimer
+    Left = 88
+    Top = 248
   end
 end
