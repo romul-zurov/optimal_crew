@@ -44,6 +44,8 @@ const ORDER_BAD_ADRES = -4; // адрес(а) маршрута заказа не определются картой,
 
 const ORDER_WAY_ERROR = -8; // ошибка при просчёте маршрута, время не определено
 
+const ORDER_AP_OK = -128; // экипаж был в АП и уехал (забрал клиента)
+
 const COORDS_BUF_SIZE = '{Last_hour_2}'; // размер буфера координат экипажа, в часах
 	// const COORDS_BUF_SIZE = '{Last_minute_10}'; // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -736,7 +738,7 @@ begin
 		add_s(surl, a.street, a.house, a.korpus, a.gps, n);
 	end;
 	// show_status(surl);
-	surl := '"' + surl + '"' + ' "DayVremyaPuti" "</td>"';
+	surl := '"' + surl + '"' + ' "DayVremyaPuti" "foo"';
 	surl := param64(surl);
 	surl := PHP_Url + '?param=' + surl;
 	// res := get_zapros(surl);

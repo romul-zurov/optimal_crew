@@ -23,6 +23,7 @@ function reverseStringList(var list : TStringList) : Integer;
 function param64(s : string) : string;
 function date_to_full(date : string) : string; overload;
 function date_to_full(date : TDateTime) : string; overload;
+function source_time_to_datetime(date : string) : TDateTime;
 function get_substr(value : string; sub1, sub2 : string) : string;
 procedure RemoveDuplicates(const stringList : TStringList);
 procedure return_adres(value : string; var s, h, k : string);
@@ -40,7 +41,7 @@ begin
 	if s = '' then
 	begin
 		// если адрес типа "финляндский вокзал" или "пулково-1"
-        // то вертаем его в улице и выходим
+		// то вертаем его в улице и выходим
 		s := value;
 		exit();
 	end;
@@ -90,8 +91,8 @@ begin
 	date := ReplaceStr(date, ' ', '');
 	date := ReplaceStr(date, '.', '');
 	date := ReplaceStr(date, ':', '');
-    date := ReplaceStr(date, '-', '');
-    date := ReplaceStr(date, '_', '');
+	date := ReplaceStr(date, '-', '');
+	date := ReplaceStr(date, '_', '');
 	if length(date) = 13 then
 		Insert('0', date, 9);
 
@@ -115,6 +116,28 @@ var s : string;
 begin
 	DateTimeToString(s, 'yyyy-mm-dd hh:nn:ss', date);
 	exit(s);
+end;
+
+function source_time_to_datetime(date : string) : TDateTime;
+var y, m, d, h, n, s : string;
+	MySettings : TFormatSettings;
+begin
+	MySettings.DateSeparator := '-';
+	MySettings.TimeSeparator := ':';
+	MySettings.ShortDateFormat := 'yyyy-mm-dd';
+	MySettings.ShortTimeFormat := 'hh:nn:ss';
+	result := StrToDateTime(date, MySettings);
+	exit(result);
+
+	// 'yyyy-mm-dd hh:nn:ss'
+	// y := copy(date, 1, 4);
+	// m := copy(date, 6, 2);
+	// d := copy(date, 9, 2);
+	// h := copy(date, 12, 2);
+	// n := copy(date, 15, 2);
+	// s := copy(date, 18, 2);
+	// result := d + '/' + m + '/' + y + ' ' + h + ':' + n + ':' + s;
+	// 'dd/mm/yyyy hh:nn:ss'
 end;
 
 function dotStrtoFloat(s : string) : double;

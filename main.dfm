@@ -80,7 +80,7 @@ object form_main: Tform_main
         Width = 144
         Height = 25
         Anchors = [akTop, akRight]
-        Caption = #1054#1073#1085#1086#1074#1080#1090#1100' '#1089#1087#1080#1089#1086#1082' '#1079#1072#1082#1072#1079#1086#1074
+        Caption = #1058#1072#1081#1084#1077#1088' '#1074#1088#1077#1084#1103' '#1076#1086' '#1072#1087' '#1086#1090#1082#1083'!'
         TabOrder = 0
         OnClick = Button1Click
       end
@@ -219,10 +219,6 @@ object form_main: Tform_main
           object TabSheet_prior: TTabSheet
             Caption = #1055#1088#1077#1076#1074#1072#1088#1080#1090#1077#1083#1100#1085#1099#1077
             ImageIndex = 1
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
             object grid_order_prior: TStringGrid
               AlignWithMargins = True
               Left = 3
@@ -319,7 +315,7 @@ object form_main: Tform_main
   end
   object Timer_get_time_order: TTimer
     Enabled = False
-    Interval = 19000
+    Interval = 1127
     OnTimer = Timer_get_time_orderTimer
     Left = 56
     Top = 192

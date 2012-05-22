@@ -648,7 +648,7 @@ begin
 	end;
 end;
 
-procedure get_show_order_time_to_end();
+procedure get_show_order_time_to_end_OLD();
 var order : TOrder;
 	crew : TCrew;
 	pc, pp : Pointer;
@@ -707,6 +707,50 @@ begin
 		// exit();
 		// end;
 	end;
+end;
+
+procedure get_show_order_time_to_end();
+var order : TOrder;
+	crew : TCrew;
+	pc, pp : Pointer;
+begin
+	if order_list.Orders.Count = 0 then
+		exit();
+
+	if not(index_current_order in [0 .. order_list.Orders.Count - 1]) then
+		index_current_order := 0;
+
+	flag_order_get_time := true; // блокируем таймер вп-ду :)
+	while index_current_order < order_list.Orders.Count do
+	begin
+		order := order_list.order(order_list.Orders.Items[index_current_order]);
+		if order <> nil then
+		begin
+			if order.is_not_prior() then
+			begin
+				if order.CrewId > -1 then
+				begin
+					// считаем ...
+					show_status('Расчёт окончания заказа № ' + IntToStr(order.id));
+					pc := crew_list.findByCrewId(order.CrewId);
+					// crew := crew_list.crew(pc);
+
+					// if order.State = ORDER_VODITEL_PODTVERDIL then
+					order.def_time_to_ap(pc);
+
+					order.def_time_to_end(pc);
+					// и выходим
+					inc(index_current_order);
+					flag_order_get_time := false;
+					exit();
+				end;
+			end;
+		end;
+		// если заказ не удовл., переходим к следующему
+		inc(index_current_order);
+	end;
+	// список кончился, выходим, вход по таймеру будет
+	flag_order_get_time := false;
 end;
 
 procedure get_show_order_time();
@@ -987,15 +1031,17 @@ begin
 		self.Timer_ordersTimer(Sender); // читаем заказы
 		self.Timer_coordsTimer(Sender); // читаем координаты экипажефф
 		// first_request(); - не нужно, всё  и так сработает по таймерам
+
+		// активируем таймеры:
+		form_main.Timer_orders.Enabled := true;
+		form_main.Timer_coords.Enabled := true;
+		form_main.Timer_get_time_order.Enabled := true;
+		form_main.Timer_show_order_grid.Enabled := true;
+		form_main.Timer_get_time_order_to_ap.Enabled := true;
 	end;
-	form_main.Timer_orders.Enabled := true;
-	form_main.Timer_coords.Enabled := true;
-	form_main.Timer_get_time_order.Enabled := true;
-	form_main.Timer_show_order_grid.Enabled := true;
-	form_main.Timer_get_time_order_to_ap.Enabled := true;
+
 	// прячем список экипажей
 	// form_main.GridPanel_grids.ColumnCollection.Items[1].Value := 0;
-
 	// show_orders_grid(order_list);
 end;
 
@@ -1030,12 +1076,15 @@ end;
 
 procedure Tform_main.Timer_get_time_orderTimer(Sender : TObject);
 begin
+	if flag_order_get_time then // расчёт уже идёт, неча отвлекать
+		exit();
 	get_show_order_time_to_end();
 end;
 
 procedure Tform_main.Timer_get_time_order_to_apTimer(Sender : TObject);
 begin
-	get_show_order_time_to_ap();
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// get_show_order_time_to_ap();
 end;
 
 procedure Tform_main.Timer_ordersTimer(Sender : TObject);
