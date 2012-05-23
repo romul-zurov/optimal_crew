@@ -17,7 +17,9 @@ const CREW_MOVE_DIST = 100.0; // если экипаж изменил координаты более чем -
 
 const CREW_RADIUS = 150.0; // радиус "попадания" экипажа в адрес, метров
 
-const ORDER_DONE = 4; // согласно ORDER_STATES
+const ORDER_PRINYAT = 1; // "принят", согласно ORDER_STATES
+
+const ORDER_DONE = 4; // "заверщён", согласно ORDER_STATES
 
 const ORDER_CANCEL = 37; // "отменён", согласно ORDER_STATES
 
@@ -448,7 +450,7 @@ begin
 	begin
 		Append(IntToStr(ORDER_CREW_NO_COORD) + '=нет_координат');
 		Append(IntToStr(ORDER_BAD_ADRES) + '=ошибка_адреса');
-		Append(IntToStr(ORDER_WAY_ERROR) + '=ошибка_маршрута');
+		Append(IntToStr(ORDER_WAY_ERROR) + '=ошибка_расчёта');
 	end;
 
 	exit(0);

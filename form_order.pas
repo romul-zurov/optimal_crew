@@ -23,12 +23,19 @@ type
 		grid_order : TStringGrid;
 		Button_show_on_map : TButton;
 		GroupBox_order : TGroupBox;
-		Button_get_time : TButton;
+		Timer_get_gps : TTimer;
+		Timer_get_crews : TTimer;
+		Timer_show_crews : TTimer;
+		Edit_gps : TEdit;
 		procedure FormCreate(Sender : TObject);
 		procedure FormClose(Sender : TObject; var Action : TCloseAction);
 		procedure Button_get_timeClick(Sender : TObject);
 		procedure Button_get_crewClick(Sender : TObject);
 
+		procedure Timer_show_crewsTimer(Sender : TObject);
+
+		procedure Timer_get_gpsTimer(Sender : TObject);
+		procedure Timer_get_crewsTimer(Sender : TObject);
 	private
 		{ Private declarations }
 		POrder : Pointer;
@@ -37,10 +44,14 @@ type
 		{ Public declarations }
 		PCrewList : Pointer;
 		POrderList : Pointer;
+		slist, cr_slist : tstringlist;
+		cr_count : integer;
 		procedure get_show_crews(var order_list : TOrderList; var crew_list : TCrewList);
-		procedure show_crews(OrderId : integer; source, dest : string; var slist : tstringlist);
+		procedure show_crews();
 		procedure show_order(); overload;
 		procedure show_order(POrd : Pointer); overload;
+		procedure start_def_times();
+		procedure ret_sl(var cr_sl : tstringlist; first : boolean; var sl : tstringlist);
 	end;
 
 var
@@ -83,11 +94,12 @@ begin
 		exit();
 	slist := tstringlist.Create();
 	// выводим пстую шапку
-	self.show_crews(order.id, order.source.get_as_string(), order.dest.get_as_string(), slist);
+	self.show_crews();
 
 	if order.source.gps = '' then
-		with order.source do
-			gps := get_gps_coords_for_adres(street, house, korpus);
+		order.source.get_gps();
+	// with order.source do
+	// gps := get_gps_coords_for_adres(street, house, korpus);
 
 	// with order.source do
 	// crew_list.set_ap(street, house, korpus, gps);
@@ -103,7 +115,7 @@ begin
 
 	ret_sl(cr_slist, True, slist);
 	// выводим шапку
-	self.show_crews(order.id, order.source.get_as_string(), order.dest.get_as_string(), slist);
+	self.show_crews();
 
 	// for pp in crew_list.Crews do
 	for i := 0 to cr_slist.Count - 1 do
@@ -113,21 +125,42 @@ begin
 
 		// crew := crew_list.crew(pp);
 		crew := crew_list.crewByCrewId(StrToInt(cr_slist.Strings[i]));
-		crew.ap := order.source;
+		with order.source do
+			crew.ap.setAdres(street, house, korpus, gps);
 		// crew.get_time(order_list, true);
 		crew.get_time_for_ap(order_list, order.source);
 		// crew_list.Crews.Sort(sort_crews_by_time); // !!!!!!!!!!!!!!!!  :((
 		// slist := crew_list.ret_crews_stringlist();
 		ret_sl(cr_slist, false, slist);
-		self.show_crews(order.id, order.source.get_as_string(), order.dest.get_as_string(), slist);
+		self.show_crews();
 		// crew_list.Crews.Sort(sort_crews_by_state_dist); // !!!!!!!!!!  :)))
 	end;
 	FreeAndNil(slist);
 end;
 
+procedure TFormOrder.ret_sl(var cr_sl : tstringlist; first : boolean; var sl : tstringlist);
+var j : integer;
+	cr : TCRew;
+begin
+	sl.Clear();
+	sl.Sorted := True;
+	for j := 0 to cr_sl.Count - 1 do
+	begin
+		cr := TCrewList(self.PCrewList).crewByCrewId(StrToInt(cr_sl.Strings[j]));
+		if first then
+			cr.set_time(-1);
+		if cr.state in [CREW_SVOBODEN, CREW_NAZAKAZE] then
+			sl.Add(cr.ret_data());
+	end;
+end;
+
 procedure TFormOrder.Button_get_crewClick(Sender : TObject);
 begin
-	self.get_show_crews(TOrderList(self.POrderList), TCrewList(self.PCrewList));
+	self.slist.Clear();
+	if TOrder(POrder).source.gps = '' then
+		TOrder(POrder).source.get_gps();
+	self.Timer_get_gps.Enabled := True;
+	// self.get_show_crews(TOrderList(self.POrderList), TCrewList(self.PCrewList));
 end;
 
 procedure TFormOrder.Button_get_timeClick(Sender : TObject);
@@ -138,7 +171,7 @@ begin
 	if order.CrewID = -1 then
 		exit();
 	pc := TCrewList(PCrewList).findByCrewId(order.CrewID);
-//	order.get_time_to_end(pc);
+	// order.get_time_to_end(pc);
 	self.show_order();
 end;
 
@@ -151,15 +184,18 @@ procedure TFormOrder.FormCreate(Sender : TObject);
 begin
 	self.Width := 800;
 	self.Height := 400;
+	slist := tstringlist.Create();
 end;
 
-procedure TFormOrder.show_crews(OrderId : integer; source, dest : string; var slist : tstringlist);
+procedure TFormOrder.show_crews();
 var s : string;
 	r : integer;
+	order : TOrder;
 begin
-	self.Caption := 'Заказ № ' + inttostr(OrderId);
-	self.GroupBox_crews.Caption := 'Подбор экипажа для заказ № ' + inttostr(OrderId) //
-		+ ' ' + source + ' --> ' + dest;
+	order := TOrder(POrder);
+	self.Caption := 'Заказ № ' + inttostr(order.ID);
+	self.GroupBox_crews.Caption := 'Подбор экипажа для заказ № ' + inttostr(order.ID) //
+		+ ' ' + order.source.get_as_string() + ' --> ' + order.dest.get_as_string();
 	with self.grid_crews do
 	begin
 		RowCount := 2;
@@ -181,7 +217,7 @@ begin
 	end;
 
 	r := 1;
-	for s in slist do
+	for s in self.slist do
 		with self.grid_crews do
 		begin
 			RowCount := r + 1;
@@ -198,6 +234,29 @@ procedure TFormOrder.show_order(POrd : Pointer);
 begin
 	self.POrder := POrd;
 	self.show_order();
+end;
+
+procedure TFormOrder.start_def_times;
+begin
+	// выводим пстую шапку
+	self.show_crews();
+	// опрееделяем список подходящихз экипажей
+	self.cr_slist := TCrewList(self.PCrewList).get_crew_list_for_ap(TOrder(POrder).source);
+	if self.cr_slist.Count = 0 then
+	begin
+		ShowMessage('Нет подходящих экипажей!');
+		exit();
+	end;
+
+	self.ret_sl(cr_slist, True, slist);
+	// выводим шапку
+	self.show_crews();
+
+	// запускаем таймеры
+	cr_count := 0;
+	self.Timer_get_crews.Enabled := True;
+	self.Timer_show_crews.Enabled := True;
+
 end;
 
 procedure TFormOrder.show_order;
@@ -226,7 +285,7 @@ begin
 		exit();
 	self.Resizing(wsMaximized);
 	self.Show();
-	self.Caption := 'Заказ № ' + inttostr(order.id);
+	self.Caption := 'Заказ № ' + inttostr(order.ID);
 	self.GroupBox_order.Caption := self.Caption;
 	with self.grid_order do
 	begin
@@ -236,7 +295,7 @@ begin
 		ColWidths[0] := 120;
 		ColWidths[1] := Width - ColWidths[0] - 20;
 	end;
-	add_row(self.grid_order, 'ID', inttostr(order.id));
+	add_row(self.grid_order, 'ID', inttostr(order.ID));
 	add_row(self.grid_order, 'Назначенный экипаж', inttostr(order.CrewID));
 	add_row(self.grid_order, 'Предварительно назначенный экипаж', //
 		inttostr(order.prior_crewid));
@@ -259,6 +318,42 @@ begin
 	// source_time : string; // время подачи экипажа
 	// time_to_end : Integer; // время до окончания заказа в минутах
 
+end;
+
+procedure TFormOrder.Timer_get_crewsTimer(Sender : TObject);
+var crew : TCRew;
+begin
+	if self.cr_count >= cr_slist.Count then
+	begin
+		self.cr_count := 0;
+		self.Timer_get_crews.Enabled := false;
+		exit();
+	end;
+
+	crew := TCrewList(self.PCrewList).crewByCrewId(StrToInt(cr_slist.Strings[self.cr_count]));
+	with TOrder(POrder).source do
+		crew.ap.setAdres(street, house, korpus, gps);
+	crew.def_time_to_ap(self.POrderList);
+	inc(self.cr_count);
+end;
+
+procedure TFormOrder.Timer_get_gpsTimer(Sender : TObject);
+begin
+	if TOrder(self.POrder).source.gps = '' then
+		// ещё не готова координата, ждём
+		exit()
+	else
+	begin
+		self.Timer_get_gps.Enabled := false;
+		self.Edit_gps.Text := TOrder(self.POrder).source.gps;
+		self.start_def_times();
+	end;
+end;
+
+procedure TFormOrder.Timer_show_crewsTimer(Sender : TObject);
+begin
+	self.ret_sl(self.cr_slist, false, self.slist);
+	self.show_crews();
 end;
 
 end.

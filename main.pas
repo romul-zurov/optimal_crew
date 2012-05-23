@@ -648,67 +648,6 @@ begin
 	end;
 end;
 
-procedure get_show_order_time_to_end_OLD();
-var order : TOrder;
-	crew : TCrew;
-	pc, pp : Pointer;
-begin
-	if order_list.Orders.Count = 0 then
-		exit();
-
-	if not(index_current_order in [0 .. order_list.Orders.Count - 1]) then
-		index_current_order := 0;
-
-	for pp in order_list.Orders do
-	begin
-		order := order_list.order(pp);
-		if order <> nil then
-		begin
-			if order.CrewId > -1 then
-			begin
-				if order.is_not_prior() then //
-				begin
-					show_status('Расчёт окончания заказа № ' + IntToStr(order.id));
-					pc := crew_list.findByCrewId(order.CrewId);
-					crew := crew_list.crew(pc);
-					order.def_time_to_end(pc);
-
-					// if (order.time_to_end = -1) // ещё не считалось,
-					// or (order.time_to_end = ORDER_CREW_NO_COORD) // не было координат,
-					// or (order.time_to_end = ORDER_BAD_ADRES) // не было координат адреса
-					// or (order.time_to_end = ORDER_WAY_ERROR) // была ошибка расчёта
-					// or ( //
-					// (order.time_to_end > 0) //
-					// and //
-					// crew.is_moved() // или имело место перемещение экипажа
-					// ) //
-					// then
-					// begin
-					// if order.get_time_to_end(pc) >= 0 then
-					// // при удачном просчёте сбрасываем "старую координату"
-					// crew.reset_old_coord();
-
-					// отображение сетки - по таймеру Timer_show_order_grid
-					// show_orders_grid();
-
-					// выходим
-					// inc(index_current_order);
-					// flag_order_get_time := false;
-					// exit();
-					// end;
-				end;
-			end;
-		end;
-		// переходим к след. заказу
-		// inc(index_current_order);
-		// if index_current_order >= order_list.Orders.Count then
-		// begin
-		// flag_order_get_time := false;
-		// exit();
-		// end;
-	end;
-end;
-
 procedure get_show_order_time_to_end();
 var order : TOrder;
 	crew : TCrew;
@@ -743,6 +682,15 @@ begin
 					inc(index_current_order);
 					flag_order_get_time := false;
 					exit();
+				end
+				else
+				begin
+					// если экипаж не назначен
+					// запрашиваем gps-координату АП - пригодится при подборе :)
+					if (order.State = ORDER_PRINYAT) //
+						and (order.source.gps = '') //
+						then
+						order.source.get_gps();
 				end;
 			end;
 		end;

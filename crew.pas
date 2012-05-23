@@ -102,6 +102,10 @@ type
 		source : TAdres; // address_from for state==3
 		dest : TAdres; // address_to for state==3
 		ap : TAdres; // адрес подачи экипажа
+		way_to_ap : TWay;
+		cur_pos : TAdres; // тек. положение экипажа
+		points : TList;
+		POrder : Pointer; // указатель на заказ
 
 		constructor Create(GpsId : Integer);
 		destructor Destroy(); override;
@@ -123,6 +127,9 @@ type
 		procedure show_status(s : string);
 		procedure reset_old_coord();
 		function ret_data() : string;
+		procedure def_time_to_ap(var polist : Pointer);
+	private
+		procedure set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 	end;
 
 	TCrewList = class(TObject)
@@ -297,6 +304,38 @@ begin
 	source := TAdres.Create('', '', '', ''); // address from
 	dest := TAdres.Create('', '', '', ''); // address to
 	ap := TAdres.Create('', '', '', ''); // адрес подачи
+	self.way_to_ap := TWay.Create();
+	self.way_to_ap.zapros.browser.OnNavigateComplete2 := self.set_time_to_ap;
+	self.points := TList.Create();
+	self.cur_pos := TAdres.Create('', '', '', '');
+	self.POrder := nil;
+end;
+
+procedure TCrew.def_time_to_ap(var polist : Pointer);
+begin
+	if //
+		not(self.state in [CREW_SVOBODEN, CREW_NAZAKAZE]) //
+	// .....считаем только свободные и занятые экипажи, исключая нерабочие и т.п.
+		or (self.coord = '') // если нет текущей коорд.
+		or (self.ap.isEmpty()) // если хреновый адрес подачи
+		then
+	begin
+		self.set_time(-1);
+		exit();
+	end;
+	self.cur_pos.setAdres('', '', '', self.coord); // начало маршрута - текущая координата машины
+	self.points.Clear(); // список точек маршрута
+	if self.state = CREW_SVOBODEN then
+		self.points.Add(Pointer(cur_pos))
+	else
+	begin
+		self.POrder := TOrderList(polist).find_by_Id(self.OrderId);
+		self.points.Add(Pointer(TOrder(self.POrder).dest));
+	end;
+
+	self.points.Add(Pointer(self.ap));
+	// вызываем расчёт
+	self.way_to_ap.get_way_time_dist(self.points);
 end;
 
 function TCrew.del_old_coords : Integer;
@@ -348,8 +387,7 @@ var cur_pos : TAdres;
 	stops_time : Integer; // время на остановки для экипажа на заказе
 	order : TOrder;
 begin
-	if // ПОКА ТОЛЬКО СВОБОДНЫЕ!!!
-		not(self.state in [CREW_SVOBODEN, CREW_NAZAKAZE]) //
+	if not(self.state in [CREW_SVOBODEN, CREW_NAZAKAZE]) //
 	// .....считаем только свободные и занятые экипажи, исключая нерабочие и т.п.
 		or (self.coord = '') //
 		or (newOrder and self.ap.isEmpty()) //
@@ -556,6 +594,28 @@ begin
 	end;
 
 	self.time := m;
+end;
+
+procedure TCrew.set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+var dob : Integer;
+begin
+	self.way_to_ap.set_way_time_dist(ASender, pDisp, url);
+
+	if self.state = CREW_NAZAKAZE then
+		dob := TOrder(self.POrder).time_to_end
+	else
+		dob := 0;
+
+	if dob < 0 then
+	begin
+		self.set_time(ORDER_WAY_ERROR);
+		exit();
+	end;
+
+	if (self.way_to_ap.time < 0) then
+		self.set_time(ORDER_WAY_ERROR)
+	else
+		self.set_time(self.way_to_ap.time + dob);
 end;
 
 procedure TCrew.show_status(s : string);
@@ -1616,8 +1676,13 @@ var prib_dt, ap_dt : TDateTime;
 begin
 	if self.time_to_ap = ORDER_AP_OK then
 		result := ' забрал '
-	else if self.time_to_ap < 0 then
+	else if self.time_to_ap = -1 then
 		result := ' - '
+	else if self.time_to_ap < 0 then
+	begin
+		result := order_states.Values[IntToStr(self.time_to_end)];
+		result := StringReplace(result, '_', ' ', [rfReplaceAll]);
+	end
 	else if self.time_to_ap = 0 then
 		result := 'на месте'
 	else
