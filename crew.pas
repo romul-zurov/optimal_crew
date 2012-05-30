@@ -39,6 +39,7 @@ type
 		na_bortu : boolean; // признак, что клиент на борту при исполнении заказа
 		pcrew : Pointer; // указатель на экипаж, нужен в def_time_to_end и set_time_to_end
 		datetime_of_time_to_ap : TDateTime; // момент, когда считалось время до ап
+		stop_int_count : Integer; // количество промежуточных остановок в заказе
 
 		// form : TFormOrder; // form to show order
 
@@ -553,11 +554,13 @@ begin
 	if self.sort_coords_by_time_desc() < 0 then
 		exit(-1);
 
-	coord_stime := self.coords_times[0]; cur_stime := replace_time('{Last_minute_5}', now());
+	coord_stime := self.coords_times[0];
+	cur_stime := replace_time('{Last_minute_5}', now());
 	if coord_stime < cur_stime then
 	begin
 		// координата экипажа "устарела" на 5 минут и более
-		self.coord := ''; self.old_coord := '';
+		self.coord := '';
+		self.old_coord := '';
 	end
 	else
 	begin
@@ -646,7 +649,6 @@ function TCrew.state_as_string : string;
 begin
 	result := crew_states.Values[IntToStr(self.state)];
 	result := StringReplace(result, '_', ' ', [rfReplaceAll]);
-
 end;
 
 function TCrew.time_as_string : string;
@@ -683,7 +685,10 @@ end;
 
 constructor TCrewList.Create(var IBQuery : TIBQuery);
 begin
-	inherited Create; self.Crews := TList.Create(); self.query := IBQuery; meausure_time := '';
+	inherited Create;
+	self.Crews := TList.Create();
+	self.query := TIBQuery(Pointer(IBQuery));
+	meausure_time := '';
 	// время выборки координат из базы
 end;
 
@@ -818,8 +823,10 @@ function TCrewList.get_crews_coords() : Integer;
 	function s_2_6(sc : string) : string;
 	var n : double;
 	begin
-		n := dotStrtoFloat(sc); sc := FloatToStrF(n, ffFixed, 8, 6);
-		sc := StringReplace(sc, ',', '.', [rfReplaceAll]); exit(sc);
+		n := dotStrtoFloat(sc);
+		sc := FloatToStrF(n, ffFixed, 8, 6);
+		sc := StringReplace(sc, ',', '.', [rfReplaceAll]);
+		exit(sc);
 	end;
 
 	function coords_to_str(fields : TFields) : Integer;
@@ -827,14 +834,21 @@ function TCrewList.get_crews_coords() : Integer;
 		j, l, ID, GpsId : Integer; b : TBytes; pint : ^Integer; plat, plong : ^single;
 		s, scoords, slat, slong : string; date1, date2, date0 : TDateTime; crew : TCrew; pp : Pointer;
 	begin
-		date1 := fields[1].AsDateTime; date2 := fields[2].AsDateTime; field := fields[3];
-		l := field.DataSize; setlength(b, l);
+		date1 := fields[1].AsDateTime;
+		date2 := fields[2].AsDateTime;
+		field := fields[3];
+		l := field.DataSize;
+		setlength(b, l);
 		// создаём условную дельту по времени для координат
-		date0 := (date2 - date1) / (l div 12); b := field.AsBytes; j := 0;
+		date0 := (date2 - date1) / (l div 12);
+		b := field.AsBytes;
+		j := 0;
 		while j < l do
 		begin
 			pint := @b[j];
-			plat := @b[j + 8]; plong := @b[j + 4]; GpsId := pint^;
+			plat := @b[j + 8];
+			plong := @b[j + 4];
+			GpsId := pint^;
 			if GpsId > 0 then
 			begin
 				slat := s_2_6(StringReplace(FloatToStr(plat^), ',', '.', [rfReplaceAll]));
@@ -847,8 +861,10 @@ function TCrewList.get_crews_coords() : Integer;
 					crew := self.crew(pp);
 				crew.append_coords(scoords, date_to_full(date1));
 			end;
-			date1 := date1 + date0; j := j + 12;
-		end; exit(0);
+			date1 := date1 + date0;
+			j := j + 12;
+		end;
+		exit(0);
 	end;
 
 var sel : string; stime : string;
@@ -870,16 +886,19 @@ begin
 		+ 'from CREWS_COORDS ' //
 		+ ' where MEASURE_START_TIME > ' + stime //
 	// + ' order by MEASURE_START_TIME ASC, ID ASC';
-		; sql_select(self.query, sel);
+		;
+	sql_select(self.query, sel);
 	while (not self.query.Eof) do
 	begin
 		coords_to_str(self.query.fields);
 		self.query.Next;
 	end;
 	// ???
-	self.query.Close();
+	// self.query.Close();
 
-	self.get_crew_list(); self.set_current_crews_coord(); self.del_crews_old_coords();
+	self.get_crew_list();
+	self.set_current_crews_coord();
+	self.del_crews_old_coords();
 	self.del_all_none_crewId();
 	// self.del_all_none_coord(); self.del_all_none_coord();
 	exit(0);
@@ -945,7 +964,9 @@ begin
 		+ ' where ' //
 		+ ' CREWS.IDENTIFIER in (' + screws_gpsid + ') ' // только экипажи из списка
 	// + ' and CREWS.STATE in (1,3) '; // с состоянием "свободен" и "на заказе"
-		; result := get_sql_stringlist(self.query, sel); self.set_crews_data(result);
+		;
+	result := get_sql_stringlist(self.query, sel);
+	self.set_crews_data(result);
 	// self.del_all_none_crewId(); self.del_all_none_crewId(); // так работает :-/
 end;
 
@@ -1172,6 +1193,7 @@ begin
 	self.na_bortu := false;
 	self.pcrew := nil;
 	self.datetime_of_time_to_ap := IncMinute(now(), -2);
+	self.stop_int_count := 0;
 	// form := TFormOrder.Create(nil);
 end;
 
@@ -1281,6 +1303,9 @@ begin
 		or (self.source.isEmpty) //
 		or (self.dest.isEmpty) //
 		then
+		exit();
+
+	if self.stop_int_count > 0 then // заказы с промежут. остановками пока не обсчитываем
 		exit();
 
 	crew := TCrew(pcrew);
@@ -1422,6 +1447,7 @@ begin
 		+ ' ORDERS.SOURCE, ORDERS.DESTINATION ' //
 		+ ' , ORDERS.DELETED ' // deleted and canceled orders
 		+ ' , ORDERS.PRIOR_CREW_ID ' // prior_crew
+		+ ' , ORDERS.STOPS_COUNT ' // кол-во промежут. остановок
 	// + ' , ORDER_COORDS.COORDS_ADDR   ' // координаты адресов заказа, пока не исп.
 		+ ' from ORDERS ' //
 	// + ' , ORDER_COORDS ' //
@@ -1451,6 +1477,13 @@ begin
 			self.prior_CrewId := StrToInt(res.Strings[6]);
 		except
 			self.prior_CrewId := -1;
+		end;
+	// кол-во промежут. остановок
+	if (length(res.Strings[7]) > 0) then
+		try
+			self.stop_int_count := StrToInt(res.Strings[7]);
+		except
+			self.stop_int_count := 0;
 		end;
 
 	exit(result);
@@ -1838,11 +1871,14 @@ begin
 		+ ' ) ' //
 
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// + ' and ORDERS.SOURCE_TIME > ' + sdate_from // ну так, что б уж поменьше
-	// + ' and ORDERS.SOURCE_TIME < ' + sdate_to // по времени подачи
+	// фильтр по дате :
+	// в числе прочего убирает глючные незакрытые заказы
+		+ ' and ORDERS.SOURCE_TIME > ' + sdate_from + ' ' // ну так, что б уж поменьше
+	// предварительные не убираем, ибо пусть видны в отд. вкладке
+	// + ' and ORDERS.SOURCE_TIME < ' + sdate_to + ' ' // по времени подачи
 
-	// . отбрасываем заказы с промежуточными остановками
-		+ ' and (ORDERS.STOPS_COUNT is null  or  ORDERS.STOPS_COUNT = 0) ' //
+	// . заказы с промежуточными остановками тоже читаем, но не считаем пока
+	// + ' and (ORDERS.STOPS_COUNT is null  or  ORDERS.STOPS_COUNT = 0) ' //
 	// + ' order by ORDERS.SOURCE_TIME asc ' //
 		;
 

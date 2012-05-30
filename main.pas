@@ -19,7 +19,6 @@ type
 		grid_order_current : TStringGrid;
 		GridPanel_main : TGridPanel;
 		panel_ap : TPanel;
-		Button1 : TButton;
 		cb_real_base : TCheckBox;
 		GridPanel_grids : TGridPanel;
 		GroupBox_order : TGroupBox;
@@ -39,6 +38,10 @@ type
 		Button_get_time_to_ap : TButton;
 		Timer_get_time_order_to_ap : TTimer;
 		Button_get_time_to_end : TButton;
+		ibquery_coords : TIBQuery;
+		ta_coords : TIBTransaction;
+		cb_timers_times : TCheckBox;
+		cb_timers_orders_coords : TCheckBox;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -57,6 +60,9 @@ type
 		procedure Button_get_time_to_apClick(Sender : TObject);
 		procedure Timer_get_time_order_to_apTimer(Sender : TObject);
 		procedure Button_get_time_to_endClick(Sender : TObject);
+		procedure cb_timers_timesClick(Sender : TObject);
+		procedure cb_timers_orders_coordsClick(Sender : TObject);
+		procedure Button_orders_coordsClick(Sender : TObject);
 	private
 		{ Private declarations }
 	public
@@ -73,6 +79,7 @@ var
 	order_list : TOrderList;
 	Complete_Flag : boolean;
 	flag_order_get_time : boolean;
+	flag_coords_request : boolean;
 	index_current_order : integer;
 	deb_list : TSTringList;
 	// SDAY : string;
@@ -483,12 +490,11 @@ begin
 		with grid_crews do
 		begin
 			Width := form_main.GroupBox_crew.Width - 10;
-			ColCount := 3; // 5;
+			ColCount := 4; // 5;
 			ColWidths[0] := 30; // 300;
 			ColWidths[1] := 120; // 60;
-			ColWidths[2] := 90;
-			// ColWidths[3] := 60;
-			// ColWidths[4] := 60; // 120;
+			ColWidths[2] := 120; // 60;
+			ColWidths[3] := 90;
 		end;
 
 		grid_crews.RowCount := 0;
@@ -505,7 +511,11 @@ begin
 			// grid_crews.Cells[0, r] := IntToStr(crew.CrewId);
 			// grid_crews.Cells[1, r] := IntToStr(crew.Time);
 			grid_crews.Cells[1, r] := crew.Coord;
-			grid_crews.Cells[2, r] := crew.state_as_string();
+			if crew.coords_times.Count > 0 then
+				grid_crews.Cells[2, r] := crew.coords_times[0]
+			else
+				grid_crews.Cells[2, r] := '';
+			grid_crews.Cells[3, r] := crew.state_as_string();
 			// grid_crews.Cells[3, r] := FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
 			// grid_crews.Cells[4, r] := crew.time_as_string;
 			inc(r);
@@ -536,11 +546,13 @@ end;
 
 procedure crews_request();
 begin
+	flag_coords_request := true; // блокируем таймер в п-дууу :))
 	crew_list.get_crews_coords();
 	crew_list.Crews.Sort(sort_crews_by_crewid);
 	show_result_crews_grid(crew_list);
 	if form_cur_crew.Showing then
 		form_cur_crew.show_crew();
+	flag_coords_request := false; // деблокируем таймер :)
 end;
 
 procedure orders_request();
@@ -858,7 +870,9 @@ begin
 			Params.Add('lc_ctype=WIN1251');
 		end;
 		try
-			db_main.Connected := true; show_status('успешное подключение к БД'); result := true;
+			db_main.Connected := true;
+			show_status('успешное подключение к БД');
+			result := true;
 		except
 			show_status('ошибка при открытии БД');
 			result := false;
@@ -878,6 +892,7 @@ begin
 	// form_cur_crew.Close();
 	// show_tmp();
 	self.Timer_ordersTimer(Sender);
+	self.Timer_coordsTimer(Sender);
 end;
 
 procedure Tform_main.Button_get_time_to_apClick(Sender : TObject);
@@ -889,6 +904,12 @@ end;
 procedure Tform_main.Button_get_time_to_endClick(Sender : TObject);
 begin
 	self.Timer_get_time_orderTimer(Sender);
+end;
+
+procedure Tform_main.Button_orders_coordsClick(Sender : TObject);
+begin
+	self.Timer_ordersTimer(Sender);
+	self.Timer_coordsTimer(Sender);
 end;
 
 procedure Tform_main.Button_show_orderClick(Sender : TObject);
@@ -913,10 +934,26 @@ procedure Tform_main.cb_show_crewsClick(Sender : TObject);
 var w : integer;
 begin
 	if self.cb_show_crews.Checked then
-		w := 250
+		w := 400
 	else
 		w := 0;
 	self.GridPanel_grids.ColumnCollection.Items[1].value := w;
+end;
+
+procedure Tform_main.cb_timers_orders_coordsClick(Sender : TObject);
+var flag : boolean;
+begin
+	flag := self.cb_timers_orders_coords.Checked;
+	self.Timer_orders.Enabled := flag;
+	self.Timer_coords.Enabled := flag;
+end;
+
+procedure Tform_main.cb_timers_timesClick(Sender : TObject);
+var flag : boolean;
+begin
+	flag := self.cb_timers_times.Checked;
+	self.Timer_get_time_order.Enabled := flag;
+	self.Timer_get_time_order_to_ap.Enabled := flag;
 end;
 
 procedure Tform_main.FormClose(Sender : TObject; var Action : TCloseAction);
@@ -931,6 +968,7 @@ begin
 	browser_panel := TPanel(Pointer(self.Panel_browser));
 	self.GridPanel_grids.ColumnCollection.Items[1].value := 0;
 	flag_order_get_time := false;
+	flag_coords_request := false;
 	index_current_order := 0;
 	// browser_form := TForm.Create(nil);
 	// with browser_form do
@@ -962,10 +1000,10 @@ begin
 	form_main.grid_order_current.RowCount := 2;
 	form_main.grid_order_prior.RowCount := 2;
 	PGlobalStatusBar := Pointer(form_main.stbar_main);
-	crew_list := TCrewList.Create(form_main.ibquery_main);
+	crew_list := TCrewList.Create(self.ibquery_coords);
 	form_cur_order.PCrewList := Pointer(crew_list);
 	form_cur_order.POrderList := Pointer(order_list);
-	order_list := TOrderList.Create(ibquery_main);
+	order_list := TOrderList.Create(self.ibquery_main);
 	// crews_count := 0;
 
 	form_main.panel_ap.Show();
@@ -1018,8 +1056,14 @@ begin
 end;
 
 procedure Tform_main.Timer_coordsTimer(Sender : TObject);
+var flag : boolean;
 begin
+	if flag_coords_request then
+		exit();
+	flag := self.Timer_coords.Enabled;
+	self.Timer_coords.Enabled := false;
 	crews_request();
+	self.Timer_coords.Enabled := flag;
 end;
 
 procedure Tform_main.Timer_get_time_orderTimer(Sender : TObject);
@@ -1036,8 +1080,12 @@ begin
 end;
 
 procedure Tform_main.Timer_ordersTimer(Sender : TObject);
+var flag : boolean;
 begin
+	flag := self.Timer_orders.Enabled;
+	self.Timer_orders.Enabled := false;
 	orders_request();
+	self.Timer_orders.Enabled := flag;
 end;
 
 procedure Tform_main.Timer_show_order_gridTimer(Sender : TObject);

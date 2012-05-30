@@ -63,7 +63,7 @@ object form_main: Tform_main
       Left = 5
       Top = 5
       Width = 754
-      Height = 28
+      Height = 27
       Margins.Left = 4
       Margins.Top = 4
       Margins.Right = 4
@@ -73,50 +73,49 @@ object form_main: Tform_main
       TabOrder = 0
       DesignSize = (
         754
-        28)
-      object Button1: TButton
-        Left = 609
-        Top = 2
-        Width = 144
+        27)
+      object Button_orders_coords: TButton
+        Left = 295
+        Top = 1
+        Width = 113
         Height = 25
-        Anchors = [akTop, akRight]
-        Caption = #1058#1072#1081#1084#1077#1088' '#1074#1088#1077#1084#1103' '#1076#1086' '#1072#1087' '#1086#1090#1082#1083'!'
+        Caption = #1079#1072#1082#1072#1079#1099'/'#1082#1086#1086#1088#1076#1080#1085#1072#1090#1099
         TabOrder = 0
-        OnClick = Button1Click
+        OnClick = Button_orders_coordsClick
       end
       object cb_real_base: TCheckBox
-        Left = 582
-        Top = 5
-        Width = 30
+        Left = 718
+        Top = 4
+        Width = 27
         Height = 17
         Anchors = [akTop, akRight]
         Caption = 'R'
+        Checked = True
+        State = cbChecked
         TabOrder = 1
         OnClick = cb_real_baseClick
       end
       object button_show_sl: TButton
-        Left = 69
+        Left = 29
         Top = 1
-        Width = 75
+        Width = 36
         Height = 25
-        Anchors = [akTop, akRight]
         Caption = 'Debug'
         TabOrder = 2
         OnClick = button_show_slClick
       end
       object Button_show_order: TButton
-        Left = 462
-        Top = 2
-        Width = 114
+        Left = 414
+        Top = 1
+        Width = 20
         Height = 25
-        Anchors = [akTop, akRight]
-        Caption = #1055#1086#1076#1088#1086#1073#1085#1086#1089#1090#1080' '#1079#1072#1082#1072#1079#1072
+        Caption = '_'
         TabOrder = 3
         OnClick = Button_show_orderClick
       end
       object cb_show_crews: TCheckBox
-        Left = 391
-        Top = 4
+        Left = 440
+        Top = 3
         Width = 65
         Height = 17
         Anchors = [akTop, akRight]
@@ -126,28 +125,52 @@ object form_main: Tform_main
       end
       object Panel_browser: TPanel
         Left = 6
-        Top = 5
+        Top = 4
         Width = 17
         Height = 17
         TabOrder = 5
       end
       object Button_get_time_to_ap: TButton
-        Left = 269
-        Top = 2
-        Width = 108
+        Left = 190
+        Top = 1
+        Width = 99
         Height = 24
         Caption = #1074#1088#1077#1084#1103' '#1076#1086' '#1087#1086#1076#1072#1095#1080
         TabOrder = 6
         OnClick = Button_get_time_to_apClick
       end
       object Button_get_time_to_end: TButton
-        Left = 150
-        Top = 2
+        Left = 71
+        Top = 1
         Width = 113
         Height = 24
         Caption = #1074#1088#1077#1084#1103' '#1076#1086' '#1086#1082#1086#1085#1095#1072#1085#1080#1103
         TabOrder = 7
         OnClick = Button_get_time_to_endClick
+      end
+      object cb_timers_times: TCheckBox
+        Left = 511
+        Top = 3
+        Width = 65
+        Height = 17
+        Anchors = [akTop, akRight]
+        Caption = #1074#1088#1077#1084#1077#1085#1072
+        Checked = True
+        State = cbChecked
+        TabOrder = 8
+        OnClick = cb_timers_timesClick
+      end
+      object cb_timers_orders_coords: TCheckBox
+        Left = 591
+        Top = 3
+        Width = 58
+        Height = 17
+        Anchors = [akTop, akRight]
+        Caption = #1079#1072#1082#1072#1079#1099
+        Checked = True
+        State = cbChecked
+        TabOrder = 9
+        OnClick = cb_timers_orders_coordsClick
       end
     end
     object GridPanel_grids: TGridPanel
@@ -280,8 +303,8 @@ object form_main: Tform_main
   end
   object db_main: TIBDatabase
     LoginPrompt = False
-    Left = 576
-    Top = 152
+    Left = 632
+    Top = 88
   end
   object ta_main: TIBTransaction
     DefaultDatabase = db_main
@@ -290,14 +313,14 @@ object form_main: Tform_main
       'rec_version'
       'nowait'
       'read')
-    Left = 616
-    Top = 248
+    Left = 560
+    Top = 216
   end
   object ibquery_main: TIBQuery
     Database = db_main
     Transaction = ta_main
-    Left = 648
-    Top = 152
+    Left = 568
+    Top = 144
   end
   object Timer_coords: TTimer
     Enabled = False
@@ -333,5 +356,21 @@ object form_main: Tform_main
     OnTimer = Timer_get_time_order_to_apTimer
     Left = 88
     Top = 248
+  end
+  object ibquery_coords: TIBQuery
+    Database = db_main
+    Transaction = ta_coords
+    Left = 680
+    Top = 144
+  end
+  object ta_coords: TIBTransaction
+    DefaultDatabase = db_main
+    Params.Strings = (
+      'read_committed'
+      'rec_version'
+      'nowait'
+      'read')
+    Left = 680
+    Top = 216
   end
 end

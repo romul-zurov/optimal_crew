@@ -128,10 +128,10 @@ var
 	// browser_form : Tform;
 	browser_panel : TPanel;
 
-	main_db : TIBDatabase;
-	main_ta : TIBTransaction;
-	main_ds : TDataSource;
-	main_ibquery : TIBQuery;
+//	main_db : TIBDatabase;
+//	main_ta : TIBTransaction;
+//	main_ds : TDataSource;
+//	main_ibquery : TIBQuery;
 
 implementation
 

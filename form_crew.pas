@@ -4,7 +4,7 @@ interface
 
 uses crew, crew_globals, crew_utils, //
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-	Dialogs, StdCtrls, ExtCtrls, OleCtrls, SHDocVw, Grids;
+	Dialogs, StdCtrls, ExtCtrls, OleCtrls, SHDocVw, Grids, Clipbrd;
 
 type
 	TFormCrew = class(TForm)
@@ -23,6 +23,7 @@ type
 		procedure FormCreate(Sender : TObject);
 		procedure FormClose(Sender : TObject; var Action : TCloseAction);
 		procedure FormResize(Sender : TObject);
+		procedure grid_coordsDblClick(Sender : TObject);
 	private
 		{ Private declarations }
 		Pcrew : Pointer;
@@ -55,6 +56,12 @@ begin
 	self.show_crew();
 end;
 
+procedure TFormCrew.grid_coordsDblClick(Sender : TObject);
+begin
+	with self.grid_coords do
+		clipboard.SetTextBuf(PWideChar(Cells[Col, Row]));
+end;
+
 procedure TFormCrew.show_crew;
 begin
 	self.show_crew(self.Pcrew);
@@ -65,8 +72,8 @@ procedure TFormCrew.show_crew(var Pcrew : Pointer);
 	begin
 		with grid do
 		begin
-			cells[0, rowcount - 1] := s1;
-			cells[1, rowcount - 1] := s2;
+			Cells[0, rowcount - 1] := s1;
+			Cells[1, rowcount - 1] := s2;
 			rowcount := rowcount + 1;
 		end;
 	end;
