@@ -12,10 +12,15 @@ const CREW_SVOBODEN = 1;
 
 const CREW_NAZAKAZE = 3;
 
-const CREW_MOVE_DIST = 100.0; // если экипаж изменил координаты более чем -
+const CREW_MOVE_DIST = 200.0; // если экипаж изменил координаты более чем -
 	// . 							пересчитываем время заказа
 
 const CREW_RADIUS = 150.0; // радиус "попадания" экипажа в адрес, метров
+
+const CREW_CUR_COORD_TIME = '{Last_minute_10}'; // "срок годности" текущей координаты
+
+const ORDER_DESTROY_TIME = '{Last_minute_10}'; // время, после которого заказ,
+	// помеченный на удаление, удаляется окончательно
 
 const ORDER_PRINYAT = 1; // "принят", согласно ORDER_STATES
 
@@ -128,10 +133,10 @@ var
 	// browser_form : Tform;
 	browser_panel : TPanel;
 
-//	main_db : TIBDatabase;
-//	main_ta : TIBTransaction;
-//	main_ds : TDataSource;
-//	main_ibquery : TIBQuery;
+	// main_db : TIBDatabase;
+	// main_ta : TIBTransaction;
+	// main_ds : TDataSource;
+	// main_ibquery : TIBQuery;
 
 implementation
 
@@ -532,7 +537,7 @@ end;
 
 destructor TAdres.Destroy;
 begin
-    self.zapros.Free();
+	self.zapros.Free();
 	inherited;
 end;
 

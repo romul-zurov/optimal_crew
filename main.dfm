@@ -175,9 +175,9 @@ object form_main: Tform_main
     end
     object GridPanel_grids: TGridPanel
       Left = 1
-      Top = 37
+      Top = 36
       Width = 762
-      Height = 318
+      Height = 319
       Align = alClient
       ColumnCollection = <
         item
@@ -207,7 +207,7 @@ object form_main: Tform_main
         Left = 1
         Top = 1
         Width = 510
-        Height = 316
+        Height = 317
         Align = alClient
         Caption = #1047#1072#1082#1072#1079#1099':'
         TabOrder = 0
@@ -215,7 +215,7 @@ object form_main: Tform_main
           Left = 2
           Top = 15
           Width = 506
-          Height = 299
+          Height = 300
           ActivePage = TabSheet_current
           Align = alClient
           TabOrder = 0
@@ -226,7 +226,7 @@ object form_main: Tform_main
               Left = 3
               Top = 3
               Width = 492
-              Height = 265
+              Height = 266
               Align = alClient
               ColCount = 3
               Ctl3D = False
@@ -247,7 +247,7 @@ object form_main: Tform_main
               Left = 3
               Top = 3
               Width = 492
-              Height = 265
+              Height = 266
               Align = alClient
               ColCount = 3
               Ctl3D = False
@@ -266,7 +266,7 @@ object form_main: Tform_main
         Left = 511
         Top = 1
         Width = 250
-        Height = 316
+        Height = 317
         Align = alClient
         Caption = #1044#1086#1089#1090#1091#1087#1085#1099#1077' '#1101#1082#1080#1087#1072#1078#1080':'
         TabOrder = 1
@@ -275,7 +275,7 @@ object form_main: Tform_main
           Left = 5
           Top = 18
           Width = 240
-          Height = 293
+          Height = 294
           Align = alClient
           ColCount = 4
           Ctl3D = False
@@ -326,36 +326,29 @@ object form_main: Tform_main
     Enabled = False
     Interval = 10000
     OnTimer = Timer_coordsTimer
-    Left = 120
-    Top = 160
+    Left = 432
+    Top = 192
   end
   object Timer_orders: TTimer
     Enabled = False
     Interval = 10000
     OnTimer = Timer_ordersTimer
-    Left = 176
+    Left = 344
     Top = 192
   end
   object Timer_get_time_order: TTimer
     Enabled = False
     Interval = 1127
     OnTimer = Timer_get_time_orderTimer
-    Left = 56
+    Left = 208
     Top = 192
   end
   object Timer_show_order_grid: TTimer
     Enabled = False
     Interval = 2048
     OnTimer = Timer_show_order_gridTimer
-    Left = 224
-    Top = 144
-  end
-  object Timer_get_time_order_to_ap: TTimer
-    Enabled = False
-    Interval = 31000
-    OnTimer = Timer_get_time_order_to_apTimer
-    Left = 88
-    Top = 248
+    Left = 80
+    Top = 192
   end
   object ibquery_coords: TIBQuery
     Database = db_main
@@ -372,5 +365,12 @@ object form_main: Tform_main
       'read')
     Left = 680
     Top = 216
+  end
+  object Timer_Main: TTimer
+    Enabled = False
+    Interval = 2048
+    OnTimer = Timer_MainTimer
+    Left = 272
+    Top = 104
   end
 end

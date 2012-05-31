@@ -76,7 +76,7 @@ procedure TFormOrder.get_show_crews(var order_list : TOrderList; var crew_list :
 		begin
 			cr := crew_list.crewByCrewId(StrToInt(cr_sl.Strings[j]));
 			if first then
-				cr.set_time(-1);
+				cr.set_time(-1, -1);
 			if cr.state in [CREW_SVOBODEN, CREW_NAZAKAZE] then
 				sl.Add(cr.ret_data());
 		end;
@@ -148,7 +148,7 @@ begin
 	begin
 		cr := TCrewList(self.PCrewList).crewByCrewId(StrToInt(cr_sl.Strings[j]));
 		if first then
-			cr.set_time(-1);
+			cr.set_time(-1, -1);
 		if cr.state in [CREW_SVOBODEN, CREW_NAZAKAZE] then
 			sl.Add(cr.ret_data());
 	end;

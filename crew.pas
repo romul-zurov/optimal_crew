@@ -29,7 +29,7 @@ type
 		source_time : string; // время подачи экипажа
 		time_to_end : Integer; // время до окончания заказа в минутах
 		time_to_ap : Integer; // время до подъезда к адресу подачи в минутах
-		deleted : boolean;
+		deleted : boolean; // признак удалённого или отменённого заказа
 		query : TIBQuery;
 		points_ap : TList;
 		points_end : TList;
@@ -40,6 +40,9 @@ type
 		pcrew : Pointer; // указатель на экипаж, нужен в def_time_to_end и set_time_to_end
 		datetime_of_time_to_ap : TDateTime; // момент, когда считалось время до ап
 		stop_int_count : Integer; // количество промежуточных остановок в заказе
+		destroy_flag : boolean; // флаг, что заказ можно удалять из списка
+		destroy_time : string; // время, когда установлен флаг удаления. заказ
+		// будет удалён через ORDER_DESTROY_TIME
 
 		// form : TFormOrder; // form to show order
 
@@ -122,7 +125,7 @@ type
 		function now_in_coord(coord : string) : boolean;
 		function is_moved() : boolean; // сместился более чем на...
 		procedure calc_dist(coord : string);
-		procedure set_time(m : Integer); // set time and time_as_string;
+		procedure set_time(m : Integer; d : double); // set time and time_as_string;
 		function get_time(var List : TOrderList; newOrder : boolean) : Integer;
 		function get_time_for_ap(var o_list : TOrderList; n_ap : TAdres) : Integer;
 		procedure show_status(s : string);
@@ -321,7 +324,7 @@ begin
 		or (self.ap.isEmpty()) // если хреновый адрес подачи
 		then
 	begin
-		self.set_time(-1);
+		self.set_time(-1, -1);
 		exit();
 	end;
 	self.cur_pos.setAdres('', '', '', self.coord); // начало маршрута - текущая координата машины
@@ -399,7 +402,7 @@ begin
 		then
 	begin
 		result := -1;
-		self.set_time(result);
+		self.set_time(-1, -1);
 		exit(result);
 	end;
 
@@ -450,7 +453,7 @@ begin
 
 		result := ifthen(result > -1, result + stops_time, -1);
 		if newOrder then
-			self.set_time(result);
+			self.set_time(result, self.dist_way);
 	end;
 
 	FreeAndNil(points);
@@ -473,7 +476,9 @@ begin
 		or (n_ap.isEmpty()) // если хреновый адрес подачи
 		then
 	begin
-		result := -1; self.set_time(result); exit(result);
+		result := -1;
+		self.set_time(-1, -1);
+		exit(result);
 	end;
 
 	points := TList.Create(); // список точек маршрута
@@ -514,7 +519,7 @@ begin
 		end;
 	end;
 
-	self.set_time(result); // если result = -1, то и dist_way станет -1, если нет, то нет :)
+	self.set_time(result, self.dist_way); // если result = -1, то и dist_way станет -1, если нет, то нет :)
 	FreeAndNil(points);
 end;
 
@@ -555,10 +560,10 @@ begin
 		exit(-1);
 
 	coord_stime := self.coords_times[0];
-	cur_stime := replace_time('{Last_minute_5}', now());
+	cur_stime := replace_time(CREW_CUR_COORD_TIME, now());
 	if coord_stime < cur_stime then
 	begin
-		// координата экипажа "устарела" на 5 минут и более
+		// координата экипажа "устарела" на CREW_CUR_COORD_TIME минут и более
 		self.coord := '';
 		self.old_coord := '';
 	end
@@ -585,7 +590,7 @@ begin
 		+ self.dist_way_as_string;
 end;
 
-procedure TCrew.set_time(m : Integer);
+procedure TCrew.set_time(m : Integer; d : double);
 begin
 	if m < 0 then
 	begin
@@ -597,28 +602,36 @@ begin
 	end;
 
 	self.time := m;
+	self.dist_way := d;
 end;
 
 procedure TCrew.set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 var dob : Integer;
+	dob2 : double;
 begin
 	self.way_to_ap.set_way_time_dist(ASender, pDisp, url);
 
 	if self.state = CREW_NAZAKAZE then
-		dob := TOrder(self.POrder).time_to_end
+	begin
+		dob := TOrder(self.POrder).time_to_end;
+		dob2 := TOrder(self.POrder).way_to_end.dist_way;
+	end
 	else
+	begin
 		dob := 0;
+		dob2 := 0;
+	end;
 
 	if dob < 0 then
 	begin
-		self.set_time(ORDER_WAY_ERROR);
+		self.set_time(ORDER_WAY_ERROR, -1);
 		exit();
 	end;
 
 	if (self.way_to_ap.time < 0) then
-		self.set_time(ORDER_WAY_ERROR)
+		self.set_time(ORDER_WAY_ERROR, -1)
 	else
-		self.set_time(self.way_to_ap.time + dob);
+		self.set_time(self.way_to_ap.time + dob, self.way_to_ap.dist_way + dob2);
 end;
 
 procedure TCrew.show_status(s : string);
@@ -1194,6 +1207,8 @@ begin
 	self.pcrew := nil;
 	self.datetime_of_time_to_ap := IncMinute(now(), -2);
 	self.stop_int_count := 0;
+	destroy_flag := false; // флаг, что заказ можно удалять из списка
+	destroy_time := '';
 	// form := TFormOrder.Create(nil);
 end;
 
@@ -1778,8 +1793,16 @@ begin
 end;
 
 function TOrderList.del_bad_orders : Integer;
-var pp : Pointer; order : TOrder; i : Integer;
+var pp : Pointer;
+	order : TOrder;
+	i : Integer;
+	s_now, s_past : string;
+	cur_t : TDateTime;
 begin
+	cur_t := now();
+	s_now := date_to_full(cur_t);
+	s_past := replace_time(ORDER_DESTROY_TIME, cur_t);
+
 	for i := self.Orders.Count - 1 downto 0 do
 	begin
 		order := self.order(self.Orders.Items[i]);
@@ -1792,7 +1815,25 @@ begin
 			or (order.state = ORDER_DISCONTNUED) // заказ прекращён
 			or (order.state = ORDER_NO_CREWS) // нет машин
 			then
-			self.del_order(i); // удаляем заказ из списка
+		begin
+			if order.destroy_flag then
+			begin
+				if order.destroy_time < s_past then
+				begin
+					self.del_order(i); // удаляем заказ из списка
+				end; // иначе просто ждём
+			end
+			else
+			begin
+				order.destroy_flag := true;
+				order.destroy_time := s_now;
+			end;
+		end
+		else
+		begin
+			order.destroy_flag := false;
+			order.destroy_time := '';
+		end;
 	end;
 	exit(0);
 end;

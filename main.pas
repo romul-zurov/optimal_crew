@@ -36,12 +36,12 @@ type
 		Panel_browser : TPanel;
 		Timer_show_order_grid : TTimer;
 		Button_get_time_to_ap : TButton;
-		Timer_get_time_order_to_ap : TTimer;
 		Button_get_time_to_end : TButton;
 		ibquery_coords : TIBQuery;
 		ta_coords : TIBTransaction;
 		cb_timers_times : TCheckBox;
 		cb_timers_orders_coords : TCheckBox;
+		Timer_Main : TTimer;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -58,13 +58,15 @@ type
 		procedure grid_order_priorDblClick(Sender : TObject);
 		procedure Timer_show_order_gridTimer(Sender : TObject);
 		procedure Button_get_time_to_apClick(Sender : TObject);
-		procedure Timer_get_time_order_to_apTimer(Sender : TObject);
 		procedure Button_get_time_to_endClick(Sender : TObject);
 		procedure cb_timers_timesClick(Sender : TObject);
 		procedure cb_timers_orders_coordsClick(Sender : TObject);
 		procedure Button_orders_coordsClick(Sender : TObject);
+		procedure Timer_MainTimer(Sender : TObject);
 	private
 		{ Private declarations }
+		flag_get_coords : boolean;
+		flag_get_orders : boolean;
 	public
 		{ Public declarations }
 	end;
@@ -344,7 +346,7 @@ procedure show_orders(var list : TOrderList; var grid_order : TStringGrid; prior
 var pp : Pointer;
 	row, ord_id, cur_col, cur_row : integer;
 	order : TOrder;
-	sord_id : string;
+	sord_id, prior_stime : string;
 begin
 	with form_main do
 	begin
@@ -387,20 +389,24 @@ begin
 		grid_order.RowCount := 2;
 		grid_order.Rows[1].Clear();
 		row := 1;
+		prior_stime := replace_time('{Last_hour_-1}', now());
 		for pp in list.Orders do
 		begin
 			order := list.order(pp);
 			if ( //
 				prior_flag //
-					and (order.source_time < replace_time('{Last_hour_-1}', now())) //
+					and (order.source_time < prior_stime) //
 				) //
 				or //
 				( //
 				not prior_flag //
-					and (order.source_time >= replace_time('{Last_hour_-1}', now())) //
+					and (order.source_time >= prior_stime) //
 				) //
 				then
 				continue;
+			if order.destroy_flag then // помеченные дл€ удалени€ заказы не отображаем
+				continue;
+
 
 
 			// sord_id := IntToStr(order.id);
@@ -898,7 +904,7 @@ end;
 procedure Tform_main.Button_get_time_to_apClick(Sender : TObject);
 begin
 	// get_show_order_time_to_ap();
-	self.Timer_get_time_order_to_apTimer(Sender);
+	// self.Timer_get_time_order_to_apTimer(Sender);
 end;
 
 procedure Tform_main.Button_get_time_to_endClick(Sender : TObject);
@@ -953,7 +959,6 @@ var flag : boolean;
 begin
 	flag := self.cb_timers_times.Checked;
 	self.Timer_get_time_order.Enabled := flag;
-	self.Timer_get_time_order_to_ap.Enabled := flag;
 end;
 
 procedure Tform_main.FormClose(Sender : TObject; var Action : TCloseAction);
@@ -963,10 +968,19 @@ begin
 	halt(0);
 end;
 
+procedure first_request();
+begin
+	orders_request();
+	crews_request();
+	show_orders_grid();
+end;
+
 procedure Tform_main.FormCreate(Sender : TObject);
 begin
 	browser_panel := TPanel(Pointer(self.Panel_browser));
 	self.GridPanel_grids.ColumnCollection.Items[1].value := 0;
+	self.flag_get_coords := false;
+	self.flag_get_orders := false;
 	flag_order_get_time := false;
 	flag_coords_request := false;
 	index_current_order := 0;
@@ -1014,16 +1028,15 @@ begin
 	begin
 		// show_tmp();
 		create_order_and_crew_states(ibquery_main);
-		self.Timer_ordersTimer(Sender); // читаем заказы
-		self.Timer_coordsTimer(Sender); // читаем координаты экипажефф
-		// first_request(); - не нужно, всЄ  и так сработает по таймерам
+		// self.Timer_ordersTimer(Sender); // читаем заказы
+		// self.Timer_coordsTimer(Sender); // читаем координаты экипажефф
+		first_request(); // первый запрос
 
 		// активируем таймеры:
 		form_main.Timer_orders.Enabled := true;
 		form_main.Timer_coords.Enabled := true;
 		form_main.Timer_get_time_order.Enabled := true;
 		form_main.Timer_show_order_grid.Enabled := true;
-		form_main.Timer_get_time_order_to_ap.Enabled := true;
 	end;
 
 	// пр€чем список экипажей
@@ -1058,6 +1071,10 @@ end;
 procedure Tform_main.Timer_coordsTimer(Sender : TObject);
 var flag : boolean;
 begin
+	// self.flag_get_coords := true;
+	// exit();
+
+	// ----------------------------
 	if flag_coords_request then
 		exit();
 	flag := self.Timer_coords.Enabled;
@@ -1068,20 +1085,61 @@ end;
 
 procedure Tform_main.Timer_get_time_orderTimer(Sender : TObject);
 begin
+	// exit();
+	// ----------------------
+
 	if flag_order_get_time then // расчЄт уже идЄт, неча отвлекать
 		exit();
 	get_show_order_time_to_end();
 end;
 
-procedure Tform_main.Timer_get_time_order_to_apTimer(Sender : TObject);
+procedure Tform_main.Timer_MainTimer(Sender : TObject);
+label quit;
 begin
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// get_show_order_time_to_ap();
+	exit();
+	// -------------------------------------------
+
+	self.Timer_Main.Enabled := false;
+
+	// begin
+
+	{
+	  if self.flag_get_coords then
+	  begin
+	  if flag_coords_request then // запрос идЄт и нефиг мешать
+	  else
+	  begin
+	  crews_request();
+	  self.flag_get_coords := false;
+	  end;
+	  goto quit;
+	  end;
+	  }
+
+	if self.flag_get_orders then
+	begin
+		orders_request();
+		self.flag_get_orders := false;
+		goto quit;
+	end;
+
+	if flag_order_get_time then // расчЄт уже идЄт, неча отвлекать
+	else
+		get_show_order_time_to_end();
+
+	// end
+quit :
+	show_orders_grid();
+	self.Timer_Main.Enabled := true;
 end;
 
 procedure Tform_main.Timer_ordersTimer(Sender : TObject);
 var flag : boolean;
 begin
+	// self.flag_get_orders := true;
+	// exit();
+
+	// ---------------------------------------------------------
 	flag := self.Timer_orders.Enabled;
 	self.Timer_orders.Enabled := false;
 	orders_request();
@@ -1090,6 +1148,9 @@ end;
 
 procedure Tform_main.Timer_show_order_gridTimer(Sender : TObject);
 begin
+	// exit();
+	// --------------------------------------------------------
+
 	show_orders_grid();
 end;
 
