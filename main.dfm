@@ -366,11 +366,4 @@ object form_main: Tform_main
     Left = 680
     Top = 216
   end
-  object Timer_Main: TTimer
-    Enabled = False
-    Interval = 2048
-    OnTimer = Timer_MainTimer
-    Left = 272
-    Top = 104
-  end
 end

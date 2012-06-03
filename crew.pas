@@ -1223,7 +1223,8 @@ var cur_pos : TAdres;
 begin
 	// проверяем состояние заказа, возможен ли вообще расчёт
 	if //
-		(pcrew = nil) //
+		(self.destroy_flag) // заказ отмечен на удаление
+		or (pcrew = nil) //
 		or (self.state <> ORDER_VODITEL_PODTVERDIL) //
 		or (self.CrewID = -1) //
 		or (self.source.isEmpty) //
@@ -1301,6 +1302,9 @@ var cur_pos : TAdres;
 	cur_dt, ap_dt : TDateTime;
 	// na_bortu : boolean; - сделать self.na_bortu
 begin
+	if (self.destroy_flag) then // заказ отмечен на удаление, выходим нафиг
+		exit();
+
 	// проверяем состояние заказа, возможен ли вообще расчёт
 	if not(self.state in [ //
 			ORDER_VODITEL_PODTVERDIL, ORDER_KLIENT_NA_BORTU, //
@@ -1893,8 +1897,10 @@ begin
 	else
 	begin
 		sdate_from := replace_time('{Last_day_1}', cur_time); // for real database
-		sdate_to := replace_time('{Last_hour_-4}', cur_time); // for real database
-	end; sdate_from := '''' + sdate_from + ''''; sdate_to := '''' + sdate_to + '''';
+		sdate_to := replace_time('{Last_day_-1}', cur_time); // for real database
+	end;
+	sdate_from := '''' + sdate_from + '''';
+	sdate_to := '''' + sdate_to + '''';
 
 	sel := 'select ' //
 		+ ' ORDERS.ID ' //
@@ -1916,7 +1922,7 @@ begin
 	// в числе прочего убирает глючные незакрытые заказы
 		+ ' and ORDERS.SOURCE_TIME > ' + sdate_from + ' ' // ну так, что б уж поменьше
 	// предварительные не убираем, ибо пусть видны в отд. вкладке
-	// + ' and ORDERS.SOURCE_TIME < ' + sdate_to + ' ' // по времени подачи
+		+ ' and ORDERS.SOURCE_TIME < ' + sdate_to + ' ' // по времени подачи
 
 	// . заказы с промежуточными остановками тоже читаем, но не считаем пока
 	// + ' and (ORDERS.STOPS_COUNT is null  or  ORDERS.STOPS_COUNT = 0) ' //

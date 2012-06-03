@@ -41,7 +41,6 @@ type
 		ta_coords : TIBTransaction;
 		cb_timers_times : TCheckBox;
 		cb_timers_orders_coords : TCheckBox;
-		Timer_Main : TTimer;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -62,17 +61,22 @@ type
 		procedure cb_timers_timesClick(Sender : TObject);
 		procedure cb_timers_orders_coordsClick(Sender : TObject);
 		procedure Button_orders_coordsClick(Sender : TObject);
-		procedure Timer_MainTimer(Sender : TObject);
 	private
 		{ Private declarations }
 		flag_get_coords : boolean;
 		flag_get_orders : boolean;
 	public
 		{ Public declarations }
+		procedure show_orders_grid();
+		procedure show_orders(var list : TOrderList; var grid_order : TStringGrid; prior_flag : boolean);
+		procedure show_result_crews_grid(var list : TCrewList);
+		procedure crews_request();
+		procedure orders_request();
+		function open_database() : boolean;
+		procedure get_orders_times();
 	end;
 
-function open_database() : boolean;
-function reconnect_db() : boolean;
+	// function reconnect_db() : boolean;
 
 var
 	form_main : Tform_main;
@@ -94,399 +98,8 @@ var
 implementation
 
 {$R *.dfm}
-// procedure show_status(status : string);
-// begin
-// form_main.stbar_main.Panels[0].Text := status;
-// end;
 
-function reconnect_db() : boolean;
-begin
-	try
-		form_main.db_main.Connected := false;
-		result := open_database();
-		exit(result);
-	except
-		exit(false);
-	end;
-end;
-
-function sql_select(sel : string) : integer;
-begin
-	with form_main do
-	begin
-		ibquery_main.SQL.Clear;
-		ibquery_main.SQL.Add(sel);
-		try
-			ibquery_main.Prepare;
-		except
-			show_status('неверный запрос к БД');
-			result := -1;
-			exit;
-		end;
-		ibquery_main.Open;
-		show_status('запрос произведён');
-	end;
-	result := 0;
-end;
-
-function ret_crews_stringlist(var clist : TCrewList) : TSTringList;
-	procedure add_s(var s : string; subs : string);
-	begin
-		s := s + '|' + subs;
-	end;
-
-var res : TSTringList;
-	pp, ps : Pointer;
-	s, sc : string;
-begin
-	res := TSTringList.Create();
-	for pp in clist.Crews do
-	begin
-		with clist.crew(pp) do
-		begin
-			s := IntToStr(CrewId);
-			add_s(s, IntToStr(GpsId));
-			add_s(s, IntToStr(State));
-			add_s(s, FloatToStr(dist / 1000.0));
-			add_s(s, IntToStr(Time));
-			add_s(s, Coord);
-			add_s(s, Code); add_s(s, name);
-			for sc in coords do
-				add_s(s, sc);
-			res.Append(s);
-		end;
-	end;
-	result := res;
-end;
-
-function coords_to_str(fields : TFields; var clist : TCrewList) : TSTringList;
-var
-	field : TField; // main file
-	j, l, id : integer;
-	// s, s2, d : string;
-	b : TBytes;
-	pint : ^integer;
-	plat, plong : ^single;
-	s, sdate1, sdate2, sgpsid, scoords : string;
-	res : TSTringList;
-	crew : TCrew;
-	pp : Pointer;
-
-begin
-	res := TSTringList.Create;
-	sdate1 := fields[1].AsString;
-	sdate2 := fields[2].AsString;
-	field := fields[3];
-	l := field.DataSize;
-	setlength(b, l);
-	b := field.AsBytes;
-	j := 0;
-	while j < l do
-	begin
-		pint := @b[j];
-		plat := @b[j + 8];
-		plong := @b[j + 4];
-		if pint^ > 0 then
-		begin
-			sgpsid := IntToStr(pint^);
-			scoords := StringReplace(FloatToStr(plat^), ',', '.', [rfReplaceAll]) + ',' + StringReplace
-				(FloatToStr(plong^), ',', '.', [rfReplaceAll]);
-		end;
-		s := sgpsid + '|' + date_to_full(sdate2) + '|(' + scoords + ')';
-		res.Append(s);
-		j := j + 12;
-
-		// !!! ---
-		// if crew_list.isGpsgpsidInList(StrToInt(sgpsid)) then
-		pp := clist.findByGpsId(StrToInt(sgpsid));
-		if pp = nil then
-			crew := clist.crew(crew_list.Append(StrToInt(sgpsid)))
-		else
-			crew := clist.crew(pp);
-		crew.append_coords(scoords, date_to_full(sdate2));
-		// !!!---
-	end;
-	result := res;
-end;
-
-function get_coord_list(const SCTIME : string; var clist : TCrewList) : TSTringList;
-var
-	sel : string;
-	// Coord : string;
-	j : integer;
-	coords, slist : TSTringList;
-begin
-	cur_time := now();
-	sel :=
-		'select ID, MEASURE_START_TIME, MEASURE_END_TIME, COORDS from CREWS_COORDS where MEASURE_START_TIME>''' +
-		SCTIME + ''' order by MEASURE_START_TIME ASC, ID ASC';
-	// sel := 'select ID, MEASURE_START_TIME, MEASURE_END_TIME, COORDS from CREWS_COORDS order by MEASURE_START_TIME ASC, ID ASC';
-	sql_select(sel);
-	with form_main do
-	begin
-		slist := TSTringList.Create;
-		while (not ibquery_main.Eof) do
-		begin
-			coords := coords_to_str(ibquery_main.fields, clist);
-			j := 0;
-			while (j < coords.Count) do
-			begin
-				slist.Append(coords.Strings[j]);
-				inc(j);
-			end;
-			ibquery_main.Next;
-		end;
-		slist.Sorted := true;
-	end;
-	clist.set_current_crews_coord();
-	clist.set_crews_dist(clist.ap_gps);
-	exit(slist);
-end;
-
-function get_sql_list(sel : string; sort_flag : boolean) : TSTringList;
-var
-	res : string;
-	list : TSTringList;
-	field : TField;
-begin
-	sql_select(sel);
-	with form_main do
-	begin
-		list := TSTringList.Create;
-		while (not ibquery_main.Eof) do
-		begin
-			res := '';
-			for field in ibquery_main.fields do
-			begin
-				res := res + field.AsString + '|';
-			end;
-			if res[length(res)] = '|' then
-				delete(res, length(res), 1);
-			list.Append(res);
-			ibquery_main.Next;
-		end;
-		if sort_flag then
-			list.Sorted := true;
-	end;
-	result := list;
-end;
-
-function get_order_list(sdate : string; var clist : TCrewList) : TSTringList;
-// заказы занятых экипажей
-var
-	sel : string;
-	res : TSTringList;
-begin
-	// маршрут для " занятых " экипажей;
-	// ID    SOURCE                       DESTINATION         STARTTIME            FINISHTIME
-	// 143 | АКАДЕМИКА ЛЕБЕДЕВА УЛ., 6 | КОРОЛЕВА ПРОСП., 34 | 03.10.2011 14:22:44 | <null>     |
-	// STATE_TIME           SOURCE_TIME          CREW_ACCEPT_TIME     GPRS_STATE_TIME
-	// | 03.10.2011 14:48:57 | 03.10.2011 14:42:26 | 03.10.2011 14:22:44 | 03.10.2011 14:48:57 |
-
-	sdate := '''' + sdate + '''';
-	// sel := 'select STARTTIME, STATE, SOURCE, STOPS_COUNT, STOPS, DESTINATION  from ORDERS
-	// where STOPS_COUNT > 0   order by STARTTIME DESC';
-	sel := 'select ' //
-		+ ' CREWS.ID, ORDERS.ID, ORDERS.SOURCE_TIME, ORDERS.SOURCE, ORDERS.DESTINATION, ' //
-		+ ' ORDERS.STOPS_COUNT, ORDERS.STOPS ' //
-		+ ' from CREWS, ORDERS ' //
-		+ ' where ' //
-		+ ' CREWS.ID in (' + clist.get_nonfree_crewid_list_as_string() + ') ' //
-		+ ' and (ORDERS.CREWID = CREWS.ID) ' //
-		+ ' and (ORDERS.STATE in (select ID from ORDER_STATES where SYSTEMSTATE = 1) ) ' //
-		+ ' order by ORDERS.SOURCE_TIME desc ';
-
-	res := get_sql_list(sel, false);
-	clist.set_crews_orderId(res);
-	exit(res);
-end;
-
-function get_current_orders() : TSTringList;
-// заказы занятых экипажей
-var
-	sel : string;
-	res : TSTringList;
-begin
-	// маршрут для " занятых " экипажей;
-	// ID    SOURCE                       DESTINATION         STARTTIME            FINISHTIME
-	// 143 | АКАДЕМИКА ЛЕБЕДЕВА УЛ., 6 | КОРОЛЕВА ПРОСП., 34 | 03.10.2011 14:22:44 | <null>     |
-	// STATE_TIME           SOURCE_TIME          CREW_ACCEPT_TIME     GPRS_STATE_TIME
-	// | 03.10.2011 14:48:57 | 03.10.2011 14:42:26 | 03.10.2011 14:22:44 | 03.10.2011 14:48:57 |
-
-	// sdate := '''' + sdate + '''';
-	// sel := 'select STARTTIME, STATE, SOURCE, STOPS_COUNT, STOPS, DESTINATION  from ORDERS
-	// where STOPS_COUNT > 0   order by STARTTIME DESC';
-	sel := 'select ' //
-		+ ' ORDERS.ID, ORDERS.SOURCE_TIME, ORDERS.SOURCE, ORDERS.DESTINATION, ' //
-		+ ' ORDERS.STOPS_COUNT, ORDERS.STOPS ' //
-		+ ' from ORDERS ' //
-		+ ' where ' //
-	// + ' CREWS.ID in (' + clist.get_nonfree_crewid_list_as_string() + ') ' //
-	// + ' and (ORDERS.CREWID = CREWS.ID) ' //
-		+ ' (ORDERS.STATE in ' //
-		+ '   (select ORDER_STATES.ID from ORDER_STATES where ORDER_STATES.SYSTEMSTATE in (0, 1) ) ' //
-		+ ' ) ' //
-		+ ' and ORDERS.IS_PRIOR = 0 ' //
-		+ ' order by ORDERS.SOURCE_TIME desc ';
-
-	res := get_sql_list(sel, false);
-	// clist.set_crews_orderId(res);
-	exit(res);
-end;
-
-function get_track_time(surl : string) : integer;
-begin
-	with form_main do
-	begin
-	end;
-	result := 0;
-end;
-
-procedure show_orders(var list : TOrderList; var grid_order : TStringGrid; prior_flag : boolean);
-var pp : Pointer;
-	row, ord_id, cur_col, cur_row : integer;
-	order : TOrder;
-	sord_id, prior_stime : string;
-begin
-	with form_main do
-	begin
-		with grid_order do
-		begin
-			// Width := 1280 - 10;     //  - define as alClient
-			// !!!
-			// RowCount := 2;
-			FixedRows := 1;
-			ColCount := 8;
-			ColWidths[0] := 50;
-			ColWidths[1] := 100;
-			ColWidths[2] := 100;
-			ColWidths[3] := 250; // 80;
-			ColWidths[4] := 120; // 80;
-			ColWidths[5] := 120;
-			ColWidths[6] := 250; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
-			ColWidths[7] := ColWidths[6];
-			// ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
-			// - ColWidths[3] - ColWidths[4] - ColWidths[5];
-
-			Cells[0, 0] := '№';
-			Cells[1, 0] := 'До подачи';
-			Cells[2, 0] := 'До окончания';
-			Cells[3, 0] := 'Экипаж';
-			Cells[4, 0] := 'Время подачи';
-			Cells[5, 0] := 'Состояние';
-			Cells[6, 0] := 'Адрес подачи';
-			Cells[7, 0] := 'Адрес назначения';
-		end;
-
-		// запоминаем, где был "курсор"
-		ord_id := -1;
-		cur_col := grid_order.Col; // !!
-		if grid_order.Cells[0, grid_order.row] = '' then
-		else
-			ord_id := StrToInt(grid_order.Cells[0, grid_order.row]);
-
-		// отображаем экипажи из списка
-		grid_order.RowCount := 2;
-		grid_order.Rows[1].Clear();
-		row := 1;
-		prior_stime := replace_time('{Last_hour_-1}', now());
-		for pp in list.Orders do
-		begin
-			order := list.order(pp);
-			if ( //
-				prior_flag //
-					and (order.source_time < prior_stime) //
-				) //
-				or //
-				( //
-				not prior_flag //
-					and (order.source_time >= prior_stime) //
-				) //
-				then
-				continue;
-			if order.destroy_flag then // помеченные для удаления заказы не отображаем
-				continue;
-
-
-
-			// sord_id := IntToStr(order.id);
-			// row := grid_order.Cols[0].IndexOf(sord_id);
-			// if row > -1 then
-			// begin
-			// // если заказ уже есть в сетке то row - уже определена
-			// show_status('заказ № ' + sord_id + ' найден')
-			// end
-			// else
-			// begin
-			// row := grid_order.RowCount;
-			// if (row = 2) and (length(grid_order.Cells[0, 1]) = 0) then
-			// // если в сетке ещё нет заказов
-			// // то пишем со строки 1
-			// row := 1
-			// else
-			// // иначе добавляем пустую строку в сетку и пишем в неё
-			// with grid_order do
-			// RowCount := RowCount + 1;
-			// end;
-
-			grid_order.Cells[0, row] := IntToStr(order.id);
-
-			grid_order.Cells[1, row] := order.time_to_ap_as_string();
-
-			grid_order.Cells[2, row] := order.time_to_end_as_string();
-			if crew_list.crew(order.CrewId) <> nil then
-				grid_order.Cells[3, row] := IntToStr(order.CrewId) + ' | ' + crew_list.crew(order.CrewId).name
-			else
-				grid_order.Cells[3, row] := IntToStr(order.CrewId);
-			grid_order.Cells[4, row] := order.source_time;
-			grid_order.Cells[5, row] := order.state_as_string();
-			grid_order.Cells[6, row] := order.source.get_as_string();
-			grid_order.Cells[7, row] := order.dest.get_as_string();
-
-			row := row + 1;
-			with grid_order do
-				RowCount := RowCount + 1;
-		end;
-		// убираем пустую строку в конце
-		with grid_order do
-			if RowCount > 2 then
-				RowCount := RowCount - 1;
-
-		// вертаем взад "курсор" сетки
-		row := grid_order.Cols[0].IndexOf(IntToStr(ord_id));
-		if row < 0 then
-			row := 1;
-		grid_order.row := row;
-		grid_order.Col := cur_col;
-
-		// теперь удаляем заказы из сетки, коих нет в списке
-		// remove all grid lines, which not in order_list :)
-		// for row := grid_order.RowCount - 1 downto 1 do
-		// begin
-		// sord_id := grid_order.Cells[0, row];
-		// if sord_id = '' then
-		// continue;
-		// try
-		// ord_id := StrToInt(sord_id);
-		// finally
-		// end;
-		// if order_list.is_defined(ord_id) then
-		// pass
-		// else
-		// // если такого заказа уже нет в списке, удаляем его из сетки
-		// show_status('Устаревший заказ № ' + IntToStr(ord_id) + ' убран из списка видимых.');
-		// del_grid_row(grid_order, row);
-		// end;
-	end;
-end;
-
-procedure show_orders_grid();
-begin
-	show_orders(order_list, form_main.grid_order_current, false);
-	show_orders(order_list, form_main.grid_order_prior, true);
-end;
-
-procedure show_result_crews_grid(var list : TCrewList);
+procedure Tform_main.show_result_crews_grid(var list : TCrewList);
 var pp : Pointer;
 	r : integer;
 	crew : TCrew;
@@ -532,36 +145,24 @@ end;
 
 procedure show_grid(var list : TSTringList; var grid : TStringGrid);
 begin
-	grid.ColCount := 1; grid.RowCount := list.Count; grid.ColWidths[0] := grid.Width;
+	grid.ColCount := 1;
+	grid.RowCount := list.Count;
+	grid.ColWidths[0] := grid.Width;
 	grid.Cols[0].Assign(list);
 end;
 
-procedure set_bd_times();
-begin
-	// SDAY := '2011-10-03 00:00:00'; // for back-up base
-
-	// SCOORDTIME := '2011-10-03 14:57:50'; // for back-up base
-
-	if form_main.cb_real_base.Checked then
-	begin
-		cur_time := now();
-		// SCOORDTIME := replace_time(COORDS_BUF_SIZE, cur_time); // for real database
-		// SDAY := replace_time('{Last_hour_4}', cur_time); // for real database
-	end;
-end;
-
-procedure crews_request();
+procedure Tform_main.crews_request();
 begin
 	flag_coords_request := true; // блокируем таймер в п-дууу :))
 	crew_list.get_crews_coords();
 	crew_list.Crews.Sort(sort_crews_by_crewid);
-	show_result_crews_grid(crew_list);
+	self.show_result_crews_grid(crew_list);
 	if form_cur_crew.Showing then
 		form_cur_crew.show_crew();
 	flag_coords_request := false; // деблокируем таймер :)
 end;
 
-procedure orders_request();
+procedure Tform_main.orders_request();
 begin
 	deb_list := order_list.get_current_orders();
 	crew_list.get_crew_list_by_order_list(order_list);
@@ -578,95 +179,7 @@ begin
 	// show_result_crews_grid(crew_list); // - не нужно, сетка обновляется по таймеру
 end;
 
-procedure show_tmp();
-var list_coord, list_crew, list_order, list_tmp : TSTringList;
-	surl, sc1, sc2, ap_coord : string;
-	i, t : integer;
-	pp, po : Pointer;
-	order : TOrder;
-	crew : TCrew;
-begin
-	cur_time := now();
-	with form_main do
-	begin
-		grid_crews.RowCount := 0; // clear grid
-		list_order := order_list.get_current_orders();
-		form_debug.show_orders(list_order);
-		crew_list.get_crew_list_by_order_list(order_list);
-		crew_list.get_crews_coords();
-		// if crew_list.get_crew_list() = nil then
-		// edit_zakaz4ik.Text := 'Nil!';
-		crew_list.Crews.Sort(sort_crews_by_crewid);
-
-		// Show orders:
-		// отображение сетки - по таймеру Timer_show_order_grid
-		// show_orders_grid();
-		show_result_crews_grid(crew_list);
-
-		exit(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	end;
-end;
-
-procedure show_order_time(var grid_order : TStringGrid);
-var order : TOrder;
-	ordId : integer;
-	pp, pc : Pointer;
-begin
-	if grid_order.Cells[0, grid_order.row] = '' then
-		exit();
-	try
-		ordId := StrToInt(grid_order.Cells[0, grid_order.row]);
-	except
-		exit();
-	end;
-	order := order_list.order(order_list.find_by_Id(ordId));
-	if order = nil then
-		exit();
-	if order.CrewId <> -1 then
-	begin
-		pc := crew_list.findByCrewId(order.CrewId);
-		// order.get_time_to_end(pc);
-		// отображение сетки - по таймеру Timer_show_order_grid
-		// show_orders_grid();
-		exit();
-	end;
-end;
-
-procedure get_show_order_time_to_ap();
-var order : TOrder;
-	crew : TCrew;
-	pc : Pointer;
-	pp : Pointer;
-begin
-	if order_list.Orders.Count = 0 then
-		exit();
-
-	for pp in order_list.Orders do
-	begin
-		order := order_list.order(pp);
-		if order <> nil then
-		begin
-			if order.CrewId > -1 then
-			begin
-				if order.is_not_prior() then //
-				begin
-					pc := crew_list.findByCrewId(order.CrewId);
-					crew := crew_list.crew(pc);
-					if order.State = ORDER_VODITEL_PODTVERDIL then
-					begin
-						// считаем время до прибытия
-						show_status('Расчёт времени подачи заказа № ' + IntToStr(order.id));
-						order.def_time_to_ap(pc);
-						// order.get_time_to_ap(pc);
-						// show_orders_grid();
-					end;
-				end;
-			end;
-		end;
-	end;
-end;
-
-procedure get_show_order_time_to_end();
+procedure Tform_main.get_orders_times();
 var order : TOrder;
 	crew : TCrew;
 	pc, pp : Pointer;
@@ -719,76 +232,6 @@ begin
 	flag_order_get_time := false;
 end;
 
-procedure get_show_order_time();
-var order : TOrder;
-	crew : TCrew;
-	pc : Pointer;
-begin
-	if order_list.Orders.Count = 0 then
-		exit();
-
-	flag_order_get_time := true; // блокируем таймер вп-ду :)
-	if not(index_current_order in [0 .. order_list.Orders.Count - 1]) then
-		index_current_order := 0;
-
-	while true do
-	begin
-		order := order_list.order(order_list.Orders.Items[index_current_order]);
-		if order <> nil then
-		begin
-			show_status('Расчёт заказа № ' + IntToStr(order.id));
-			if order.CrewId > -1 then
-			begin
-				if order.is_not_prior() then //
-				begin
-					pc := crew_list.findByCrewId(order.CrewId);
-					crew := crew_list.crew(pc);
-					if order.State = ORDER_VODITEL_PODTVERDIL then
-					begin
-						// считаем время до прибытия
-						// order.get_time_to_ap(pc);
-						// отображение сетки - по таймеру Timer_show_order_grid
-						// show_orders_grid();
-					end
-					else
-						order.time_to_ap := -1;
-
-					if (order.time_to_end = -1) // ещё не считалось,
-						or (order.time_to_end = ORDER_CREW_NO_COORD) // не было координат,
-						or (order.time_to_end = ORDER_BAD_ADRES) // не было координат адреса
-						or (order.time_to_end = ORDER_WAY_ERROR) // была ошибка расчёта
-						or ( //
-						(order.time_to_end > 0) //
-							and //
-							crew.is_moved() // или имело место перемещение экипажа
-						) //
-						then
-					begin
-						// if order.get_time_to_end(pc) >= 0 then
-						// // при удачном просчёте сбрасываем "старую координату"
-						// crew.reset_old_coord();
-
-						// отображение сетки - по таймеру Timer_show_order_grid
-						// show_orders_grid();
-
-						// выходим
-						inc(index_current_order);
-						flag_order_get_time := false;
-						exit();
-					end;
-				end;
-			end;
-		end;
-		// переходим к след. заказу
-		inc(index_current_order);
-		if index_current_order >= order_list.Orders.Count then
-		begin
-			flag_order_get_time := false;
-			exit();
-		end;
-	end;
-end;
-
 procedure show_order(var grid : TStringGrid);
 var order : TOrder;
 	sid : string;
@@ -820,24 +263,9 @@ begin
 		PCrewList := Pointer(crew_list);
 		show_order(pp);
 	end;
-	exit();
-
-	// order := order_list.order(order_list.find_by_Id(ordId));
-	// if order = nil then
-	// exit();
-	//
-	// if order.CrewId <> -1 then
-	// begin
-	// crew := TCrew(crew_list.findByCrewId(order.CrewId));
-	// order.time_to_end := crew.get_time(order_list, false);
-	// show_orders_grid(order_list);
-	//
-	// exit();
-	// end;
-
 end;
 
-function open_database() : boolean;
+function Tform_main.open_database() : boolean;
 var MyPath, base, user, password : string;
 	FIniFile : TIniFile;
 begin
@@ -862,7 +290,7 @@ begin
 	finally
 	end;
 
-	with form_main do
+	with self do
 	begin
 		with db_main do
 		begin
@@ -970,9 +398,9 @@ end;
 
 procedure first_request();
 begin
-	orders_request();
-	crews_request();
-	show_orders_grid();
+	form_main.orders_request();
+	form_main.crews_request();
+	form_main.show_orders_grid();
 end;
 
 procedure Tform_main.FormCreate(Sender : TObject);
@@ -1068,6 +496,123 @@ begin
 	show_order(grid_order_prior);
 end;
 
+procedure Tform_main.show_orders(var list : TOrderList; var grid_order : TStringGrid; prior_flag : boolean);
+var pp : Pointer;
+	row, ord_id, cur_col, cur_row : integer;
+	order : TOrder;
+	sord_id, prior_stime, s_crew : string;
+begin
+	with form_main do
+	begin
+		with grid_order do
+		begin
+			// Width := 1280 - 10;     //  - define as alClient
+			// !!!
+			// RowCount := 2;
+			FixedRows := 1;
+			ColCount := 8;
+			if self.cb_show_crews.Checked then
+				ColWidths[0] := 50
+			else
+				ColWidths[0] := 0;
+
+			ColWidths[1] := 100;
+			ColWidths[2] := 100;
+			ColWidths[3] := 250; // 80;
+			ColWidths[4] := 120; // 80;
+			ColWidths[5] := 120;
+			ColWidths[6] := 250; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
+			ColWidths[7] := ColWidths[6];
+			// ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
+			// - ColWidths[3] - ColWidths[4] - ColWidths[5];
+
+			Cells[0, 0] := '№';
+			Cells[1, 0] := 'До подачи';
+			Cells[2, 0] := 'До окончания';
+			Cells[3, 0] := 'Экипаж';
+			Cells[4, 0] := 'Время подачи';
+			Cells[5, 0] := 'Состояние';
+			Cells[6, 0] := 'Адрес подачи';
+			Cells[7, 0] := 'Адрес назначения';
+		end;
+
+		// запоминаем, где был "курсор"
+		ord_id := -1;
+		cur_col := grid_order.Col; // !!
+		if grid_order.Cells[0, grid_order.row] = '' then
+		else
+			ord_id := StrToInt(grid_order.Cells[0, grid_order.row]);
+
+		// отображаем экипажи из списка
+		grid_order.RowCount := 2;
+		grid_order.Rows[1].Clear();
+		row := 1;
+		prior_stime := replace_time('{Last_hour_-1}', now());
+		for pp in list.Orders do
+		begin
+			order := list.order(pp);
+			if ( //
+				prior_flag //
+					and (order.source_time < prior_stime) //
+				) //
+				or //
+				( //
+				not prior_flag //
+					and (order.source_time >= prior_stime) //
+				) //
+				then
+				continue;
+			if order.destroy_flag then // помеченные для удаления заказы не отображаем
+				continue;
+
+			grid_order.Cells[0, row] := IntToStr(order.id);
+
+			grid_order.Cells[1, row] := order.time_to_ap_as_string();
+
+			grid_order.Cells[2, row] := order.time_to_end_as_string();
+			if order.CrewId > 0 then
+			begin
+				if crew_list.crew(order.CrewId) <> nil then
+				begin
+					s_crew := crew_list.crew(order.CrewId).name;
+					if self.cb_show_crews.Checked then
+						s_crew := IntToStr(order.CrewId) + ' | ' + s_crew;
+				end
+				else
+					s_crew := 'CREW ERROR';
+			end
+			else
+				s_crew := 'не назначен';
+			grid_order.Cells[3, row] := s_crew;
+			grid_order.Cells[4, row] := order.source_time;
+			grid_order.Cells[5, row] := order.state_as_string();
+			grid_order.Cells[6, row] := order.source.get_as_string();
+			grid_order.Cells[7, row] := order.dest.get_as_string();
+
+			row := row + 1;
+			with grid_order do
+				RowCount := RowCount + 1;
+		end;
+		// убираем пустую строку в конце
+		with grid_order do
+			if RowCount > 2 then
+				RowCount := RowCount - 1;
+
+		// вертаем взад "курсор" сетки
+		row := grid_order.Cols[0].IndexOf(IntToStr(ord_id));
+		if row < 0 then
+			row := 1;
+		grid_order.row := row;
+		grid_order.Col := cur_col;
+	end;
+end;
+
+procedure Tform_main.show_orders_grid;
+begin
+	self.show_orders(order_list, form_main.grid_order_current, false);
+	self.show_orders(order_list, form_main.grid_order_prior, true);
+end;
+
 procedure Tform_main.Timer_coordsTimer(Sender : TObject);
 var flag : boolean;
 begin
@@ -1090,47 +635,7 @@ begin
 
 	if flag_order_get_time then // расчёт уже идёт, неча отвлекать
 		exit();
-	get_show_order_time_to_end();
-end;
-
-procedure Tform_main.Timer_MainTimer(Sender : TObject);
-label quit;
-begin
-	exit();
-	// -------------------------------------------
-
-	self.Timer_Main.Enabled := false;
-
-	// begin
-
-	{
-	  if self.flag_get_coords then
-	  begin
-	  if flag_coords_request then // запрос идёт и нефиг мешать
-	  else
-	  begin
-	  crews_request();
-	  self.flag_get_coords := false;
-	  end;
-	  goto quit;
-	  end;
-	  }
-
-	if self.flag_get_orders then
-	begin
-		orders_request();
-		self.flag_get_orders := false;
-		goto quit;
-	end;
-
-	if flag_order_get_time then // расчёт уже идёт, неча отвлекать
-	else
-		get_show_order_time_to_end();
-
-	// end
-quit :
-	show_orders_grid();
-	self.Timer_Main.Enabled := true;
+	self.get_orders_times();
 end;
 
 procedure Tform_main.Timer_ordersTimer(Sender : TObject);
@@ -1151,7 +656,7 @@ begin
 	// exit();
 	// --------------------------------------------------------
 
-	show_orders_grid();
+	self.show_orders_grid();
 end;
 
 end.

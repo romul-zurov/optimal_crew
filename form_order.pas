@@ -184,7 +184,8 @@ procedure TFormOrder.FormCreate(Sender : TObject);
 begin
 	self.Width := 800;
 	self.Height := 400;
-	slist := tstringlist.Create();
+	self.slist := tstringlist.Create();
+	self.cr_slist := tstringlist.Create();
 end;
 
 procedure TFormOrder.show_crews();
@@ -233,6 +234,16 @@ end;
 procedure TFormOrder.show_order(POrd : Pointer);
 begin
 	self.POrder := POrd;
+
+	self.slist.Clear();
+	self.cr_slist.Clear();
+	self.grid_crews.RowCount := 2;
+	self.grid_crews.Rows[1].Clear();
+	self.Edit_gps.Text := '';
+
+	// выводим пстую шапку
+	// self.show_crews();
+
 	self.show_order();
 end;
 
@@ -290,7 +301,7 @@ begin
 	with self.grid_order do
 	begin
 		RowCount := 1;
-		rows[0].Clear();
+		Rows[0].Clear();
 		ColCount := 2;
 		ColWidths[0] := 120;
 		ColWidths[1] := Width - ColWidths[0] - 20;
