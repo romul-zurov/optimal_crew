@@ -342,8 +342,8 @@ end;
 
 procedure Tform_main.Button_orders_coordsClick(Sender : TObject);
 begin
-	self.Timer_ordersTimer(Sender);
 	self.Timer_coordsTimer(Sender);
+	self.Timer_ordersTimer(Sender);
 end;
 
 procedure Tform_main.Button_show_orderClick(Sender : TObject);
@@ -614,18 +614,17 @@ begin
 end;
 
 procedure Tform_main.Timer_coordsTimer(Sender : TObject);
-var flag : boolean;
+var flag, flag_ord : boolean;
 begin
-	// self.flag_get_coords := true;
-	// exit();
-
-	// ----------------------------
 	if flag_coords_request then
 		exit();
 	flag := self.Timer_coords.Enabled;
+	flag_ord := self.Timer_orders.Enabled;
 	self.Timer_coords.Enabled := false;
+	self.Timer_orders.Enabled := false;
 	crews_request();
 	self.Timer_coords.Enabled := flag;
+	self.Timer_orders.Enabled := flag_ord;
 end;
 
 procedure Tform_main.Timer_get_time_orderTimer(Sender : TObject);

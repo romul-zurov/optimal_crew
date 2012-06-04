@@ -313,14 +313,14 @@ object form_main: Tform_main
       'rec_version'
       'nowait'
       'read')
-    Left = 560
-    Top = 216
+    Left = 568
+    Top = 128
   end
   object ibquery_main: TIBQuery
     Database = db_main
     Transaction = ta_main
-    Left = 568
-    Top = 144
+    Left = 560
+    Top = 216
   end
   object Timer_coords: TTimer
     Enabled = False
@@ -353,8 +353,8 @@ object form_main: Tform_main
   object ibquery_coords: TIBQuery
     Database = db_main
     Transaction = ta_coords
-    Left = 680
-    Top = 144
+    Left = 688
+    Top = 208
   end
   object ta_coords: TIBTransaction
     DefaultDatabase = db_main
@@ -363,7 +363,7 @@ object form_main: Tform_main
       'rec_version'
       'nowait'
       'read')
-    Left = 680
-    Top = 216
+    Left = 688
+    Top = 128
   end
 end

@@ -594,10 +594,8 @@ procedure TCrew.set_time(m : Integer; d : double);
 begin
 	if m < 0 then
 	begin
-		self.time := -1;
-		// self.time_as_string := '';
+		self.time := m;
 		self.dist_way := -1;
-		// self.dist_way_as_string := '';
 		exit();
 	end;
 
@@ -666,8 +664,11 @@ end;
 
 function TCrew.time_as_string : string;
 begin
-	if self.time < 0 then
+	if self.time = ORDER_WAY_ERROR then
+		exit('расчёт невозможен')
+	else if self.time < 0 then
 		exit('');
+
 	result := IntToStr(self.time mod 60) + ' мин.';
 	if self.time > 59 then
 		result := IntToStr(self.time div 60) + ' ч. ' + result;
@@ -900,20 +901,32 @@ begin
 		+ ' where MEASURE_START_TIME > ' + stime //
 	// + ' order by MEASURE_START_TIME ASC, ID ASC';
 		;
-	sql_select(self.query, sel);
+
+	// sql_select(self.query, sel);
+	// вместо ^^^^^^^^^^ делаем прямо по пунктам:
+	self.query.Close();
+	self.query.SQL.Clear();
+	self.query.SQL.Add(sel);
+	try
+		self.query.Open();
+	except
+		show_status('неверный запрос GPS-координат из БД');
+		exit(-1);
+	end;
+	// show_status('запрос произведён');
+
 	while (not self.query.Eof) do
 	begin
 		coords_to_str(self.query.fields);
-		self.query.Next;
+		self.query.Next();
 	end;
 	// ???
-	// self.query.Close();
+	self.query.Close();
 
 	self.get_crew_list();
 	self.set_current_crews_coord();
 	self.del_crews_old_coords();
 	self.del_all_none_crewId();
-	// self.del_all_none_coord(); self.del_all_none_coord();
 	exit(0);
 end;
 
@@ -1415,6 +1428,7 @@ begin
 			self.time_to_end := 0;
 			// self.state := ORDER_DONE;
 			// self.CrewID := -1; // сбрасываем экипаж в заказе
+            self.stops_time := 0;
 			crew.OrderId := -1;
 			crew.state := CREW_SVOBODEN;
 			exit();
@@ -1698,9 +1712,10 @@ begin
 		self.time_to_end := ORDER_WAY_ERROR
 	else
 	begin
-		self.time_to_end := self.way_to_end.time;
-		TCrew(self.pcrew).reset_old_coord(); // србрасываем координату
+		self.time_to_end := self.way_to_end.time + self.stops_time;
+		TCrew(self.pcrew).reset_old_coord(); // сбрасываем координату
 	end;
+
 
 	// if self.time_to_end > -1  then self.dfgh;
 

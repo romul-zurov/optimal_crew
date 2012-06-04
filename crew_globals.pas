@@ -463,16 +463,17 @@ end;
 
 function sql_select(var query : TIBQuery; sel : string) : integer;
 begin
-	query.SQL.Clear;
+	query.Close();
+	query.SQL.Clear();
 	query.SQL.Add(sel);
 	try
-		query.Prepare;
+		query.Prepare();
 	except
 		show_status('неверный запрос к БД');
 		result := -1;
 		exit;
 	end;
-	query.Open;
+	query.Open();
 	// show_status('запрос произведён');
 	result := 0;
 end;

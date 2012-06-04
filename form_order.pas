@@ -316,19 +316,6 @@ begin
 	add_row(self.grid_order, 'Адрес подачи', order.source.get_as_string());
 	add_row(self.grid_order, 'Адрес назначения', order.dest.get_as_string());
 	add_row(self.grid_order, 'До окончания', order.time_to_end_as_string());
-
-	// ID : Integer; // order main ID in ORDERS table, -1 if not defined
-	// CrewID : Integer; // crew ID for a order, -1 if not defined
-	// // want_CrewId : Integer; // желаемый экипаж на заказе - НЕ НУЖЕН!
-	// prior_CrewId : Integer; // предварительный экипаж на предвар. заказе
-	// prior : boolean; // признак предварительного заказа
-	// state : Integer; // -1 - not defined, 0 - принят, маршрут задан
-	// // .                 1 - в работе, 2 - выполнен;
-	// source : TAdres; // address from
-	// dest : TAdres; // address to
-	// source_time : string; // время подачи экипажа
-	// time_to_end : Integer; // время до окончания заказа в минутах
-
 end;
 
 procedure TFormOrder.Timer_get_crewsTimer(Sender : TObject);
