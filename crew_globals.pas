@@ -442,7 +442,7 @@ function create_order_and_crew_states(var IBQuery : TIBQuery) : integer;
 			s := StringReplace(s, '|', '=', [rfReplaceAll]);
 			states.Add(s);
 		end;
-		s := '-1=не_определено';
+		s := '-1=#_не_определено';
 		states.Append(s);
 	end;
 
@@ -455,10 +455,10 @@ begin
 
 	with order_states do
 	begin
-		Append(IntToStr(ORDER_CREW_NO_COORD) + '=нет_координат');
-		Append(IntToStr(ORDER_BAD_ADRES) + '=ошибка_адреса');
-		Append(IntToStr(ORDER_WAY_ERROR) + '=ошибка_расчёта');
-		Append(IntToStr(ORDER_HAS_STOPS) + '=заказ_с_остановками');
+		Append(IntToStr(ORDER_CREW_NO_COORD) + '=#_нет_координат');
+		Append(IntToStr(ORDER_BAD_ADRES) + '=!!!_ошибка_адреса');
+		Append(IntToStr(ORDER_WAY_ERROR) + '=!!!_ошибка_расчёта');
+		Append(IntToStr(ORDER_HAS_STOPS) + '=#_заказ_с_остановками');
 	end;
 
 	exit(0);

@@ -215,7 +215,9 @@ begin
 
 	if (p1 > 0) and (p2 > 0) then
 	begin
-		p1 := p1 + length(sub1); s := copy(res, p1, p2 - p1); res := s;
+		p1 := p1 + length(sub1);
+		s := copy(res, p1, p2 - p1);
+		res := s;
 	end
 	else
 		res := '';

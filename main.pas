@@ -61,6 +61,8 @@ type
 		procedure cb_timers_timesClick(Sender : TObject);
 		procedure cb_timers_orders_coordsClick(Sender : TObject);
 		procedure Button_orders_coordsClick(Sender : TObject);
+		procedure grid_order_currentDrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
+			State : TGridDrawState);
 	private
 		{ Private declarations }
 		flag_get_coords : boolean;
@@ -86,7 +88,7 @@ var
 	Complete_Flag : boolean;
 	flag_order_get_time : boolean;
 	flag_coords_request : boolean;
-	index_current_order : integer;
+	index_current_order : Integer;
 	deb_list : TSTringList;
 	// SDAY : string;
 	// SCOORDTIME : string;
@@ -101,7 +103,7 @@ implementation
 
 procedure Tform_main.show_result_crews_grid(var list : TCrewList);
 var pp : Pointer;
-	r : integer;
+	r : Integer;
 	crew : TCrew;
 begin
 	with form_main do
@@ -239,7 +241,7 @@ end;
 procedure show_order(var grid : TStringGrid);
 var order : TOrder;
 	sid : string;
-	ordId : integer;
+	ordId : Integer;
 	pp : Pointer;
 	crew : TCrew;
 	slist : TSTringList;
@@ -369,7 +371,7 @@ begin
 end;
 
 procedure Tform_main.cb_show_crewsClick(Sender : TObject);
-var w : integer;
+var w : Integer;
 begin
 	if self.cb_show_crews.Checked then
 		w := 400
@@ -478,7 +480,7 @@ end;
 
 procedure Tform_main.grid_crewsDblClick(Sender : TObject);
 var pp : Pointer;
-	id, r : integer;
+	id, r : Integer;
 	sid : string;
 begin
 	r := self.grid_crews.row;
@@ -495,6 +497,47 @@ begin
 	show_order(grid_order_current);
 end;
 
+procedure Tform_main.grid_order_currentDrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
+	State : TGridDrawState);
+var sub : string;
+begin
+	if (ACol in [1, 2]) and (ARow > 0) then // только для колонок расчёта/статуса
+		with TStringGrid(Sender) do
+		begin
+			sub := '';
+			if pos('!!!', Cells[ACol, ARow]) = 1 then
+			begin
+				// draw(clRed, '!!!');
+				Canvas.Brush.color := clRed;
+				sub := '!!!';
+				// Canvas.FillRect(Rect);
+				// Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], '!!!', ''));
+			end
+			else if pos('!', Cells[ACol, ARow]) = 1 then
+			begin
+				// draw(clYellow, '!');
+				Canvas.Brush.color := clYellow;
+				sub := '!';
+				// Canvas.FillRect(Rect);
+				// Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], '!', ''));
+			end
+			else if pos('#', Cells[ACol, ARow]) = 1 then
+			begin
+				// draw(clGray, '#');
+				Canvas.Brush.color := clGray;
+				sub := '#';
+				// Canvas.FillRect(Rect);
+				// Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], '#', ''));
+			end
+			else
+				// draw(clGreen, '');
+				Canvas.Brush.color := 255*256 ;
+
+			Canvas.FillRect(Rect);
+			Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], sub, ''));
+		end;
+end;
+
 procedure Tform_main.grid_order_priorDblClick(Sender : TObject);
 begin
 	show_order(grid_order_prior);
@@ -502,7 +545,7 @@ end;
 
 procedure Tform_main.show_orders(var list : TOrderList; var grid_order : TStringGrid; prior_flag : boolean);
 var pp : Pointer;
-	row, ord_id, cur_col, cur_row : integer;
+	row, ord_id, cur_col, cur_row : Integer;
 	order : TOrder;
 	sord_id, prior_stime, s_crew : string;
 begin

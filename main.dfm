@@ -234,18 +234,21 @@ object form_main: Tform_main
               FixedCols = 0
               RowCount = 1
               FixedRows = 0
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clWindowText
+              Font.Height = -11
+              Font.Name = 'Tahoma'
+              Font.Style = [fsBold]
               ParentCtl3D = False
+              ParentFont = False
               TabOrder = 0
               OnDblClick = grid_order_currentDblClick
+              OnDrawCell = grid_order_currentDrawCell
             end
           end
           object TabSheet_prior: TTabSheet
             Caption = #1055#1088#1077#1076#1074#1072#1088#1080#1090#1077#1083#1100#1085#1099#1077
             ImageIndex = 1
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
             object grid_order_prior: TStringGrid
               AlignWithMargins = True
               Left = 3
@@ -259,7 +262,13 @@ object form_main: Tform_main
               FixedCols = 0
               RowCount = 1
               FixedRows = 0
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clWindowText
+              Font.Height = -11
+              Font.Name = 'Tahoma'
+              Font.Style = [fsBold]
               ParentCtl3D = False
+              ParentFont = False
               TabOrder = 0
               OnDblClick = grid_order_priorDblClick
             end

@@ -1793,16 +1793,16 @@ var prib_dt, ap_dt, cur_dt : TDateTime;
 	s_opoz : string;
 begin
 	if self.time_to_ap = ORDER_AP_OK then
-		result := ' забрал '
+		result := '!!! забрал '
 	else if self.time_to_ap = -1 then
-		result := ' - '
+		result := '# - '
 	else if self.time_to_ap < 0 then
 	begin
 		result := order_states.Values[IntToStr(self.time_to_ap)];
 		result := StringReplace(result, '_', ' ', [rfReplaceAll]);
 	end
 	else if self.time_to_ap = 0 then
-		result := 'на месте'
+		result := '! на месте'
 	else
 	begin
 		cur_dt := now();
@@ -1835,7 +1835,7 @@ function TOrder.time_to_end_as_string : string;
 begin
 	case self.time_to_end of
 		- 1 :
-			exit('неизвестно');
+			exit('#неизвестно');
 		0 :
 			exit('завершён');
 	else // case
