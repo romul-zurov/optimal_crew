@@ -51,6 +51,8 @@ const ORDER_BAD_ADRES = -4; // адрес(а) маршрута заказа не определются картой,
 
 const ORDER_WAY_ERROR = -8; // ошибка при просчёте маршрута, время не определено
 
+const ORDER_HAS_STOPS = -16; // заказ с промежут. остановками пока не считается
+
 const ORDER_AP_OK = -128; // экипаж был в АП и уехал (забрал клиента)
 
 const COORDS_BUF_SIZE = '{Last_hour_2}'; // размер буфера координат экипажа, в часах
@@ -456,6 +458,7 @@ begin
 		Append(IntToStr(ORDER_CREW_NO_COORD) + '=нет_координат');
 		Append(IntToStr(ORDER_BAD_ADRES) + '=ошибка_адреса');
 		Append(IntToStr(ORDER_WAY_ERROR) + '=ошибка_расчёта');
+		Append(IntToStr(ORDER_HAS_STOPS) + '=заказ_с_остановками');
 	end;
 
 	exit(0);

@@ -196,32 +196,36 @@ begin
 		order := order_list.order(order_list.Orders.Items[index_current_order]);
 		if order <> nil then
 		begin
-			if order.is_not_prior() then
+			if not order.destroy_flag then
 			begin
-				if order.CrewId > -1 then
+				if order.is_not_prior() then
 				begin
-					// считаем ...
-					show_status('Расчёт окончания заказа № ' + IntToStr(order.id));
-					pc := crew_list.findByCrewId(order.CrewId);
-					// crew := crew_list.crew(pc);
+					if order.CrewId > -1 then
+					begin
+						// считаем ...
+						show_status('Расчёт окончания заказа № ' + IntToStr(order.id));
+						pc := crew_list.findByCrewId(order.CrewId);
+						// crew := crew_list.crew(pc);
 
-					// if order.State = ORDER_VODITEL_PODTVERDIL then
-					order.def_time_to_ap(pc);
+						// if order.State = ORDER_VODITEL_PODTVERDIL then
+						order.def_time_to_ap(pc);
 
-					order.def_time_to_end(pc);
-					// и выходим
-					inc(index_current_order);
-					flag_order_get_time := false;
-					exit();
-				end
-				else
-				begin
-					// если экипаж не назначен
-					// запрашиваем gps-координату АП - пригодится при подборе :)
-					if (order.State = ORDER_PRINYAT) //
-						and (order.source.gps = '') //
-						then
-						order.source.get_gps();
+						order.def_time_to_end(pc);
+						// и выходим
+						inc(index_current_order);
+						flag_order_get_time := false;
+						exit();
+					end
+					else
+					begin
+						// если экипаж не назначен
+						// запрашиваем gps-координату АП - пригодится при подборе :)
+						if //
+						// (order.State = ORDER_PRINYAT) and //
+							(order.source.gps = '') //
+							then
+							order.source.get_gps();
+					end;
 				end;
 			end;
 		end;
@@ -516,7 +520,7 @@ begin
 			else
 				ColWidths[0] := 0;
 
-			ColWidths[1] := 100;
+			ColWidths[1] := 150;
 			ColWidths[2] := 100;
 			ColWidths[3] := 250; // 80;
 			ColWidths[4] := 120; // 80;
@@ -527,7 +531,7 @@ begin
 			// - ColWidths[3] - ColWidths[4] - ColWidths[5];
 
 			Cells[0, 0] := '№';
-			Cells[1, 0] := 'До подачи';
+			Cells[1, 0] := 'Опоздание';
 			Cells[2, 0] := 'До окончания';
 			Cells[3, 0] := 'Экипаж';
 			Cells[4, 0] := 'Время подачи';

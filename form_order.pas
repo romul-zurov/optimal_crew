@@ -150,7 +150,7 @@ begin
 		if first then
 			cr.set_time(-1, -1);
 		if cr.state in [CREW_SVOBODEN, CREW_NAZAKAZE] then
-			sl.Add(cr.ret_data());
+			sl.Add(cr.ret_data_to_ap(TOrder(POrder).source_time));
 	end;
 end;
 
@@ -303,19 +303,20 @@ begin
 		RowCount := 1;
 		Rows[0].Clear();
 		ColCount := 2;
-		ColWidths[0] := 120;
+		ColWidths[0] := 60;
 		ColWidths[1] := Width - ColWidths[0] - 20;
 	end;
 	add_row(self.grid_order, 'ID', inttostr(order.ID));
-	add_row(self.grid_order, 'Назначенный экипаж', inttostr(order.CrewID));
-	add_row(self.grid_order, 'Предварительно назначенный экипаж', //
-		inttostr(order.prior_crewid));
-	add_row(self.grid_order, 'Предварительный заказ', da_net(order.prior));
-	add_row(self.grid_order, 'Состояние', order.state_as_string());
-	add_row(self.grid_order, 'Время подачи', order.source_time);
-	add_row(self.grid_order, 'Адрес подачи', order.source.get_as_string());
-	add_row(self.grid_order, 'Адрес назначения', order.dest.get_as_string());
-	add_row(self.grid_order, 'До окончания', order.time_to_end_as_string());
+	add_row(self.grid_order, 'CrewID', inttostr(order.CrewID));
+	add_row(self.grid_order, 'prior_crewid', inttostr(order.prior_crewid));
+	add_row(self.grid_order, 'prior', da_net(order.prior));
+	add_row(self.grid_order, 'state', order.state_as_string());
+	add_row(self.grid_order, 'source_time', order.source_time);
+	add_row(self.grid_order, 'source', order.source.get_as_string());
+	add_row(self.grid_order, 'dest', order.dest.get_as_string());
+	add_row(self.grid_order, 'time_to_end', order.time_to_end_as_string());
+	add_row(self.grid_order, 'time_to_ap', order.time_to_ap_as_string());
+	add_row(self.grid_order, 'stops_time', inttostr(order.stops_time));
 end;
 
 procedure TFormOrder.Timer_get_crewsTimer(Sender : TObject);
