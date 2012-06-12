@@ -36,6 +36,8 @@ type
 
 		procedure Timer_get_gpsTimer(Sender : TObject);
 		procedure Timer_get_crewsTimer(Sender : TObject);
+		procedure grid_crewsDrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
+			State : TGridDrawState);
 	private
 		{ Private declarations }
 		POrder : Pointer;
@@ -45,7 +47,7 @@ type
 		PCrewList : Pointer;
 		POrderList : Pointer;
 		slist, cr_slist : tstringlist;
-		cr_count : integer;
+		cr_count : Integer;
 		procedure get_show_crews(var order_list : TOrderList; var crew_list : TCrewList);
 		procedure show_crews();
 		procedure show_order(); overload;
@@ -67,7 +69,7 @@ implementation
 
 procedure TFormOrder.get_show_crews(var order_list : TOrderList; var crew_list : TCrewList);
 	procedure ret_sl(var cr_sl : tstringlist; first : boolean; var sl : tstringlist);
-	var j : integer;
+	var j : Integer;
 		cr : TCRew;
 	begin
 		sl.Clear();
@@ -77,13 +79,13 @@ procedure TFormOrder.get_show_crews(var order_list : TOrderList; var crew_list :
 			cr := crew_list.crewByCrewId(StrToInt(cr_sl.Strings[j]));
 			if first then
 				cr.set_time(-1, -1);
-			if cr.state in [CREW_SVOBODEN, CREW_NAZAKAZE] then
+			if cr.State in [CREW_SVOBODEN, CREW_NAZAKAZE] then
 				sl.Add(cr.ret_data());
 		end;
 	end;
 
 var order : TOrder;
-	ordId, i : integer;
+	ordId, i : Integer;
 	pp : Pointer;
 	crew : TCRew;
 	slist, cr_slist : tstringlist;
@@ -138,8 +140,47 @@ begin
 	FreeAndNil(slist);
 end;
 
+procedure TFormOrder.grid_crewsDrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
+	State : TGridDrawState);
+var sub : string;
+begin
+	if (ACol in [3, 4]) and (ARow > 0) then // только для колонок расчёта/статуса и для не-заглавных строк
+		with TStringGrid(Sender) do
+		begin
+			sub := '';
+			if pos('!!!', Cells[ACol, ARow]) = 1 then
+			begin
+				Canvas.Brush.color := clRed;
+				sub := '!!!';
+			end
+			else
+				if pos('!', Cells[ACol, ARow]) = 1 then
+				begin
+					Canvas.Brush.color := clYellow;
+					sub := '!';
+				end
+				else
+					if pos('#', Cells[ACol, ARow]) = 1 then
+					begin
+						Canvas.Brush.color := $CCCCCC;
+						sub := '#';
+					end
+					else
+						if pos('*', Cells[ACol, ARow]) = 1 then
+						begin
+							Canvas.Brush.color := $00FF00;
+							sub := '*';
+						end
+						else
+							Canvas.Brush.color := $FFFFFF;
+
+			Canvas.FillRect(Rect);
+			Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], sub, ''));
+		end;
+end;
+
 procedure TFormOrder.ret_sl(var cr_sl : tstringlist; first : boolean; var sl : tstringlist);
-var j : integer;
+var j : Integer;
 	cr : TCRew;
 begin
 	sl.Clear();
@@ -149,7 +190,7 @@ begin
 		cr := TCrewList(self.PCrewList).crewByCrewId(StrToInt(cr_sl.Strings[j]));
 		if first then
 			cr.set_time(-1, -1);
-		if cr.state in [CREW_SVOBODEN, CREW_NAZAKAZE] then
+		if cr.State in [CREW_SVOBODEN, CREW_NAZAKAZE] then
 			sl.Add(cr.ret_data_to_ap(TOrder(POrder).source_time));
 	end;
 end;
@@ -159,6 +200,7 @@ begin
 	self.slist.Clear();
 	if TOrder(POrder).source.gps = '' then
 		TOrder(POrder).source.get_gps();
+    self.Edit_gps.Text := 'Определяем координату АП...';
 	self.Timer_get_gps.Enabled := True;
 	// self.get_show_crews(TOrderList(self.POrderList), TCrewList(self.PCrewList));
 end;
@@ -177,6 +219,9 @@ end;
 
 procedure TFormOrder.FormClose(Sender : TObject; var Action : TCloseAction);
 begin
+	self.Timer_get_gps.Enabled := false;
+	self.Timer_get_crews.Enabled := false;
+	self.Timer_show_crews.Enabled := false;
 	self.Hide();
 end;
 
@@ -190,7 +235,7 @@ end;
 
 procedure TFormOrder.show_crews();
 var s : string;
-	r : integer;
+	r : Integer;
 	order : TOrder;
 begin
 	order := TOrder(POrder);
@@ -202,10 +247,10 @@ begin
 		RowCount := 2;
 		ColCount := 5;
 		FixedRows := 1;
-		ColWidths[0] := 50;
+		ColWidths[0] := 0; //50; // прячем :)
 		// ColWidths[1] := 200;
-		ColWidths[2] := 120;
-		ColWidths[3] := 100;
+		ColWidths[2] := 80;
+		ColWidths[3] := 200;
 		ColWidths[4] := 120; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
 		ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
 			- ColWidths[3] - ColWidths[4];

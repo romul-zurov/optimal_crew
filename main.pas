@@ -524,14 +524,14 @@ begin
 			else if pos('#', Cells[ACol, ARow]) = 1 then
 			begin
 				// draw(clGray, '#');
-				Canvas.Brush.color := clGray;
+				Canvas.Brush.color := $CCCCCC; //clGray;
 				sub := '#';
 				// Canvas.FillRect(Rect);
 				// Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], '#', ''));
 			end
 			else
 				// draw(clGreen, '');
-				Canvas.Brush.color := 255*256 ;
+				Canvas.Brush.color := $00FF00;
 
 			Canvas.FillRect(Rect);
 			Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], sub, ''));

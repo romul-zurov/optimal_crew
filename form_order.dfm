@@ -77,7 +77,6 @@ object FormOrder: TFormOrder
           Value = 100.000000000000000000
         end>
       TabOrder = 0
-      ExplicitWidth = 130
       object GroupBox_controls: TGroupBox
         Left = 1
         Top = 1
@@ -86,7 +85,6 @@ object FormOrder: TFormOrder
         Align = alClient
         Caption = 'GroupBox_controls'
         TabOrder = 0
-        ExplicitWidth = 128
         object Button_get_crew: TButton
           Left = 3
           Top = 15
@@ -120,7 +118,6 @@ object FormOrder: TFormOrder
         Align = alClient
         Caption = 'GroupBox_order'
         TabOrder = 1
-        ExplicitWidth = 128
         object grid_order: TStringGrid
           Left = 2
           Top = 15
@@ -131,7 +128,6 @@ object FormOrder: TFormOrder
           DefaultRowHeight = 16
           FixedCols = 0
           TabOrder = 0
-          ExplicitWidth = 124
         end
       end
     end
@@ -166,12 +162,10 @@ object FormOrder: TFormOrder
           Value = 100.000000000000000000
         end>
       TabOrder = 1
-      ExplicitLeft = 131
-      ExplicitWidth = 663
       object GroupBox_crews: TGroupBox
         Left = 1
         Top = 1
-        Width = 541
+        Width = 471
         Height = 290
         Align = alClient
         Caption = #1055#1086#1076#1073#1086#1088' '#1101#1082#1080#1087#1072#1078#1072' '#1076#1083#1103' '#1079#1072#1082#1072#1079#1072
@@ -179,16 +173,23 @@ object FormOrder: TFormOrder
         object grid_crews: TStringGrid
           Left = 2
           Top = 15
-          Width = 537
+          Width = 467
           Height = 273
           Align = alClient
           DefaultRowHeight = 16
           FixedCols = 0
+          Font.Charset = DEFAULT_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -11
+          Font.Name = 'Tahoma'
+          Font.Style = [fsBold]
+          ParentFont = False
           TabOrder = 0
+          OnDrawCell = grid_crewsDrawCell
         end
       end
       object GroupBox1: TGroupBox
-        Left = 542
+        Left = 472
         Top = 1
         Width = 120
         Height = 290
