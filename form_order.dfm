@@ -88,7 +88,7 @@ object FormOrder: TFormOrder
         object Button_get_crew: TButton
           Left = 3
           Top = 15
-          Width = 118
+          Width = 190
           Height = 25
           Caption = #1055#1086#1076#1086#1073#1088#1072#1090#1100' '#1101#1082#1080#1087#1072#1078
           TabOrder = 0
@@ -97,7 +97,7 @@ object FormOrder: TFormOrder
         object Button_show_on_map: TButton
           Left = 6
           Top = 70
-          Width = 118
+          Width = 187
           Height = 25
           Caption = #1055#1086#1082#1072#1079#1072#1090#1100' '#1085#1072' '#1082#1072#1088#1090#1077
           TabOrder = 1
@@ -105,7 +105,7 @@ object FormOrder: TFormOrder
         object Edit_gps: TEdit
           Left = 5
           Top = 43
-          Width = 118
+          Width = 188
           Height = 21
           TabOrder = 2
         end

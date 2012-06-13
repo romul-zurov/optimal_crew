@@ -455,10 +455,10 @@ begin
 
 	with order_states do
 	begin
-		Append(IntToStr(ORDER_CREW_NO_COORD) + '=#_нет_координат');
+		Append(IntToStr(ORDER_CREW_NO_COORD) + '=%_нет_координат');
 		Append(IntToStr(ORDER_BAD_ADRES) + '=!!!_ошибка_адреса');
 		Append(IntToStr(ORDER_WAY_ERROR) + '=!!!_ошибка_расчёта');
-		Append(IntToStr(ORDER_HAS_STOPS) + '=#_заказ_с_остановками');
+		Append(IntToStr(ORDER_HAS_STOPS) + '=%_заказ_с_остановками');
 	end;
 
 	exit(0);

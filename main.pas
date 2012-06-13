@@ -507,31 +507,29 @@ begin
 			sub := '';
 			if pos('!!!', Cells[ACol, ARow]) = 1 then
 			begin
-				// draw(clRed, '!!!');
 				Canvas.Brush.color := clRed;
 				sub := '!!!';
-				// Canvas.FillRect(Rect);
-				// Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], '!!!', ''));
-			end
-			else if pos('!', Cells[ACol, ARow]) = 1 then
-			begin
-				// draw(clYellow, '!');
-				Canvas.Brush.color := clYellow;
-				sub := '!';
-				// Canvas.FillRect(Rect);
-				// Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], '!', ''));
-			end
-			else if pos('#', Cells[ACol, ARow]) = 1 then
-			begin
-				// draw(clGray, '#');
-				Canvas.Brush.color := $CCCCCC; //clGray;
-				sub := '#';
-				// Canvas.FillRect(Rect);
-				// Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], '#', ''));
 			end
 			else
-				// draw(clGreen, '');
-				Canvas.Brush.color := $00FF00;
+				if pos('!', Cells[ACol, ARow]) = 1 then
+				begin
+					Canvas.Brush.color := clYellow;
+					sub := '!';
+				end
+				else
+					if pos('#', Cells[ACol, ARow]) = 1 then
+					begin
+						Canvas.Brush.color := $CCCCCC; // clGray;
+						sub := '#';
+					end
+					else
+						if pos('%', Cells[ACol, ARow]) = 1 then
+						begin
+							Canvas.Brush.color := $6D6D6D;
+							sub := '%';
+						end
+						else
+							Canvas.Brush.color := $00FF00;
 
 			Canvas.FillRect(Rect);
 			Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], sub, ''));
