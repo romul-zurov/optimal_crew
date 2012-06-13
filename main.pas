@@ -7,7 +7,7 @@ uses
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
 	Dialogs, Grids, StdCtrls, DB, IBDatabase, DBGrids, ComCtrls, IBCustomDataSet,
 	StrUtils, DateUtils, IBQuery, OleCtrls, SHDocVw, MSHTML, ActiveX, IniFiles, WinInet,
-	ExtCtrls, ActnList;
+	ExtCtrls, ActnList, Math;
 
 type
 	Tform_main = class(TForm)
@@ -543,7 +543,7 @@ end;
 
 procedure Tform_main.show_orders(var list : TOrderList; var grid_order : TStringGrid; prior_flag : boolean);
 var pp : Pointer;
-	row, ord_id, cur_col, cur_row : Integer;
+	row, ord_id, cur_col, cur_row, adr_w : Integer;
 	order : TOrder;
 	sord_id, prior_stime, s_crew : string;
 begin
@@ -561,19 +561,24 @@ begin
 			else
 				ColWidths[0] := 0;
 
-			ColWidths[1] := 150;
+			ColWidths[1] := 160;
 			ColWidths[2] := 100;
-			ColWidths[3] := 250; // 80;
-			ColWidths[4] := 120; // 80;
-			ColWidths[5] := 120;
-			ColWidths[6] := 250; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
+			ColWidths[3] := 260; // 80;
+			ColWidths[4] := 128; // 80;
+			ColWidths[5] := 180;
+			adr_w:= ( //
+				Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] //
+					- ColWidths[4] - ColWidths[5] - 24 //
+				) //
+				div 2; // 210
+			ColWidths[6] := IfThen(adr_w > 192, adr_w, 192);
 			ColWidths[7] := ColWidths[6];
 			// ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
 			// - ColWidths[3] - ColWidths[4] - ColWidths[5];
 
 			Cells[0, 0] := '№';
 			Cells[1, 0] := 'Опоздание';
-			Cells[2, 0] := 'До окончания';
+			Cells[2, 0] := 'Статус';
 			Cells[3, 0] := 'Экипаж';
 			Cells[4, 0] := 'Время подачи';
 			Cells[5, 0] := 'Состояние';

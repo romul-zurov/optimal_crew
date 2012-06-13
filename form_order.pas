@@ -126,7 +126,7 @@ begin
 	self.slist.Clear();
 	if TOrder(POrder).source.gps = '' then
 		TOrder(POrder).source.get_gps();
-	self.Edit_gps.Text := 'ќпредел€ем координату јѕ...';
+	self.Edit_gps.Text := 'ќпредел€ем доступные экипажи...';
 	self.Timer_get_gps.Enabled := True;
 end;
 
@@ -172,7 +172,7 @@ begin
 		RowCount := 2;
 		ColCount := 5;
 		FixedRows := 1;
-		ColWidths[0] := 80; // 50; // пр€чем :)
+		ColWidths[0] := 64; // 50; // пр€чем :)
 		// ColWidths[1] := 200;
 		ColWidths[2] := 80;
 		ColWidths[3] := 200;
@@ -210,10 +210,8 @@ begin
 	self.grid_crews.RowCount := 2;
 	self.grid_crews.Rows[1].Clear();
 	self.Edit_gps.Text := '';
-
-	// выводим пстую шапку
-	// self.show_crews();
-
+	// выводим пустую шапку
+	 self.show_crews();
 	self.show_order();
 end;
 

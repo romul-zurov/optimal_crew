@@ -169,6 +169,12 @@ object FormOrder: TFormOrder
         Height = 290
         Align = alClient
         Caption = #1055#1086#1076#1073#1086#1088' '#1101#1082#1080#1087#1072#1078#1072' '#1076#1083#1103' '#1079#1072#1082#1072#1079#1072
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -11
+        Font.Name = 'Tahoma'
+        Font.Style = [fsBold]
+        ParentFont = False
         TabOrder = 0
         object grid_crews: TStringGrid
           Left = 2
@@ -221,21 +227,21 @@ object FormOrder: TFormOrder
     Enabled = False
     Interval = 512
     OnTimer = Timer_get_gpsTimer
-    Left = 208
-    Top = 120
+    Left = 312
+    Top = 128
   end
   object Timer_get_crews: TTimer
     Enabled = False
     Interval = 512
     OnTimer = Timer_get_crewsTimer
-    Left = 304
-    Top = 120
+    Left = 432
+    Top = 128
   end
   object Timer_show_crews: TTimer
     Enabled = False
     Interval = 1011
     OnTimer = Timer_show_crewsTimer
-    Left = 408
-    Top = 120
+    Left = 568
+    Top = 128
   end
 end

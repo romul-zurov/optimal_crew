@@ -416,9 +416,10 @@ function TCrew.dist_str : string;
 begin
 	if self.dist < 0 then
 		exit('99999999');
-	result := IntToStr(round(self.dist));
+//	result := IntToStr(round(self.dist));
+	result := FloatToStrF(self.dist / 1000, ffFixed, 8, 1) + 'км';
 	while length(result) < 8 do
-		result := '0' + result;
+		result := ' ' + result;
 end;
 
 function TCrew.dist_way_as_string : string;
@@ -1963,9 +1964,12 @@ function TOrder.time_to_end_as_string : string;
 begin
 	case self.time_to_end of
 		- 1 :
-			exit('#неизвестно');
+			exit('# - ');
 		0 :
-			exit('завершён');
+			if self.state in [ORDER_DONE, ORDER_VODITEL_VYPOLNIL_ZAKAZ] then
+				exit('завершён')
+			else
+				exit('!!! завершён');
 	else // case
 		if self.time_to_end < 0 then
 		begin
@@ -1973,7 +1977,8 @@ begin
 			result := StringReplace(result, '_', ' ', [rfReplaceAll]);
 		end
 		else
-			result := self.time_as_string(self.time_to_end);
+			// result := self.time_as_string(self.time_to_end);
+			exit('выполняется');
 	end; // case
 end;
 
@@ -2128,7 +2133,7 @@ begin
 	// в числе прочего убирает глючные незакрытые заказы
 		+ ' and ORDERS.SOURCE_TIME > ' + sdate_from + ' ' // ну так, что б уж поменьше
 	// предварительные не убираем, ибо пусть видны в отд. вкладке
-		+ ' and ORDERS.SOURCE_TIME < ' + sdate_to + ' ' // по времени подачи
+	// + ' and ORDERS.SOURCE_TIME < ' + sdate_to + ' ' // по времени подачи
 
 	// . заказы с промежуточными остановками тоже читаем, но не считаем пока
 	// + ' and (ORDERS.STOPS_COUNT is null  or  ORDERS.STOPS_COUNT = 0) ' //
