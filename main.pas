@@ -501,9 +501,11 @@ procedure Tform_main.grid_order_currentDrawCell(Sender : TObject; ACol, ARow : I
 	State : TGridDrawState);
 var sub : string;
 begin
-	if (ACol in [1, 2]) and (ARow > 0) then // только для колонок расчёта/статуса
+	if (ACol in [1, 4, 5, 6]) and (ARow > 0) then // только для колонок расчёта/статуса
 		with TStringGrid(Sender) do
 		begin
+			if Cells[ACol, ARow] = '' then
+				exit();
 			sub := '';
 			if pos('!!!', Cells[ACol, ARow]) = 1 then
 			begin
@@ -529,7 +531,7 @@ begin
 							sub := '%';
 						end
 						else
-							Canvas.Brush.color := $00FF00;
+							Canvas.Brush.color := ifthen(ACol = 1, $00FF00, $FFFFFF);
 
 			Canvas.FillRect(Rect);
 			Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], sub, ''));
@@ -556,34 +558,41 @@ begin
 			// RowCount := 2;
 			FixedRows := 1;
 			ColCount := 8;
-			if self.cb_show_crews.Checked then
-				ColWidths[0] := 50
-			else
-				ColWidths[0] := 0;
+			Cells[0, 0] := '№'; // не отображается по умолчанию
+			Cells[1, 0] := 'Реальный статус';
+			Cells[2, 0] := 'До окончания'; // не отображается по умолчанию
+			Cells[3, 0] := 'Состояние';
+			Cells[4, 0] := 'Экипаж';
+			Cells[5, 0] := 'Адрес подачи';
+			Cells[6, 0] := 'Адрес назначения';
+			Cells[7, 0] := 'Время подачи';
 
-			ColWidths[1] := 160;
-			ColWidths[2] := 100;
-			ColWidths[3] := 260; // 80;
-			ColWidths[4] := 128; // 80;
-			ColWidths[5] := 180;
-			adr_w:= ( //
+			if self.cb_show_crews.Checked then
+			begin
+				ColWidths[0] := 50;
+				ColWidths[2] := 100;
+			end
+			else
+			begin
+				ColWidths[0] := 0;
+				ColWidths[2] := 0;
+			end;
+
+			ColWidths[1] := 240; // 160;
+
+			ColWidths[3] := 180; // 260; // 80;
+			ColWidths[4] := 260; // 128; // 80;
+			ColWidths[7] := 88;
+
+			adr_w := ( //
 				Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] //
-					- ColWidths[4] - ColWidths[5] - 24 //
+					- ColWidths[4] - ColWidths[7] - 24 //
 				) //
 				div 2; // 210
-			ColWidths[6] := IfThen(adr_w > 192, adr_w, 192);
-			ColWidths[7] := ColWidths[6];
+			ColWidths[5] := IfThen(adr_w > 192, adr_w, 192);
+			ColWidths[6] := ColWidths[5];
 			// ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
 			// - ColWidths[3] - ColWidths[4] - ColWidths[5];
-
-			Cells[0, 0] := '№';
-			Cells[1, 0] := 'Опоздание';
-			Cells[2, 0] := 'Статус';
-			Cells[3, 0] := 'Экипаж';
-			Cells[4, 0] := 'Время подачи';
-			Cells[5, 0] := 'Состояние';
-			Cells[6, 0] := 'Адрес подачи';
-			Cells[7, 0] := 'Адрес назначения';
 		end;
 
 		// запоминаем, где был "курсор"
@@ -615,11 +624,11 @@ begin
 			if order.destroy_flag then // помеченные для удаления заказы не отображаем
 				continue;
 
-			grid_order.Cells[0, row] := IntToStr(order.id);
+			grid_order.Cells[0, row] := IntToStr(order.id); // не отображается по умолчанию
+			grid_order.Cells[1, row] := order.status();
+			grid_order.Cells[2, row] := order.time_to_end_as_string(); // не отображается по умолчанию
+			grid_order.Cells[3, row] := order.state_as_string();
 
-			grid_order.Cells[1, row] := order.time_to_ap_as_string();
-
-			grid_order.Cells[2, row] := order.time_to_end_as_string();
 			if order.CrewId > 0 then
 			begin
 				if crew_list.crew(order.CrewId) <> nil then
@@ -629,15 +638,15 @@ begin
 						s_crew := IntToStr(order.CrewId) + ' | ' + s_crew;
 				end
 				else
-					s_crew := 'CREW ERROR';
+					s_crew := '!!!CREW ERROR';
 			end
 			else
-				s_crew := 'не назначен';
-			grid_order.Cells[3, row] := s_crew;
-			grid_order.Cells[4, row] := order.source_time;
-			grid_order.Cells[5, row] := order.state_as_string();
-			grid_order.Cells[6, row] := order.source.get_as_string();
-			grid_order.Cells[7, row] := order.dest.get_as_string();
+				s_crew := '!!!';
+
+			grid_order.Cells[4, row] := s_crew;
+			grid_order.Cells[5, row] := order.source.get_as_color_string();
+			grid_order.Cells[6, row] := order.dest.get_as_color_string();
+			grid_order.Cells[7, row] := order.source_time_without_date();
 
 			row := row + 1;
 			with grid_order do

@@ -59,6 +59,8 @@ type
 		function time_to_ap_as_string() : string; // время до подъезда к АП в мин/часах;
 		// function color
 		function state_as_string() : string;
+		function status() : string;
+		function source_time_without_date() : string;
 		function is_not_prior() : boolean;
 	private
 		// brow_comp_eve : TBrowserComplete2Event;
@@ -277,14 +279,14 @@ begin
 	  if (s1 > s2) then
 	  exit(1)
 	  else
-	  if (d1 < d2) then // if state1 == state2
-	  exit(-1)
-	  else
 	  }
-	if (d1 > d2) then
-		exit(1)
+	if (d1 < d2) then // if state1 == state2
+		exit(-1)
 	else
-		exit(0);
+		if (d1 > d2) then
+			exit(1)
+		else
+			exit(0);
 end;
 
 { TCrew }
@@ -306,17 +308,22 @@ begin
 		exit();
 
 	coord_from := '';
-	if (self.state = CREW_NAZAKAZE) and (self.POrder <> nil) then
+	if (self.state = CREW_NAZAKAZE) { and (self.POrder <> nil) } then
+	begin
 		// если экипаж на заказе, то расстояние меряем от точки высадки
-		// при наличии координаты у оной, во всех иных случаях - от текущей коорд.
-		try
-			coord_from := TOrder(POrder).dest.gps;
-		except
-			coord_from := ''; // на всякий случай
-		end;
-
-	if coord_from = '' then
+		if self.POrder <> nil then
+			try
+				if TOrder(self.POrder).dest.gps_ok() then
+					coord_from := TOrder(self.POrder).dest.gps;
+			except
+				coord_from := ''; // на всякий случай
+			end;
+	end
+	else
 		coord_from := self.coord;
+
+	// if coord_from = '' then
+	// coord_from := self.coord;
 
 	if coord_from = '' then
 		exit()
@@ -416,7 +423,7 @@ function TCrew.dist_str : string;
 begin
 	if self.dist < 0 then
 		exit('99999999');
-//	result := IntToStr(round(self.dist));
+	// result := IntToStr(round(self.dist));
 	result := FloatToStrF(self.dist / 1000, ffFixed, 8, 1) + 'км';
 	while length(result) < 8 do
 		result := ' ' + result;
@@ -685,20 +692,29 @@ begin
 		s_opozdanie := self.time_to_str(opozdanie);
 		if dt > ap_dt then
 		begin
-			scolor := '!!! ';
-			prefix := '&';
 			s_opozdanie := 'опоздает на ' + s_opozdanie;
-			res := self.time_str();
+			if opozdanie < 10 then
+			begin
+				res := self.dist_way_str();
+				scolor := '!';
+				prefix := '#'; // вместе с успевающими !
+			end
+			else
+			begin
+				res := self.time_str();
+				scolor := '!!! ';
+				prefix := '&';
+			end;
 		end
 		else
 		begin
 			s_opozdanie := 'успевает с запасом ' + s_opozdanie;
 			prefix := '#';
 			res := self.dist_way_str();
-			if opozdanie < 10 then
-				scolor := '! '
-			else
-				scolor := '* ';
+			// if opozdanie < 10 then
+			// scolor := '! '
+			// else
+			scolor := '*';
 		end;
 	end;
 	result := '' //
@@ -784,7 +800,7 @@ end;
 function TCrew.time_as_string : string;
 begin
 	if self.time = ORDER_WAY_ERROR then
-		exit('!!! расчёт невозможен')
+		exit('%расчёт не удался')
 	else
 		if self.time < 0 then
 			exit('# - ');
@@ -1082,16 +1098,19 @@ begin
 	self.set_crews_orderId_by_order_list(List);
 	for pp in List.Orders do
 	begin
-		order := List.order(pp); crew := self.crewByCrewId(order.CrewID);
+		order := List.order(pp);
+		crew := self.crewByCrewId(order.CrewID);
 		if (order <> nil) and (crew <> nil) then
 		begin
-			crew.source := order.source; crew.dest := order.dest;
+			crew.source := order.source;
+			crew.dest := order.dest;
+			crew.POrder := Pointer(order);
 		end;
 	end;
 end;
 
 function TCrewList.get_crew_list_for_ap(new_ap : TAdres; Order_ID : Integer) : TStringList;
-var pp : Pointer;
+var
 	crew : TCrew;
 	i : Integer;
 
@@ -1101,18 +1120,25 @@ begin
 	self.set_crews_dist(self.ap_gps);
 	self.Crews.Sort(sort_crews_by_state_dist);
 	result := TStringList.Create();
-	// for pp in self.Crews do
+
 	for i := 0 to self.Crews.Count - 1 do
 	begin
-		// crew := self.crew(pp);
 		crew := self.crew(self.Crews.Items[i]);
+
+		// if //
+		// (crew.state in [CREW_SVOBODEN, CREW_NAZAKAZE]) //
+		// and (crew.coord <> '') //
+		// // отбрасываем экипаж, УЖЕ назначенный на заказ :)
+		// and not((crew.state = CREW_NAZAKAZE) and (crew.OrderId = Order_ID)) //
+		// then
+		// result.Add(IntToStr(crew.CrewID));
+
 		if //
 			(crew.state in [CREW_SVOBODEN, CREW_NAZAKAZE]) //
 			and (crew.coord <> '') //
-		// отбрасываем экипаж, УЖЕ назначенный на заказ :)
-			and not((crew.state = CREW_NAZAKAZE) and (crew.OrderId = Order_ID)) //
+			and (crew.dist >= 0) //
 			then
-			result.Add(IntToStr(crew.CrewID));
+			result.Add(IntToStr(crew.CrewID))
 	end;
 end;
 
@@ -1281,8 +1307,8 @@ begin
 		// т.к. для экипажа на заказе м.б. несколько
 		// заказов в состоянии исполнения
 
-		if sl.Strings[5] <> '' then
-			continue; // пропускаем заказы с промежуточными остановками;
+		// if sl.Strings[5] <> '' then
+		// continue; // пропускаем заказы с промежуточными остановками;
 
 		crew.OrderId := StrToInt(sl.Strings[1]);
 		// sl.Strings[2]; // - пропускаем
@@ -1300,7 +1326,16 @@ begin
 	begin
 		order := List.order(pp);
 		if self.isCrewIdInList(order.CrewID) then
+		begin
 			self.crewByCrewId(order.CrewID).OrderId := order.ID;
+			self.crewByCrewId(order.CrewID).POrder := Pointer(order);
+		end;
+	end;
+	// убираем сслыки на заказы у свободных экипажей
+	for pp in self.Crews do
+	begin
+		if TCrew(pp).state = CREW_SVOBODEN then
+			TCrew(pp).POrder := nil;
 	end;
 end;
 
@@ -1385,7 +1420,12 @@ begin
 	if //
 		(self.destroy_flag) // заказ отмечен на удаление
 		or (pcrew = nil) //
-		or (self.state <> ORDER_VODITEL_PODTVERDIL) //
+	// or (self.state <> ORDER_VODITEL_PODTVERDIL) //
+		or not(self.state in [ //
+			ORDER_VODITEL_PODTVERDIL, //
+		ORDER_PRIGLASITE_KILIENTA, ORDER_KLIENT_NE_VYSHEL, //
+		ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
+			]) //
 		or (self.CrewID = -1) //
 		or (self.source.isEmpty) //
 		then
@@ -1475,6 +1515,10 @@ begin
 		then
 		exit();
 
+	if self.time_to_end = ORDER_AN_OK then
+		// заказ уже был завершён, незачем считать его
+		exit();
+
 	// проверяем назначенность экипажа и адресов
 	if
 	// (self.state in [ORDER_DONE, ORDER_CANCEL, ORDER_DISCONTNUED]) //
@@ -1505,6 +1549,12 @@ begin
 		and (not crew.is_moved()) // и экипаж не переместился с просчёта на заданное расстояние
 		then // то не пересчитываем, просто ждём, когда экипаж переедет
 		exit();
+
+	if self.dest.gps = '' then
+	begin
+		self.dest.get_gps();
+		exit();
+	end;
 
 	cur_dt := now();
 	ap_dt := source_time_to_datetime(self.source_time);
@@ -1586,6 +1636,12 @@ begin
 	if (self.na_bortu) or (self.state = ORDER_KLIENT_NA_BORTU) then
 	begin
 		gps := self.dest.gps;
+		if pos('Error', gps) > 0 then
+		begin
+			self.dest.gps := '';
+			self.time_to_end := ORDER_BAD_ADRES;
+			exit();
+		end;
 		if gps = '' then // нет координаты у адреса высадки
 		begin
 			self.dest.get_gps();
@@ -1599,13 +1655,18 @@ begin
 		end
 		else
 		begin
-			// забрал-высадил, то делаем заказ завёршенным и экипаж свободным
-			self.time_to_end := 0;
+			if crew.now_in_coord(gps) then
+				// высаживает
+				self.time_to_end := 0
+			else
+				// забрал-высадил, то делаем заказ завёршенным и экипаж свободным
+				self.time_to_end := ORDER_AN_OK;
+
 			// self.state := ORDER_DONE;
 			// self.CrewID := -1; // сбрасываем экипаж в заказе
 			self.stops_time := 0;
-			crew.OrderId := -1;
-			crew.state := CREW_SVOBODEN;
+			// crew.OrderId := -1;
+			// crew.state := CREW_SVOBODEN;
 			exit();
 		end;
 	end;
@@ -1899,11 +1960,39 @@ begin
 	// self.time_to_end := ORDER_WAY_ERROR;
 end;
 
+function TOrder.source_time_without_date : string;
+begin
+	result := '    ' + copy(self.source_time, 12, 8);
+end;
+
 function TOrder.state_as_string : string;
 begin
 	// result := IntToStr(self.state);
 	result := order_states.Values[IntToStr(self.state)];
 	result := StringReplace(result, '_', ' ', [rfReplaceAll]);
+end;
+
+function TOrder.status : string;
+var scol : string;
+begin
+	if (self.time_to_ap = ORDER_AP_OK) or (self.time_to_ap = ORDER_BAD_ADRES) //
+		or (self.time_to_ap >= 0) then
+	begin
+		result := self.time_to_ap_as_string();
+		if self.time_to_ap = ORDER_BAD_ADRES then
+			result := result + ' подачи!'; // self.source.get_as_string();
+	end
+	else
+	begin
+		if self.time_to_end > 0 then
+			result := 'выполняется'
+		else
+		begin
+			result := self.time_to_end_as_string();
+			if self.time_to_end = ORDER_BAD_ADRES then
+				result := result + ' назначения!'; // self.dest.get_as_string();
+		end;
+	end;
 end;
 
 function TOrder.time_as_string(time : Integer) : string;
@@ -1919,10 +2008,10 @@ var prib_dt, ap_dt, cur_dt : TDateTime;
 	s_opoz : string;
 begin
 	if self.time_to_ap = ORDER_AP_OK then
-		result := '!!! забрал '
+		result := '!клиент на борту'
 	else
 		if self.time_to_ap = -1 then
-			result := '# - '
+			result := ''
 		else
 			if self.time_to_ap < 0 then
 			begin
@@ -1931,7 +2020,12 @@ begin
 			end
 			else
 				if self.time_to_ap = 0 then
-					result := '! на месте'
+				begin
+					if self.state = ORDER_VODITEL_PODTVERDIL then
+						result := '!ожидание клиента'
+					else
+						result := 'ожидание клиента'
+				end
 				else
 				begin
 					cur_dt := now();
@@ -1949,10 +2043,10 @@ begin
 						porog := 5;
 						if opozdanie > porog then
 							// песенц опаздываем :)
-							result := '!!! ' + result
+							result := '!!!' + result
 						else
 							// ничо страшного, но волнуемся :)
-							result := '! ' + result;
+							result := '!' + result;
 					end
 					else
 						// result :=  self.time_as_string(self.time_to_ap);
@@ -1963,13 +2057,18 @@ end;
 function TOrder.time_to_end_as_string : string;
 begin
 	case self.time_to_end of
-		- 1 :
-			exit('# - ');
+		ORDER_AN_OK :
+			if self.state in [ORDER_DONE, ORDER_VODITEL_VYPOLNIL_ZAKAZ] then
+				exit('заказ завершён')
+			else
+				exit('!!!заказ завершён');
+		-1 :
+			exit('');
 		0 :
 			if self.state in [ORDER_DONE, ORDER_VODITEL_VYPOLNIL_ZAKAZ] then
-				exit('завершён')
+				exit('заказ завершён')
 			else
-				exit('!!! завершён');
+				exit('!высадка клиента');
 	else // case
 		if self.time_to_end < 0 then
 		begin
@@ -1977,8 +2076,8 @@ begin
 			result := StringReplace(result, '_', ' ', [rfReplaceAll]);
 		end
 		else
-			// result := self.time_as_string(self.time_to_end);
-			exit('выполняется');
+			result := self.time_as_string(self.time_to_end);
+		// exit('выполняется');
 	end; // case
 end;
 

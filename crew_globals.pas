@@ -57,8 +57,10 @@ const ORDER_HAS_STOPS = -16; // заказ с промежут. остановками пока не считается
 
 const ORDER_AP_OK = -128; // экипаж был в АП и уехал (забрал клиента)
 
-const COORDS_BUF_SIZE = '{Last_hour_2}'; // размер буфера координат экипажа, в часах
-	// const COORDS_BUF_SIZE = '{Last_minute_10}'; // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+const ORDER_AN_OK = -192; // экипаж был в адресе назначения и уехал (высадил клиента)
+
+	// const COORDS_BUF_SIZE = '{Last_hour_2}'; // размер буфера координат экипажа, в часах
+const COORDS_BUF_SIZE = '{Last_minute_20}'; // больше не надо, во избежание ошибок туда-сюда
 
 const DEBUG_MEASURE_TIME = '''2011-10-03 13:57:50'''; // for back-up base
 
@@ -81,6 +83,7 @@ type
 		house : string;
 		korpus : string;
 		gps : string;
+		s_color : string; // цвет для некорректных адресов
 		zapros : TZapros;
 		constructor Create(street, house, korpus, gps : string);
 		destructor Destroy; override;
@@ -88,7 +91,9 @@ type
 		procedure Clear();
 		function isEmpty() : boolean;
 		function get_as_string() : string;
+		function get_as_color_string() : string;
 		procedure get_gps();
+		function gps_ok() : boolean;
 	private
 		procedure gps_complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 		// procedure complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
@@ -205,10 +210,11 @@ begin
 	begin
 		if i = 0 then
 			n := 0
-		else if i = (c - 1) then
-			n := -1
 		else
-			n := 1;
+			if i = (c - 1) then
+				n := -1
+			else
+				n := 1;
 		a := TAdres(points.Items[i]);
 		add_s(surl, a.street, a.house, a.korpus, a.gps, n);
 	end;
@@ -457,8 +463,8 @@ begin
 
 	with order_states do
 	begin
-		Append(IntToStr(ORDER_CREW_NO_COORD) + '=%нет_координат');
-		Append(IntToStr(ORDER_BAD_ADRES) + '=%ошибка_адреса');
+		Append(IntToStr(ORDER_CREW_NO_COORD) + '=%нет_координат_экипажа');
+		Append(IntToStr(ORDER_BAD_ADRES) + '=!!!некорректный_адрес');
 		Append(IntToStr(ORDER_WAY_ERROR) + '=%ошибка_расчёта');
 		Append(IntToStr(ORDER_HAS_STOPS) + '=%заказ_с_остановками');
 	end;
@@ -537,6 +543,7 @@ begin
 	self.house := house;
 	self.korpus := korpus;
 	self.gps := gps;
+	self.s_color := '';
 	self.zapros := TZapros.Create();
 	self.zapros.browser.OnNavigateComplete2 := self.gps_complete;
 end;
@@ -545,6 +552,11 @@ destructor TAdres.Destroy;
 begin
 	self.zapros.Free();
 	inherited;
+end;
+
+function TAdres.get_as_color_string : string;
+begin
+	result := self.s_color + self.get_as_string();
 end;
 
 function TAdres.get_as_string : string;
@@ -559,7 +571,6 @@ begin
 		if length(self.korpus) > 0 then
 			result := result + '/' + self.korpus;
 	end;
-	exit(result);
 end;
 
 procedure TAdres.get_gps;
@@ -589,6 +600,15 @@ begin
 	// self.gps := ''
 	// else
 	self.gps := self.zapros.otvet;
+	if pos('Error', self.gps) > 0 then
+		s_color := '!!!'
+	else
+		s_color := '';
+end;
+
+function TAdres.gps_ok : boolean;
+begin
+	result := not((length(self.gps) = 0) or (pos('Error', self.gps) > 0));
 end;
 
 function TAdres.isEmpty : boolean;
@@ -743,10 +763,11 @@ begin
 	begin
 		if i = 0 then
 			n := 0
-		else if i = (c - 1) then
-			n := -1
 		else
-			n := 1;
+			if i = (c - 1) then
+				n := -1
+			else
+				n := 1;
 		a := TAdres(points.Items[i]);
 		add_s(surl, a.street, a.house, a.korpus, a.gps, n);
 	end;

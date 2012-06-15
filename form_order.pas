@@ -211,7 +211,7 @@ begin
 	self.grid_crews.Rows[1].Clear();
 	self.Edit_gps.Text := '';
 	// выводим пустую шапку
-	 self.show_crews();
+	self.show_crews();
 	self.show_order();
 end;
 
@@ -285,6 +285,8 @@ begin
 	add_row(self.grid_order, 'time_to_end', order.time_to_end_as_string());
 	add_row(self.grid_order, 'time_to_ap', order.time_to_ap_as_string());
 	add_row(self.grid_order, 'stops_time', inttostr(order.stops_time));
+	add_row(self.grid_order, 'source.gps', order.source.gps);
+	add_row(self.grid_order, 'dest.gps', order.dest.gps);
 end;
 
 procedure TFormOrder.Timer_get_crewsTimer(Sender : TObject);
@@ -313,7 +315,10 @@ begin
 	begin
 		self.Timer_get_gps.Enabled := false;
 		self.Edit_gps.Text := TOrder(self.POrder).source.gps;
-		self.start_def_times();
+		if pos('Error', TOrder(self.POrder).source.gps) > 0 then
+			ShowMessage('Некорректный адрес подачи!')
+		else
+			self.start_def_times();
 	end;
 end;
 
