@@ -501,7 +501,7 @@ procedure Tform_main.grid_order_currentDrawCell(Sender : TObject; ACol, ARow : I
 	State : TGridDrawState);
 var sub : string;
 begin
-	if (ACol in [1, 4, 5, 6]) and (ARow > 0) then // только для колонок расчёта/статуса
+	if (ACol in [1, 2, 4, 5, 6]) and (ARow > 0) then // только для колонок расчёта/статуса
 		with TStringGrid(Sender) do
 		begin
 			if Cells[ACol, ARow] = '' then
@@ -531,7 +531,7 @@ begin
 							sub := '%';
 						end
 						else
-							Canvas.Brush.color := ifthen(ACol = 1, $00FF00, $FFFFFF);
+							Canvas.Brush.color := ifthen(ACol in [1, 2], $00FF00, $FFFFFF);
 
 			Canvas.FillRect(Rect);
 			Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], sub, ''));
@@ -589,7 +589,7 @@ begin
 					- ColWidths[4] - ColWidths[7] - 24 //
 				) //
 				div 2; // 210
-			ColWidths[5] := IfThen(adr_w > 192, adr_w, 192);
+			ColWidths[5] := ifthen(adr_w > 192, adr_w, 192);
 			ColWidths[6] := ColWidths[5];
 			// ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
 			// - ColWidths[3] - ColWidths[4] - ColWidths[5];

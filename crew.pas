@@ -300,6 +300,7 @@ end;
 
 procedure TCrew.calc_dist(coord : string);
 var coord_from : string;
+	order : TOrder;
 begin
 	self.dist := -1.0; //
 	if (length(coord) = 0) //
@@ -313,8 +314,14 @@ begin
 		// если экипаж на заказе, то рассто€ние мер€ем от точки высадки
 		if self.POrder <> nil then
 			try
-				if TOrder(self.POrder).dest.gps_ok() then
-					coord_from := TOrder(self.POrder).dest.gps;
+				order := TOrder(self.POrder);
+				if (order.time_to_end = ORDER_AN_OK) then
+					// заказ –≈јЋ№Ќќ завершЄн, но водитель ещЄ не м€фкнул
+					// считаем экипаж свободным и мер€ем от текущей координаты
+					coord_from := self.coord
+				else
+					if (order.time_to_end >= 0) and (order.dest.gps_ok()) then
+						coord_from := TOrder(self.POrder).dest.gps;
 			except
 				coord_from := ''; // на вс€кий случай
 			end;
