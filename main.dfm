@@ -3,7 +3,7 @@ object form_main: Tform_main
   Top = 0
   Caption = #1055#1086#1076#1073#1086#1088' '#1086#1087#1090#1080#1084#1072#1083#1100#1085#1086#1075#1086' '#1101#1082#1080#1087#1072#1078#1072' '#1040#1057'-'#1058#1072#1082#1089#1080
   ClientHeight = 381
-  ClientWidth = 770
+  ClientWidth = 805
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -19,7 +19,7 @@ object form_main: Tform_main
     AlignWithMargins = True
     Left = 3
     Top = 3
-    Width = 764
+    Width = 799
     Height = 375
     Align = alClient
     ColumnCollection = <
@@ -58,12 +58,13 @@ object form_main: Tform_main
         SizeStyle = ssAuto
       end>
     TabOrder = 0
+    ExplicitWidth = 764
     object panel_ap: TPanel
       AlignWithMargins = True
       Left = 5
       Top = 5
-      Width = 754
-      Height = 27
+      Width = 789
+      Height = 28
       Margins.Left = 4
       Margins.Top = 4
       Margins.Right = 4
@@ -72,20 +73,20 @@ object form_main: Tform_main
       AutoSize = True
       TabOrder = 0
       DesignSize = (
-        754
-        27)
+        789
+        28)
       object Button_orders_coords: TButton
-        Left = 295
+        Left = 215
         Top = 1
-        Width = 113
+        Width = 98
         Height = 25
-        Caption = #1079#1072#1082#1072#1079#1099'/'#1082#1086#1086#1088#1076#1080#1085#1072#1090#1099
+        Caption = #1079#1072#1082#1072#1079#1099'/'#1082#1086#1086#1088#1076'-'#1090#1099
         TabOrder = 0
         OnClick = Button_orders_coordsClick
       end
       object cb_real_base: TCheckBox
-        Left = 718
-        Top = 4
+        Left = 753
+        Top = 5
         Width = 27
         Height = 17
         Anchors = [akTop, akRight]
@@ -97,7 +98,7 @@ object form_main: Tform_main
       end
       object button_show_sl: TButton
         Left = 29
-        Top = 1
+        Top = 2
         Width = 36
         Height = 25
         Caption = 'Debug'
@@ -105,7 +106,7 @@ object form_main: Tform_main
         OnClick = button_show_slClick
       end
       object Button_show_order: TButton
-        Left = 414
+        Left = 319
         Top = 1
         Width = 20
         Height = 25
@@ -114,8 +115,8 @@ object form_main: Tform_main
         OnClick = Button_show_orderClick
       end
       object cb_show_crews: TCheckBox
-        Left = 440
-        Top = 3
+        Left = 547
+        Top = 4
         Width = 65
         Height = 17
         Anchors = [akTop, akRight]
@@ -125,32 +126,32 @@ object form_main: Tform_main
       end
       object Panel_browser: TPanel
         Left = 6
-        Top = 4
+        Top = 5
         Width = 17
         Height = 17
         TabOrder = 5
       end
       object Button_get_time_to_ap: TButton
-        Left = 190
-        Top = 1
-        Width = 99
+        Left = 151
+        Top = 2
+        Width = 58
         Height = 24
-        Caption = #1074#1088#1077#1084#1103' '#1076#1086' '#1087#1086#1076#1072#1095#1080
+        Caption = #1076#1086' '#1087#1086#1076#1072#1095#1080
         TabOrder = 6
         OnClick = Button_get_time_to_apClick
       end
       object Button_get_time_to_end: TButton
         Left = 71
-        Top = 1
-        Width = 113
+        Top = 2
+        Width = 74
         Height = 24
-        Caption = #1074#1088#1077#1084#1103' '#1076#1086' '#1086#1082#1086#1085#1095#1072#1085#1080#1103
+        Caption = #1076#1086' '#1086#1082#1086#1085#1095#1072#1085#1080#1103
         TabOrder = 7
         OnClick = Button_get_time_to_endClick
       end
       object cb_timers_times: TCheckBox
-        Left = 511
-        Top = 3
+        Left = 618
+        Top = 4
         Width = 65
         Height = 17
         Anchors = [akTop, akRight]
@@ -161,8 +162,8 @@ object form_main: Tform_main
         OnClick = cb_timers_timesClick
       end
       object cb_timers_orders_coords: TCheckBox
-        Left = 591
-        Top = 3
+        Left = 689
+        Top = 4
         Width = 58
         Height = 17
         Anchors = [akTop, akRight]
@@ -172,11 +173,31 @@ object form_main: Tform_main
         TabOrder = 9
         OnClick = cb_timers_orders_coordsClick
       end
+      object cb_show_times_to_end: TCheckBox
+        Left = 448
+        Top = 4
+        Width = 93
+        Height = 17
+        Anchors = [akTop, akRight]
+        Caption = #1044#1086' '#1086#1082#1086#1085#1095#1072#1085#1080#1103
+        TabOrder = 10
+        OnClick = cb_show_crewsClick
+      end
+      object cb_show_orders_id: TCheckBox
+        Left = 381
+        Top = 4
+        Width = 68
+        Height = 17
+        Anchors = [akTop, akRight]
+        Caption = 'OrdersID'
+        TabOrder = 11
+        OnClick = cb_show_crewsClick
+      end
     end
     object GridPanel_grids: TGridPanel
       Left = 1
       Top = 36
-      Width = 762
+      Width = 797
       Height = 319
       Align = alClient
       ColumnCollection = <
@@ -203,29 +224,33 @@ object form_main: Tform_main
           Value = 100.000000000000000000
         end>
       TabOrder = 1
+      ExplicitWidth = 762
       object GroupBox_order: TGroupBox
         Left = 1
         Top = 1
-        Width = 510
+        Width = 545
         Height = 317
         Align = alClient
         Caption = #1047#1072#1082#1072#1079#1099':'
         TabOrder = 0
+        ExplicitWidth = 510
         object PageControl_orders: TPageControl
           Left = 2
           Top = 15
-          Width = 506
+          Width = 541
           Height = 300
           ActivePage = TabSheet_current
           Align = alClient
           TabOrder = 0
+          ExplicitWidth = 506
           object TabSheet_current: TTabSheet
             Caption = #1058#1077#1082#1091#1097#1080#1077':'
+            ExplicitWidth = 498
             object grid_order_current: TStringGrid
               AlignWithMargins = True
               Left = 3
               Top = 3
-              Width = 492
+              Width = 527
               Height = 266
               Align = alClient
               ColCount = 3
@@ -244,20 +269,18 @@ object form_main: Tform_main
               TabOrder = 0
               OnDblClick = grid_order_currentDblClick
               OnDrawCell = grid_order_currentDrawCell
+              ExplicitWidth = 492
             end
           end
           object TabSheet_prior: TTabSheet
             Caption = #1055#1088#1077#1076#1074#1072#1088#1080#1090#1077#1083#1100#1085#1099#1077
             ImageIndex = 1
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
+            ExplicitWidth = 498
             object grid_order_prior: TStringGrid
               AlignWithMargins = True
               Left = 3
               Top = 3
-              Width = 492
+              Width = 527
               Height = 266
               Align = alClient
               ColCount = 3
@@ -275,18 +298,20 @@ object form_main: Tform_main
               ParentFont = False
               TabOrder = 0
               OnDblClick = grid_order_priorDblClick
+              ExplicitWidth = 492
             end
           end
         end
       end
       object GroupBox_crew: TGroupBox
-        Left = 511
+        Left = 546
         Top = 1
         Width = 250
         Height = 317
         Align = alClient
         Caption = #1044#1086#1089#1090#1091#1087#1085#1099#1077' '#1101#1082#1080#1087#1072#1078#1080':'
         TabOrder = 1
+        ExplicitLeft = 511
         object grid_crews: TStringGrid
           AlignWithMargins = True
           Left = 5
@@ -309,13 +334,14 @@ object form_main: Tform_main
     object stbar_main: TStatusBar
       Left = 1
       Top = 355
-      Width = 762
+      Width = 797
       Height = 19
       Align = alClient
       Panels = <
         item
           Width = 100
         end>
+      ExplicitWidth = 762
     end
   end
   object db_main: TIBDatabase
@@ -336,7 +362,7 @@ object form_main: Tform_main
   object ibquery_main: TIBQuery
     Database = db_main
     Transaction = ta_main
-    Left = 560
+    Left = 584
     Top = 216
   end
   object Timer_coords: TTimer
@@ -370,7 +396,7 @@ object form_main: Tform_main
   object ibquery_coords: TIBQuery
     Database = db_main
     Transaction = ta_coords
-    Left = 688
+    Left = 704
     Top = 208
   end
   object ta_coords: TIBTransaction

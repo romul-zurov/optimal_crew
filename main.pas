@@ -41,6 +41,8 @@ type
 		ta_coords : TIBTransaction;
 		cb_timers_times : TCheckBox;
 		cb_timers_orders_coords : TCheckBox;
+		cb_show_times_to_end : TCheckBox;
+		cb_show_orders_id : TCheckBox;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -567,16 +569,15 @@ begin
 			Cells[6, 0] := 'Адрес назначения';
 			Cells[7, 0] := 'Время подачи';
 
-			if self.cb_show_crews.Checked then
-			begin
-				ColWidths[0] := 50;
-				ColWidths[2] := 100;
-			end
+			if self.cb_show_times_to_end.Checked then
+				ColWidths[2] := 200
 			else
-			begin
-				ColWidths[0] := 0;
 				ColWidths[2] := 0;
-			end;
+
+			if self.cb_show_orders_id.Checked then
+				ColWidths[0] := 50
+			else
+				ColWidths[0] := 0;
 
 			ColWidths[1] := 240; // 160;
 
@@ -625,7 +626,12 @@ begin
 				continue;
 
 			grid_order.Cells[0, row] := IntToStr(order.id); // не отображается по умолчанию
+
 			grid_order.Cells[1, row] := order.status();
+			if self.cb_show_times_to_end.Checked then
+				grid_order.Cells[1, row] := grid_order.Cells[1, row] //
+					+ ' ' + time_without_date(order.datetime_of_time_to_ap);
+
 			grid_order.Cells[2, row] := order.time_to_end_as_string(); // не отображается по умолчанию
 			grid_order.Cells[3, row] := order.state_as_string();
 

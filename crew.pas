@@ -28,7 +28,10 @@ type
 		dest : TAdres; // address to
 		source_time : string; // врем€ подачи экипажа
 		time_to_end : Integer; // врем€ до окончани€ заказа в минутах
+		datetime_of_time_to_end : TDateTime; // момент, когда считалось врем€ до окончани€
+		// нужно дл€ отладки
 		time_to_ap : Integer; // врем€ до подъезда к адресу подачи в минутах
+		datetime_of_time_to_ap : TDateTime; // момент, когда считалось врем€ до ап
 		deleted : boolean; // признак удалЄнного или отменЄнного заказа
 		query : TIBQuery;
 		points_ap : TList;
@@ -38,7 +41,7 @@ type
 		stops_time : Integer; // врем€ на остановки экипажа на заказе в минутах
 		na_bortu : boolean; // признак, что клиент на борту при исполнении заказа
 		pcrew : Pointer; // указатель на экипаж, нужен в def_time_to_end и set_time_to_end
-		datetime_of_time_to_ap : TDateTime; // момент, когда считалось врем€ до ап
+
 		stop_int_count : Integer; // количество промежуточных остановок в заказе
 		destroy_flag : boolean; // флаг, что заказ можно удал€ть из списка
 		destroy_time : string; // врем€, когда установлен флаг удалени€. заказ
@@ -1277,10 +1280,8 @@ begin
 		crew.Code := sl.Strings[2];
 		crew.name := sl.Strings[3];
 		crew.state := StrToInt(sl.Strings[4]);
-		// if crew.state = CREW_SVOBODEN then
-		// crew.state_as_string := '—вободен'
-		// else
-		// crew.state_as_string := 'Ќа заказе';
+		if crew.state = 11 then // "на заказе с бордюра" приравниваем к "свободен"
+			crew.state := CREW_SVOBODEN;
 	end;
 	FreeAndNil(sl);
 	exit(0);
@@ -1407,7 +1408,8 @@ begin
 	self.stops_time := 0;
 	self.na_bortu := false;
 	self.pcrew := nil;
-	self.datetime_of_time_to_ap := IncMinute(now(), -2);
+	self.datetime_of_time_to_ap := IncHour(now(), -1);
+	self.datetime_of_time_to_end := self.datetime_of_time_to_ap;
 	self.stop_int_count := 0;
 	destroy_flag := false; // флаг, что заказ можно удал€ть из списка
 	destroy_time := '';
@@ -1440,6 +1442,10 @@ begin
 		self.time_to_ap := -1;
 		exit();
 	end;
+
+	if self.time_to_ap = ORDER_AP_OK then
+		// клиент забран, незачем считать его
+		exit();
 
 	crew := TCrew(pcrew);
 	if crew = nil then
@@ -1679,6 +1685,7 @@ begin
 	end;
 
 	self.pcrew := pcrew;
+	self.datetime_of_time_to_end := now(); // засекаем момент вз€ти€ времени
 	self.way_to_end.get_way_time_dist(self.points_end);
 end;
 
@@ -1969,7 +1976,7 @@ end;
 
 function TOrder.source_time_without_date : string;
 begin
-	result := '    ' + copy(self.source_time, 12, 8);
+	result := '    ' + time_without_date(self.source_time);
 end;
 
 function TOrder.state_as_string : string;
@@ -2083,7 +2090,8 @@ begin
 			result := StringReplace(result, '_', ' ', [rfReplaceAll]);
 		end
 		else
-			result := self.time_as_string(self.time_to_end);
+			result := self.time_as_string(self.time_to_end) //
+				+ ' ' + time_without_date(self.datetime_of_time_to_end);
 		// exit('выполн€етс€');
 	end; // case
 end;

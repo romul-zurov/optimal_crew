@@ -23,6 +23,8 @@ function reverseStringList(var list : TStringList) : Integer;
 function param64(s : string) : string;
 function date_to_full(date : string) : string; overload;
 function date_to_full(date : TDateTime) : string; overload;
+function time_without_date(full_date : string) : string; overload;
+function time_without_date(dt : TDateTime) : string; overload;
 function source_time_to_datetime(date : string) : TDateTime;
 function get_substr(value : string; sub1, sub2 : string) : string;
 procedure RemoveDuplicates(const stringList : TStringList);
@@ -54,8 +56,9 @@ begin
 		if pos('-', k) > 0 then // отбрасываем квартиру
 			k := get_substr(k, '', '-');
 	end
-	else if pos('-', h) > 0 then // отбрасываем квартиру
-		h := get_substr(h, '', '-');
+	else
+		if pos('-', h) > 0 then // отбрасываем квартиру
+			h := get_substr(h, '', '-');
 
 end;
 
@@ -116,6 +119,16 @@ var s : string;
 begin
 	DateTimeToString(s, 'yyyy-mm-dd hh:nn:ss', date);
 	exit(s);
+end;
+
+function time_without_date(full_date : string) : string;
+begin
+	result := '    ' + copy(full_date, 12, 8);
+end;
+
+function time_without_date(dt : TDateTime) : string;
+begin
+	result := time_without_date(date_to_full(dt));
 end;
 
 function source_time_to_datetime(date : string) : TDateTime;
@@ -318,10 +331,12 @@ begin
 	result := value;
 	if pos('{Last_minute_', value) > 0 then
 		result := replace_minute(value, MyTime)
-	else if pos('{Last_hour_', value) > 0 then
-		result := replace_hour(value, MyTime)
-	else if pos('{Last_day_', value) > 0 then
-		result := replace_day(value, MyTime);
+	else
+		if pos('{Last_hour_', value) > 0 then
+			result := replace_hour(value, MyTime)
+		else
+			if pos('{Last_day_', value) > 0 then
+				result := replace_day(value, MyTime);
 end;
 
 procedure RemoveDuplicates(const stringList : TStringList);
