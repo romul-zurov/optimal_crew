@@ -25,7 +25,9 @@ type
 		state : Integer; // -1 - not defined, 0 - принят, маршрут задан
 		// .                 1 - в работе, 2 - выполнен;
 		source : TAdres; // address from
+		source_raw : string; // address from raw-format
 		dest : TAdres; // address to
+		dest_raw : string; // address to raw-format
 		source_time : string; // время подачи экипажа
 		time_to_end : Integer; // время до окончания заказа в минутах
 		datetime_of_time_to_end : TDateTime; // момент, когда считалось время до окончания
@@ -1393,7 +1395,9 @@ begin
 	self.state := -1; // -1 - not defined, 0 - принят, маршрут задан
 	// .                 1 - в работе, 2 - выполнен, остальное см. crew_globals;
 	self.source := TAdres.Create('', '', '', ''); // address from
+	self.source_raw := '';
 	self.dest := TAdres.Create('', '', '', ''); // address to
+	self.dest_raw := '';
 	self.source_time := ''; // время подачи экипажа
 	self.time_to_end := -1; // время до окончания заказа в минутах
 	self.time_to_ap := -1; // время до подъезда к адресу подачи в минутах
@@ -1744,30 +1748,58 @@ begin
 	res.Text := StringReplace(res.Text, '|', #13#10, [rfReplaceAll]);
 
 	if res.Strings[0] <> '' then
-		self.CrewID := StrToInt(res.Strings[0]);
-	self.state := StrToInt(res.Strings[1]); self.source_time := date_to_full(res.Strings[2]);
-	return_adres(res.Strings[3], s, h, k); self.source.setAdres(s, h, k, self.source.gps);
-	return_adres(res.Strings[4], s, h, k); self.dest.setAdres(s, h, k, self.dest.gps);
+		self.CrewID := StrToInt(res.Strings[0])
+	else
+	begin
+		if self.CrewID > -1 then
+		begin
+			// снимаем экипаж с заказа
+			self.time_to_end := -1;
+			self.time_to_ap := -1;
+			self.pcrew := nil;
+		end;
+		self.CrewID := -1; // !!!
+	end;
+	try
+		self.state := StrToInt(res.Strings[1]);
+	except
+		self.state := -1;
+	end;
+
+	self.source_time := date_to_full(res.Strings[2]);
+
+	self.source.set_raw_adres(res.Strings[3]);
+	self.dest.set_raw_adres(res.Strings[4]);
+	// return_adres(res.Strings[3], s, h, k);
+	// self.source.setAdres(s, h, k, self.source.gps);
+	// return_adres(res.Strings[4], s, h, k);
+	// self.dest.setAdres(s, h, k, self.dest.gps);
 
 	// проверяем удалённые и отменённые заказы
 	if (length(res.Strings[5]) = 0) or (res.Strings[5] = '0') then
 		self.deleted := false
 	else
 		self.deleted := true;
+
 	// предварительно назначенный экипаж:
 	if (length(res.Strings[6]) > 0) then
 		try
 			self.prior_CrewId := StrToInt(res.Strings[6]);
 		except
 			self.prior_CrewId := -1;
-		end;
+		end
+	else
+		self.prior_CrewId := -1; // сбрасываем, если нет
+
 	// кол-во промежут. остановок
 	if (length(res.Strings[7]) > 0) then
 		try
 			self.stop_int_count := StrToInt(res.Strings[7]);
 		except
 			self.stop_int_count := 0;
-		end;
+		end
+	else
+		self.stop_int_count := 0; // сбрасываем, если нет
 
 	exit(result);
 end;

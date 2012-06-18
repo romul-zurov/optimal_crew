@@ -28,38 +28,12 @@ function time_without_date(dt : TDateTime) : string; overload;
 function source_time_to_datetime(date : string) : TDateTime;
 function get_substr(value : string; sub1, sub2 : string) : string;
 procedure RemoveDuplicates(const stringList : TStringList);
-procedure return_adres(value : string; var s, h, k : string);
+
 
 implementation
 
 procedure pass;
 begin
-end;
-
-procedure return_adres(value : string; var s, h, k : string);
-begin
-	s := ''; h := ''; k := '';
-	s := get_substr(value, '', ',');
-	if s = '' then
-	begin
-		// если адрес типа "финляндский вокзал" или "пулково-1"
-		// то вертаем его в улице и выходим
-		s := value;
-		exit();
-	end;
-	h := get_substr(value, ',', '');
-	if pos('/', h) > 0 then // если есть номер корпуса
-	begin
-		// выделяем корпус
-		k := get_substr(h, '/', '');
-		h := get_substr(h, '', '/');
-		if pos('-', k) > 0 then // отбрасываем квартиру
-			k := get_substr(k, '', '-');
-	end
-	else
-		if pos('-', h) > 0 then // отбрасываем квартиру
-			h := get_substr(h, '', '-');
-
 end;
 
 function reverseStringList(var list : TStringList) : Integer;

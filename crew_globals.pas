@@ -79,6 +79,7 @@ type
 	end;
 
 	TAdres = class(TObject)
+		raw_adres : string; // адрес в произвольном виде
 		street : string;
 		house : string;
 		korpus : string;
@@ -88,6 +89,7 @@ type
 		constructor Create(street, house, korpus, gps : string);
 		destructor Destroy; override;
 		procedure setAdres(street, house, korpus, gps : string);
+		procedure set_raw_adres(adres : string);
 		procedure Clear();
 		function isEmpty() : boolean;
 		function get_as_string() : string;
@@ -539,6 +541,7 @@ end;
 constructor TAdres.Create(street, house, korpus, gps : string);
 begin
 	inherited Create;
+	self.raw_adres := '';
 	self.street := street;
 	self.house := house;
 	self.korpus := korpus;
@@ -556,7 +559,8 @@ end;
 
 function TAdres.get_as_color_string : string;
 begin
-	result := self.s_color + self.get_as_string();
+	// result := self.s_color + self.get_as_string();
+	result := self.s_color + self.raw_adres;
 end;
 
 function TAdres.get_as_string : string;
@@ -626,6 +630,44 @@ begin
 	self.house := house;
 	self.korpus := korpus;
 	self.gps := gps;
+end;
+
+procedure TAdres.set_raw_adres(adres : string);
+	procedure ret_adr(var value : string; var s, h, k : string);
+	begin
+		s := ''; h := ''; k := '';
+		s := get_substr(value, '', ',');
+		if s = '' then
+		begin
+			// если адрес типа "финляндский вокзал" или "пулково-1"
+			// то вертаем его в улице и выходим
+			s := value;
+			exit();
+		end;
+		h := get_substr(value, ',', '');
+		if pos('/', h) > 0 then // если есть номер корпуса
+		begin
+			// выделяем корпус
+			k := get_substr(h, '/', '');
+			h := get_substr(h, '', '/');
+			if pos('-', k) > 0 then // отбрасываем квартиру
+				k := get_substr(k, '', '-');
+		end
+		else
+			if pos('-', h) > 0 then // отбрасываем квартиру
+				h := get_substr(h, '', '-');
+	end;
+
+var
+	s, h, k : string;
+begin
+	if adres = self.raw_adres then
+		exit(); // если адрес тот же, что и раньше, то ничего
+
+	// иначе определяем новый и сбрасываем кооординату
+	self.raw_adres := adres;
+	ret_adr(adres, s, h, k);
+	self.setAdres(s, h, k, '');
 end;
 
 procedure show_status(status : string);
