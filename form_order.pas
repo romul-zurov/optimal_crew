@@ -70,7 +70,7 @@ procedure TFormOrder.grid_crewsDrawCell(Sender : TObject; ACol, ARow : Integer; 
 	State : TGridDrawState);
 var sub : string;
 begin
-	if (ACol in [3, 4]) and (ARow > 0) then // только для колонок расчёта/статуса и для не-заглавных строк
+	if (ACol in [3, 4, 5]) and (ARow > 0) then // только для колонок расчёта/статуса и для не-заглавных строк
 		with TStringGrid(Sender) do
 		begin
 			sub := '';
@@ -117,7 +117,7 @@ begin
 		if first then
 			cr.set_time(-1, -1);
 		if cr.State in [CREW_SVOBODEN, CREW_NAZAKAZE] then
-			sl.Add(cr.ret_data_to_ap(TOrder(POrder).source_time));
+			sl.Add(cr.ret_data_to_ap(TOrder(POrder).source_time, TOrder(POrder).raw_dist_way));
 	end;
 end;
 
@@ -170,21 +170,23 @@ begin
 	with self.grid_crews do
 	begin
 		RowCount := 2;
-		ColCount := 5;
+		ColCount := 6;
 		FixedRows := 1;
 		ColWidths[0] := 64; // 50; // прячем :)
 		// ColWidths[1] := 200;
 		ColWidths[2] := 80;
 		ColWidths[3] := 200;
 		ColWidths[4] := 120; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
+		ColWidths[5] := 80;
 		ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
-			- ColWidths[3] - ColWidths[4];
+			- ColWidths[3] - ColWidths[4] - ColWidths[5];
 
 		Cells[0, 0] := 'По прямой';
 		Cells[1, 0] := 'Экипаж';
 		Cells[2, 0] := 'Состояние';
 		Cells[3, 0] := 'Время подачи';
 		Cells[4, 0] := 'Расстояние';
+		Cells[5, 0] := 'Перерасход';
 	end;
 
 	r := 1;
@@ -196,7 +198,8 @@ begin
 			Cells[1, r] := get_substr(s, '|', '||');
 			Cells[2, r] := get_substr(s, '||', '|||');
 			Cells[3, r] := get_substr(s, '|||', '||||');
-			Cells[4, r] := get_substr(s, '||||', ''); // + 'км';
+			Cells[4, r] := get_substr(s, '||||', '|||||'); // + 'км';
+			Cells[5, r] := get_substr(s, '|||||', '');
 			inc(r);
 		end;
 end;
@@ -287,6 +290,7 @@ begin
 	add_row(self.grid_order, 'stops_time', inttostr(order.stops_time));
 	add_row(self.grid_order, 'source.gps', order.source.gps);
 	add_row(self.grid_order, 'dest.gps', order.dest.gps);
+	add_row(self.grid_order, 'raw_dist_way', FloatToStrF(order.raw_dist_way, ffFixed, 8, 1));
 end;
 
 procedure TFormOrder.Timer_get_crewsTimer(Sender : TObject);

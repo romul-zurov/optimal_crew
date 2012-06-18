@@ -38,7 +38,6 @@ type
 		query : TIBQuery;
 		way_to_ap : TWay;
 		way_to_end : TWay;
-		way_source_dest : TWay; // собс-но главный маршрут АП --> АН
 		stops_time : Integer; // время на остановки экипажа на заказе в минутах
 		na_bortu : boolean; // признак, что клиент на борту при исполнении заказа
 		pcrew : Pointer; // указатель на экипаж, нужен в def_time_to_end и set_time_to_end
@@ -46,6 +45,7 @@ type
 		stop_int_count : Integer; // количество промежуточных остановок в заказе
 		destroy_flag : boolean; // флаг, что заказ можно удалять из списка
 		destroy_time : string; // время, когда установлен флаг удаления. заказ
+		raw_dist_way : double; // условная "длина" маршрута, определяемая из его цены, км
 		// будет удалён через ORDER_DESTROY_TIME
 
 		// form : TFormOrder; // form to show order
@@ -114,7 +114,7 @@ type
 		ap : TAdres; // адрес подачи экипажа
 		way_to_ap : TWay;
 		cur_pos : TAdres; // тек. положение экипажа
-		points : TList;
+		// points : TList;
 		POrder : Pointer; // указатель на заказ
 
 		constructor Create(GpsId : Integer);
@@ -136,14 +136,17 @@ type
 		procedure show_status(s : string);
 		procedure reset_old_coord();
 		function ret_data() : string;
-		function ret_data_to_ap(source_time : string) : string;
+		function ret_data_to_ap(source_time : string; half_dist_way : double) : string;
 		procedure def_time_to_ap(var polist : Pointer);
+		function pererasxod_color(half_dist_way : double) : string;
 	private
+		rasxod : double;
 		function time_to_str(time : Integer) : string;
 		function time_str() : string; // в виде '00000056'
 		function dist_way_str() : string; // в виде '000015.6' для сортировки TStringList.sort()
 		function dist_str() : string;
 		procedure set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+		function pererasxod(half_dist_way : double) : Integer; // -1 - not defined, 0 - ЗЗ, 1 - ЖЗ, 2 - КЗ
 	end;
 
 	TCrewList = class(TObject)
@@ -365,7 +368,7 @@ begin
 	ap := TAdres.Create('', '', '', ''); // адрес подачи
 	self.way_to_ap := TWay.Create();
 	self.way_to_ap.zapros.browser.OnNavigateComplete2 := self.set_time_to_ap;
-	self.points := TList.Create();
+	// self.points := TList.Create();
 	self.cur_pos := TAdres.Create('', '', '', '');
 	self.POrder := nil;
 end;
@@ -383,19 +386,19 @@ begin
 		exit();
 	end;
 	self.cur_pos.setAdres('', '', '', self.coord); // начало маршрута - текущая координата машины
-	self.points.Clear(); // список точек маршрута
+	self.way_to_ap.points.Clear(); // список точек маршрута
 	if self.state = CREW_SVOBODEN then
 	begin
-		self.points.Add(Pointer(cur_pos));
+		self.way_to_ap.points.Add(Pointer(cur_pos));
 		self.POrder := nil; // на случай всяких там инцестов в self.set_time_to_ap
 	end
 	else
 	begin
 		self.POrder := TOrderList(polist).find_by_Id(self.OrderId);
-		self.points.Add(Pointer(TOrder(self.POrder).dest));
+		self.way_to_ap.points.Add(Pointer(TOrder(self.POrder).dest));
 	end;
 
-	self.points.Add(Pointer(self.ap));
+	self.way_to_ap.points.Add(Pointer(self.ap));
 	// вызываем расчёт
 	self.way_to_ap.get_way_time_dist();
 end;
@@ -637,6 +640,39 @@ begin
 	result := get_dist_from_coord(coord, self.coord) < CREW_RADIUS;
 end;
 
+function TCrew.pererasxod(half_dist_way : double) : Integer;
+begin
+	result := -1;
+	self.rasxod := -1.0;
+	if (self.dist_way < 0) or (self.dist < 0) then
+		exit();
+
+	self.rasxod := half_dist_way / 2.0;
+
+	if self.dist_way < self.rasxod then
+		exit(0)
+	else
+		if self.dist_way < 10.0 then
+			exit(1)
+		else
+			exit(2);
+end;
+
+function TCrew.pererasxod_color(half_dist_way : double) : string;
+begin
+	result := '';//FloatToStrF(self.rasxod, ffFixed, 8, 1);
+	case self.pererasxod(half_dist_way) of
+		0 :
+			result := '*' + result;
+		1 :
+			result := '!' + result;
+		2 :
+			result := '!!!' + result;
+	else
+		result := '#' + result;
+	end;
+end;
+
 function TCrew.set_current_coord() : Integer;
 var coord_stime, cur_stime : string;
 begin
@@ -674,7 +710,7 @@ begin
 		+ self.dist_way_as_string;
 end;
 
-function TCrew.ret_data_to_ap(source_time : string) : string;
+function TCrew.ret_data_to_ap(source_time : string; half_dist_way : double) : string;
 var s_opozdanie, scolor, prefix, res : string;
 	dt, ap_dt : TDateTime;
 	opozdanie : Integer;
@@ -735,9 +771,10 @@ begin
 		+ self.dist_str() + '|' // !!!
 		+ self.name + '||' //
 		+ self.state_as_string() + '|||' //
-		+ scolor + s_opozdanie //
-		+ '||||' //
-		+ scolor + self.dist_way_as_string();
+		+ scolor + s_opozdanie + '||||' //
+		+ scolor + self.dist_way_as_string() + '|||||' //
+		+ self.pererasxod_color(half_dist_way) //
+		;
 end;
 
 procedure TCrew.set_time(m : Integer; d : double);
@@ -1404,7 +1441,6 @@ begin
 	self.deleted := false;
 	self.way_to_ap := TWay.Create();
 	self.way_to_end := TWay.Create();
-	self.way_source_dest := TWay.Create();
 	self.way_to_ap.zapros.browser.OnNavigateComplete2 := self.set_time_to_ap;
 	self.way_to_end.zapros.browser.OnNavigateComplete2 := self.set_time_to_end;
 	self.stops_time := 0;
@@ -1413,8 +1449,10 @@ begin
 	self.datetime_of_time_to_ap := IncHour(now(), -1);
 	self.datetime_of_time_to_end := self.datetime_of_time_to_ap;
 	self.stop_int_count := 0;
-	destroy_flag := false; // флаг, что заказ можно удалять из списка
-	destroy_time := '';
+	self.destroy_flag := false; // флаг, что заказ можно удалять из списка
+	self.destroy_time := '';
+	self.raw_dist_way := -1.0;
+
 	// form := TFormOrder.Create(nil);
 end;
 
@@ -1707,9 +1745,6 @@ begin
 	// self.way_to_end.zapros.browser.Stop();
 	self.way_to_end.Free();
 
-	self.way_to_ap.points.Free();
-	self.way_to_end.points.Free();
-
 	self.pcrew := nil;
 
 	inherited;
@@ -1733,6 +1768,7 @@ begin
 		+ ' , ORDERS.DELETED ' // deleted and canceled orders
 		+ ' , ORDERS.PRIOR_CREW_ID ' // prior_crew
 		+ ' , ORDERS.STOPS_COUNT ' // кол-во промежут. остановок
+		+ ' , ORDERS.SUMM ' // Стоимость заказа без учета скидок(наценок) для расчёта длины маршрута
 	// + ' , ORDER_COORDS.COORDS_ADDR   ' // координаты адресов заказа, пока не исп.
 		+ ' from ORDERS ' //
 	// + ' , ORDER_COORDS ' //
@@ -1798,6 +1834,15 @@ begin
 		end
 	else
 		self.stop_int_count := 0; // сбрасываем, если нет
+
+	if (length(res.Strings[8]) > 0) then
+		try
+			self.raw_dist_way := dotStrtoFloat(res.Strings[8]) / RUB_ZA_KM;
+		except
+			self.raw_dist_way := -1.0;
+		end
+	else
+		self.raw_dist_way := -1.0; // сбрасываем, если нет
 
 	exit(result);
 end;
