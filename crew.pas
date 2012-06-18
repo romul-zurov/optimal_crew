@@ -36,10 +36,9 @@ type
 		datetime_of_time_to_ap : TDateTime; // момент, когда считалось время до ап
 		deleted : boolean; // признак удалённого или отменённого заказа
 		query : TIBQuery;
-		points_ap : TList;
-		points_end : TList;
 		way_to_ap : TWay;
 		way_to_end : TWay;
+		way_source_dest : TWay; // собс-но главный маршрут АП --> АН
 		stops_time : Integer; // время на остановки экипажа на заказе в минутах
 		na_bortu : boolean; // признак, что клиент на борту при исполнении заказа
 		pcrew : Pointer; // указатель на экипаж, нужен в def_time_to_end и set_time_to_end
@@ -398,7 +397,7 @@ begin
 
 	self.points.Add(Pointer(self.ap));
 	// вызываем расчёт
-	self.way_to_ap.get_way_time_dist(self.points);
+	self.way_to_ap.get_way_time_dist();
 end;
 
 function TCrew.del_old_coords : Integer;
@@ -1405,8 +1404,7 @@ begin
 	self.deleted := false;
 	self.way_to_ap := TWay.Create();
 	self.way_to_end := TWay.Create();
-	self.points_ap := TList.Create();
-	self.points_end := TList.Create();
+	self.way_source_dest := TWay.Create();
 	self.way_to_ap.zapros.browser.OnNavigateComplete2 := self.set_time_to_ap;
 	self.way_to_end.zapros.browser.OnNavigateComplete2 := self.set_time_to_end;
 	self.stops_time := 0;
@@ -1491,11 +1489,11 @@ begin
 		// заполняем точки маршрута
 		cur_pos := TAdres.Create('', '', '', crew.coord);
 		// начало маршрута - текущая координата машины
-		self.points_ap.Clear(); // список точек маршрута
-		self.points_ap.Add(Pointer(cur_pos));
-		self.points_ap.Add(Pointer(self.source));
+		self.way_to_ap.points.Clear(); // список точек маршрута
+		self.way_to_ap.points.Add(Pointer(cur_pos));
+		self.way_to_ap.points.Add(Pointer(self.source));
 		// вызываем расчёт
-		self.way_to_ap.get_way_time_dist(self.points_ap);
+		self.way_to_ap.get_way_time_dist();
 	end
 	else
 	begin
@@ -1581,10 +1579,10 @@ begin
 		dobavka := 0;
 
 	self.stops_time := 0;
-	self.points_end.Clear(); // список точек маршрута
+	self.way_to_end.points.Clear(); // список точек маршрута
 	cur_pos := TAdres.Create('', '', '', crew.coord);
 	// начало маршрута - текущая координата машины
-	self.points_end.Add(Pointer(cur_pos));
+	self.way_to_end.points.Add(Pointer(cur_pos));
 
 	// если экипаж на заказе, то проверяем, был ли он в точках source и dest
 	// если нет - добавляем их в маршрут и прибавляем время на остановки
@@ -1605,9 +1603,9 @@ begin
 				end
 				else // определяем точки и паузу
 				begin
-					self.points_end.Clear(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-					self.points_end.Add(Pointer(self.source));
-					self.points_end.Add(Pointer(self.dest));
+					self.way_to_end.points.Clear(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+					self.way_to_end.points.Add(Pointer(self.source));
+					self.way_to_end.points.Add(Pointer(self.dest));
 					self.stops_time := ifthen(dobavka > self.time_to_ap, dobavka, self.time_to_ap);
 					self.stops_time := self.stops_time + 10 + 3;
 				end;
@@ -1624,8 +1622,8 @@ begin
 		  if (not crew.was_in_coord(gps)) then // и водитель в АП не был ещё
 		  // т.е. если экипаж ещё не забрал клиента
 		  begin
-		  self.points_end.Add(Pointer(self.source));
-		  self.points_end.Add(Pointer(self.dest));
+		  self.way_to_end.points.Add(Pointer(self.source));
+		  self.way_to_end.points.Add(Pointer(self.dest));
 		  self.stops_time := self.stops_time + dobavka + 10 + 3; // !!!!!!!!!!!!!!!!!!!!!
 		  end
 		  else
@@ -1667,7 +1665,7 @@ begin
 
 		if not crew.was_in_coord(gps) then // ещё не высадил
 		begin
-			self.points_end.Add(Pointer(self.dest));
+			self.way_to_end.points.Add(Pointer(self.dest));
 			self.stops_time := self.stops_time + 3;
 		end
 		else
@@ -1690,7 +1688,7 @@ begin
 
 	self.pcrew := pcrew;
 	self.datetime_of_time_to_end := now(); // засекаем момент взятия времени
-	self.way_to_end.get_way_time_dist(self.points_end);
+	self.way_to_end.get_way_time_dist();
 end;
 
 destructor TOrder.Destroy;
@@ -1709,8 +1707,8 @@ begin
 	// self.way_to_end.zapros.browser.Stop();
 	self.way_to_end.Free();
 
-	self.points_ap.Free();
-	self.points_end.Free();
+	self.way_to_ap.points.Free();
+	self.way_to_end.points.Free();
 
 	self.pcrew := nil;
 

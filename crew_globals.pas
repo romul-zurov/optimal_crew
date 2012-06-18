@@ -104,10 +104,11 @@ type
 	TWay = class(TObject)
 		time : integer;
 		dist_way : double;
+		points : TList;
 		zapros : TZapros;
 		constructor Create();
 		destructor Destroy; override;
-		procedure get_way_time_dist(var points : TList);
+		procedure get_way_time_dist();
 		procedure set_way_time_dist(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 	end;
 
@@ -765,17 +766,20 @@ constructor TWay.Create;
 begin
 	self.time := -1;
 	self.dist_way := -1.0;
+	self.points := TList.Create();
 	self.zapros := TZapros.Create();
 	self.zapros.browser.OnNavigateComplete2 := self.set_way_time_dist;
 end;
 
 destructor TWay.Destroy;
 begin
+	self.points.Clear();
+	self.points.Free();
 	self.zapros.Free();
 	inherited;
 end;
 
-procedure TWay.get_way_time_dist(var points : TList);
+procedure TWay.get_way_time_dist();
 	procedure add_s(var s : string; s1, s2, s3, s4 : string; num : integer);
 	var ss : string;
 	begin
@@ -797,7 +801,7 @@ var i, c, n, t : integer;
 	a : TAdres;
 	surl, res, dist_res : string;
 begin
-	c := points.Count;
+	c := self.points.Count;
 	if c < 2 then
 		exit();
 	surl := ac_taxi_url + 'order?i_generate_address=1&service=0&';
@@ -810,7 +814,7 @@ begin
 				n := -1
 			else
 				n := 1;
-		a := TAdres(points.Items[i]);
+		a := TAdres(self.points.Items[i]);
 		add_s(surl, a.street, a.house, a.korpus, a.gps, n);
 	end;
 	// show_status(surl);
