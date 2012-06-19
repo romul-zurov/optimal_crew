@@ -1481,7 +1481,8 @@ begin
 		or (pcrew = nil) //
 	// or (self.state <> ORDER_VODITEL_PODTVERDIL) //
 		or not(self.state in [ //
-			ORDER_VODITEL_PODTVERDIL, //
+			ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, ORDER_VODITEL_PRINYAL, //
+		ORDER_VODITEL_PODTVERDIL, //
 		ORDER_PRIGLASITE_KILIENTA, ORDER_KLIENT_NE_VYSHEL, //
 		ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
 			]) //
@@ -1571,7 +1572,8 @@ begin
 
 	// проверяем состояние заказа, возможен ли вообще расчёт
 	if not(self.state in [ //
-			ORDER_VODITEL_PODTVERDIL, ORDER_KLIENT_NA_BORTU, //
+			ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, ORDER_VODITEL_PRINYAL, //
+		ORDER_VODITEL_PODTVERDIL, ORDER_KLIENT_NA_BORTU, //
 		ORDER_PRIGLASITE_KILIENTA, ORDER_KLIENT_NE_VYSHEL, //
 		ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
 			]) //
@@ -1636,7 +1638,13 @@ begin
 	// если нет - добавляем их в маршрут и прибавляем время на остановки
 	self.na_bortu := false;
 	// if (self.state <> ORDER_KLIENT_NA_BORTU) then // клиент НЕ на борту
-	if (self.state = ORDER_VODITEL_PODTVERDIL) then // клиент НЕ на борту
+	if ( //
+		self.state in [ //
+			ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, ORDER_VODITEL_PRINYAL, //
+		ORDER_VODITEL_PODTVERDIL //
+			] //
+		) //
+		then // клиент НЕ на борту
 	begin
 		if self.time_to_ap = ORDER_AP_OK then
 			self.na_bortu := true // клиент на борту и водятел УЕХАЛ уже с АП, не сменив статус!
@@ -2083,14 +2091,14 @@ begin
 	end
 	else
 	begin
-		if self.time_to_end > 0 then
-			result := 'выполняется'
-		else
-		begin
-			result := self.time_to_end_as_string();
-			if self.time_to_end = ORDER_BAD_ADRES then
-				result := result + ' назначения!'; // self.dest.get_as_string();
-		end;
+		// if self.time_to_end > 0 then
+		// result := 'выполняется'
+		// else
+		// begin
+		result := self.time_to_end_as_string();
+		if self.time_to_end = ORDER_BAD_ADRES then
+			result := result + ' назначения!'; // self.dest.get_as_string();
+		// end;
 	end;
 end;
 
@@ -2129,42 +2137,51 @@ begin
 			else
 				if self.time_to_ap = 0 then
 				begin
-					if self.state = ORDER_VODITEL_PODTVERDIL then
+					if self.state in [ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
+						ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
+						then
 						result := '!ожидание клиента'
 					else
 						result := 'ожидание клиента'
 				end
-				else
+				else // self.time_to_ap > 0
 				begin
-					if self.state <> ORDER_VODITEL_PODTVERDIL then
-						// опоздание/успевание - только при статусе "водитель подтвердил"
-						result := ''
+					if self.state in [ORDER_PRIGLASITE_KILIENTA, ORDER_KLIENT_NE_VYSHEL, //
+						ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
+						] //
+						then
+						result := 'ожидание клиента'
 					else
-					begin
-						cur_dt := now();
-						prib_dt := IncMinute(cur_dt, self.time_to_ap);
-						ap_dt := source_time_to_datetime(self.source_time);
-						opozdanie := MinutesBetween(prib_dt, ap_dt); // насколько опаздываем/раньше
-						s_opoz := self.time_as_string(opozdanie);
-						if prib_dt > ap_dt then // опаздываем нахер :) !
+						if self.state in [ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
+							ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
+							then
 						begin
-							result := 'опаздывает на ' + s_opoz;
-							// if cur_dt < ap_dt then
-							// porog := MinutesBetween(cur_dt, ap_dt) mod 10
-							// else
-							// porog := 0;
-							porog := 5;
-							if opozdanie > porog then
-								// песенц опаздываем :)
-								result := '!!!' + result
+							cur_dt := now();
+							prib_dt := IncMinute(cur_dt, self.time_to_ap);
+							ap_dt := source_time_to_datetime(self.source_time);
+							opozdanie := MinutesBetween(prib_dt, ap_dt); // насколько опаздываем/раньше
+							s_opoz := self.time_as_string(opozdanie);
+							if prib_dt > ap_dt then // опаздываем нахер :) !
+							begin
+								result := 'опаздывает на ' + s_opoz;
+								// if cur_dt < ap_dt then
+								// porog := MinutesBetween(cur_dt, ap_dt) mod 10
+								// else
+								// porog := 0;
+								porog := 5;
+								if opozdanie > porog then
+									// песенц опаздываем :)
+									result := '!!!' + result
+								else
+									// ничо страшного, но волнуемся :)
+									result := '!' + result;
+							end
 							else
-								// ничо страшного, но волнуемся :)
-								result := '!' + result;
+								// result :=  self.time_as_string(self.time_to_ap);
+								result := 'будет раньше на ' + s_opoz;
 						end
 						else
-							// result :=  self.time_as_string(self.time_to_ap);
-							result := 'будет раньше на ' + s_opoz;
-					end;
+							result := ''
 				end;
 end;
 
@@ -2190,9 +2207,12 @@ begin
 			result := StringReplace(result, '_', ' ', [rfReplaceAll]);
 		end
 		else
-			result := self.time_as_string(self.time_to_end) //
-				+ ' ' + time_without_date(self.datetime_of_time_to_end);
-		// exit('выполняется');
+			if self.state in [ORDER_DONE, ORDER_VODITEL_VYPOLNIL_ZAKAZ] then
+				exit('заказ завершён')
+			else
+				result := 'закончится через ' + self.time_as_string(self.time_to_end) //
+				// + ' ' + time_without_date(self.datetime_of_time_to_end)//
+					;
 	end; // case
 end;
 

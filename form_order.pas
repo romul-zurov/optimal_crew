@@ -305,8 +305,10 @@ begin
 	add_row(self.grid_order, 'source_time', order.source_time);
 	add_row(self.grid_order, 'source', order.source.get_as_string());
 	add_row(self.grid_order, 'dest', order.dest.get_as_string());
-	add_row(self.grid_order, 'time_to_end', order.time_to_end_as_string());
-	add_row(self.grid_order, 'time_to_ap', order.time_to_ap_as_string());
+	add_row(self.grid_order, 'time_to_end', inttostr(order.time_to_end));
+	add_row(self.grid_order, 'time_to_end_str', order.time_to_end_as_string());
+	add_row(self.grid_order, 'time_to_ap', inttostr(order.time_to_ap));
+	add_row(self.grid_order, 'time_to_ap_str', order.time_to_ap_as_string());
 	add_row(self.grid_order, 'stops_time', inttostr(order.stops_time));
 	add_row(self.grid_order, 'source.gps', order.source.gps);
 	add_row(self.grid_order, 'dest.gps', order.dest.gps);

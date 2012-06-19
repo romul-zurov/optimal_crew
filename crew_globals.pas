@@ -36,9 +36,15 @@ const ORDER_NO_CREWS = 6; // "нет машин", согласно ORDER_STATES
 
 const ORDER_KLIENT_NA_BORTU = 29; // согласно ORDER_STATES
 
+const ORDER_ZAKAZ_OTPRAVLEN = 30; // согласно ORDER_STATES
+
 const ORDER_PRIGLASITE_KILIENTA = 31; // согласно ORDER_STATES
 
 const ORDER_KLIENT_NE_VYSHEL = 32; // согласно ORDER_STATES
+
+const ORDER_ZAKAZ_POLUCHEN = 33; // согласно ORDER_STATES
+
+const ORDER_VODITEL_PRINYAL = 35; // согласно ORDER_STATES
 
 const ORDER_CANCEL = 37; // "отменён", согласно ORDER_STATES
 
