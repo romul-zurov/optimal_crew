@@ -70,7 +70,7 @@ procedure TFormOrder.grid_crewsDrawCell(Sender : TObject; ACol, ARow : Integer; 
 	State : TGridDrawState);
 var sub : string;
 begin
-	if (ACol in [3, 4, 5]) and (ARow > 0) then // только для колонок расчёта/статуса и для не-заглавных строк
+	if (ACol in [3, 4, 5, 6]) and (ARow > 0) then // только для колонок расчёта/статуса и для не-заглавных строк
 		with TStringGrid(Sender) do
 		begin
 			sub := '';
@@ -98,7 +98,13 @@ begin
 							sub := '*';
 						end
 						else
-							Canvas.Brush.color := $FFFFFF;
+							if pos('%', Cells[ACol, ARow]) = 1 then
+							begin
+								Canvas.Brush.color := $6D6D6D;
+								sub := '%';
+							end
+							else
+								Canvas.Brush.color := $FFFFFF;
 
 			Canvas.FillRect(Rect);
 			Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], sub, ''));
@@ -170,16 +176,8 @@ begin
 	with self.grid_crews do
 	begin
 		RowCount := 2;
-		ColCount := 6;
+		ColCount := 7;
 		FixedRows := 1;
-		ColWidths[0] := 64; // 50; // прячем :)
-		// ColWidths[1] := 200;
-		ColWidths[2] := 80;
-		ColWidths[3] := 200;
-		ColWidths[4] := 120; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
-		ColWidths[5] := 80;
-		ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
-			- ColWidths[3] - ColWidths[4] - ColWidths[5];
 
 		Cells[0, 0] := 'По прямой';
 		Cells[1, 0] := 'Экипаж';
@@ -187,6 +185,18 @@ begin
 		Cells[3, 0] := 'Время подачи';
 		Cells[4, 0] := 'Расстояние';
 		Cells[5, 0] := 'Перерасход';
+		Cells[6, 0] := 'Линия';
+
+		ColWidths[0] := 64; // 50; // прячем :)
+		// ColWidths[1] := 200;
+		ColWidths[2] := 70;
+		ColWidths[3] := 200;
+		ColWidths[4] := 80; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
+		ColWidths[5] := 80;
+		ColWidths[6] := 40;
+		ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
+			- ColWidths[3] - ColWidths[4] - ColWidths[5] - ColWidths[6];
+
 	end;
 
 	r := 1;
@@ -194,12 +204,14 @@ begin
 		with self.grid_crews do
 		begin
 			RowCount := r + 1;
+			// Cells[0, r] := get_substr(s, '', '|');       // временно!!!
 			Cells[0, r] := get_substr(s, '$', '|');
 			Cells[1, r] := get_substr(s, '|', '||');
 			Cells[2, r] := get_substr(s, '||', '|||');
 			Cells[3, r] := get_substr(s, '|||', '||||');
 			Cells[4, r] := get_substr(s, '||||', '|||||'); // + 'км';
-			Cells[5, r] := get_substr(s, '|||||', '');
+			Cells[5, r] := get_substr(s, '|||||', '||||||');
+			Cells[6, r] := get_substr(s, '||||||', '');
 			inc(r);
 		end;
 end;
