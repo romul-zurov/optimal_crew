@@ -58,7 +58,6 @@ object form_main: Tform_main
         SizeStyle = ssAuto
       end>
     TabOrder = 0
-    ExplicitWidth = 764
     object panel_ap: TPanel
       AlignWithMargins = True
       Left = 5
@@ -196,9 +195,9 @@ object form_main: Tform_main
     end
     object GridPanel_grids: TGridPanel
       Left = 1
-      Top = 36
+      Top = 37
       Width = 797
-      Height = 319
+      Height = 318
       Align = alClient
       ColumnCollection = <
         item
@@ -224,34 +223,30 @@ object form_main: Tform_main
           Value = 100.000000000000000000
         end>
       TabOrder = 1
-      ExplicitWidth = 762
       object GroupBox_order: TGroupBox
         Left = 1
         Top = 1
         Width = 545
-        Height = 317
+        Height = 316
         Align = alClient
         Caption = #1047#1072#1082#1072#1079#1099':'
         TabOrder = 0
-        ExplicitWidth = 510
         object PageControl_orders: TPageControl
           Left = 2
           Top = 15
           Width = 541
-          Height = 300
+          Height = 299
           ActivePage = TabSheet_current
           Align = alClient
           TabOrder = 0
-          ExplicitWidth = 506
           object TabSheet_current: TTabSheet
             Caption = #1058#1077#1082#1091#1097#1080#1077':'
-            ExplicitWidth = 498
             object grid_order_current: TStringGrid
               AlignWithMargins = True
               Left = 3
               Top = 3
               Width = 527
-              Height = 266
+              Height = 265
               Align = alClient
               ColCount = 3
               Ctl3D = False
@@ -269,19 +264,17 @@ object form_main: Tform_main
               TabOrder = 0
               OnDblClick = grid_order_currentDblClick
               OnDrawCell = grid_order_currentDrawCell
-              ExplicitWidth = 492
             end
           end
           object TabSheet_prior: TTabSheet
             Caption = #1055#1088#1077#1076#1074#1072#1088#1080#1090#1077#1083#1100#1085#1099#1077
             ImageIndex = 1
-            ExplicitWidth = 498
             object grid_order_prior: TStringGrid
               AlignWithMargins = True
               Left = 3
               Top = 3
               Width = 527
-              Height = 266
+              Height = 265
               Align = alClient
               ColCount = 3
               Ctl3D = False
@@ -298,7 +291,6 @@ object form_main: Tform_main
               ParentFont = False
               TabOrder = 0
               OnDblClick = grid_order_priorDblClick
-              ExplicitWidth = 492
             end
           end
         end
@@ -307,17 +299,16 @@ object form_main: Tform_main
         Left = 546
         Top = 1
         Width = 250
-        Height = 317
+        Height = 316
         Align = alClient
         Caption = #1044#1086#1089#1090#1091#1087#1085#1099#1077' '#1101#1082#1080#1087#1072#1078#1080':'
         TabOrder = 1
-        ExplicitLeft = 511
         object grid_crews: TStringGrid
           AlignWithMargins = True
           Left = 5
           Top = 18
           Width = 240
-          Height = 294
+          Height = 293
           Align = alClient
           ColCount = 4
           Ctl3D = False
@@ -341,7 +332,6 @@ object form_main: Tform_main
         item
           Width = 100
         end>
-      ExplicitWidth = 762
     end
   end
   object db_main: TIBDatabase
@@ -367,7 +357,7 @@ object form_main: Tform_main
   end
   object Timer_coords: TTimer
     Enabled = False
-    Interval = 10000
+    Interval = 60000
     OnTimer = Timer_coordsTimer
     Left = 432
     Top = 192
@@ -381,7 +371,7 @@ object form_main: Tform_main
   end
   object Timer_get_time_order: TTimer
     Enabled = False
-    Interval = 1127
+    Interval = 256
     OnTimer = Timer_get_time_orderTimer
     Left = 208
     Top = 192

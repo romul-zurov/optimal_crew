@@ -7,7 +7,7 @@ uses
 	crew, //
 	crew_globals, //
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-	Dialogs, Grids, StdCtrls, ExtCtrls, OleCtrls, SHDocVw;
+	Dialogs, Grids, StdCtrls, ExtCtrls, OleCtrls, SHDocVw, Math, StrUtils;
 
 type
 	TFormOrder = class(TForm)
@@ -27,6 +27,7 @@ type
 		Timer_get_crews : TTimer;
 		Timer_show_crews : TTimer;
 		Edit_gps : TEdit;
+		cb_debug : TCheckBox;
 		procedure FormCreate(Sender : TObject);
 		procedure FormClose(Sender : TObject; var Action : TCloseAction);
 		procedure Button_get_timeClick(Sender : TObject);
@@ -38,6 +39,8 @@ type
 		procedure Timer_get_crewsTimer(Sender : TObject);
 		procedure grid_crewsDrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
 			State : TGridDrawState);
+
+		procedure cb_debugClick(Sender : TObject);
 	private
 		{ Private declarations }
 		POrder : Pointer;
@@ -148,6 +151,11 @@ begin
 	self.show_order();
 end;
 
+procedure TFormOrder.cb_debugClick(Sender : TObject);
+begin
+	self.GroupBox_order.Visible := self.cb_debug.Checked;
+end;
+
 procedure TFormOrder.FormClose(Sender : TObject; var Action : TCloseAction);
 begin
 	self.Timer_get_gps.Enabled := false;
@@ -162,6 +170,7 @@ begin
 	self.Height := 400;
 	self.slist := tstringlist.Create();
 	self.cr_slist := tstringlist.Create();
+	self.GroupBox_order.Visible := self.cb_debug.Checked;
 end;
 
 procedure TFormOrder.show_crews();
@@ -184,15 +193,15 @@ begin
 		Cells[2, 0] := 'Состояние';
 		Cells[3, 0] := 'Время подачи';
 		Cells[4, 0] := 'Расстояние';
-		Cells[5, 0] := 'Перерасход';
+		Cells[5, 0] := 'Расход';
 		Cells[6, 0] := 'Линия';
 
-		ColWidths[0] := 64; // 50; // прячем :)
+		ColWidths[0] := ifthen(self.cb_debug.Checked, 128, 64); // 64; // 50; // прячем :)
 		// ColWidths[1] := 200;
 		ColWidths[2] := 70;
 		ColWidths[3] := 200;
 		ColWidths[4] := 80; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
-		ColWidths[5] := 80;
+		ColWidths[5] := ifthen(self.cb_debug.Checked, 80, 0);
 		ColWidths[6] := 40;
 		ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
 			- ColWidths[3] - ColWidths[4] - ColWidths[5] - ColWidths[6];
@@ -204,8 +213,7 @@ begin
 		with self.grid_crews do
 		begin
 			RowCount := r + 1;
-			// Cells[0, r] := get_substr(s, '', '|');       // временно!!!
-			Cells[0, r] := get_substr(s, '$', '|');
+			Cells[0, r] := ifthen(self.cb_debug.Checked, get_substr(s, '', '|'), get_substr(s, '$', '|'));
 			Cells[1, r] := get_substr(s, '|', '||');
 			Cells[2, r] := get_substr(s, '||', '|||');
 			Cells[3, r] := get_substr(s, '|||', '||||');

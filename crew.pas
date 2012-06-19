@@ -781,7 +781,7 @@ begin
 		+ self.name + '||' //
 		+ self.state_as_string() + '|||' //
 		+ scolor + s_opozdanie + '||||' //
-		+ scolor + self.dist_way_as_string() + '|||||' //
+		+ rasxod + self.dist_way_as_string() + '|||||' //
 		+ rasxod + '||||||' //
 		+ line_num //
 		;
@@ -2107,7 +2107,16 @@ var prib_dt, ap_dt, cur_dt : TDateTime;
 	s_opoz : string;
 begin
 	if self.time_to_ap = ORDER_AP_OK then
-		result := '!клиент на борту'
+	begin
+		if (self.state in [ //
+				ORDER_VODITEL_PODTVERDIL, //
+			ORDER_PRIGLASITE_KILIENTA, ORDER_KLIENT_NE_VYSHEL, //
+			ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
+				]) then
+			result := '!клиент на борту'
+		else
+			result := '';
+	end
 	else
 		if self.time_to_ap = -1 then
 			result := ''
@@ -2127,29 +2136,35 @@ begin
 				end
 				else
 				begin
-					cur_dt := now();
-					prib_dt := IncMinute(cur_dt, self.time_to_ap);
-					ap_dt := source_time_to_datetime(self.source_time);
-					opozdanie := MinutesBetween(prib_dt, ap_dt); // насколько опаздываем/раньше
-					s_opoz := self.time_as_string(opozdanie);
-					if prib_dt > ap_dt then // опаздываем нахер :) !
-					begin
-						result := 'опаздывает на ' + s_opoz;
-						// if cur_dt < ap_dt then
-						// porog := MinutesBetween(cur_dt, ap_dt) mod 10
-						// else
-						// porog := 0;
-						porog := 5;
-						if opozdanie > porog then
-							// песенц опаздываем :)
-							result := '!!!' + result
-						else
-							// ничо страшного, но волнуемся :)
-							result := '!' + result;
-					end
+					if self.state <> ORDER_VODITEL_PODTVERDIL then
+						// опоздание/успевание - только при статусе "водитель подтвердил"
+						result := ''
 					else
-						// result :=  self.time_as_string(self.time_to_ap);
-						result := 'будет раньше на ' + s_opoz;
+					begin
+						cur_dt := now();
+						prib_dt := IncMinute(cur_dt, self.time_to_ap);
+						ap_dt := source_time_to_datetime(self.source_time);
+						opozdanie := MinutesBetween(prib_dt, ap_dt); // насколько опаздываем/раньше
+						s_opoz := self.time_as_string(opozdanie);
+						if prib_dt > ap_dt then // опаздываем нахер :) !
+						begin
+							result := 'опаздывает на ' + s_opoz;
+							// if cur_dt < ap_dt then
+							// porog := MinutesBetween(cur_dt, ap_dt) mod 10
+							// else
+							// porog := 0;
+							porog := 5;
+							if opozdanie > porog then
+								// песенц опаздываем :)
+								result := '!!!' + result
+							else
+								// ничо страшного, но волнуемся :)
+								result := '!' + result;
+						end
+						else
+							// result :=  self.time_as_string(self.time_to_ap);
+							result := 'будет раньше на ' + s_opoz;
+					end;
 				end;
 end;
 
