@@ -29,7 +29,6 @@ function source_time_to_datetime(date : string) : TDateTime;
 function get_substr(value : string; sub1, sub2 : string) : string;
 procedure RemoveDuplicates(const stringList : TStringList);
 
-
 implementation
 
 procedure pass;
@@ -97,7 +96,7 @@ end;
 
 function time_without_date(full_date : string) : string;
 begin
-	result := '    ' + copy(full_date, 12, 8);
+	result := copy(full_date, 12, 8);
 end;
 
 function time_without_date(dt : TDateTime) : string;

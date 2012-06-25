@@ -331,7 +331,17 @@ object form_main: Tform_main
       Panels = <
         item
           Width = 100
+        end
+        item
+          Width = 100
+        end
+        item
+          Width = 200
+        end
+        item
+          Width = 50
         end>
+      ExplicitWidth = 213
     end
   end
   object db_main: TIBDatabase

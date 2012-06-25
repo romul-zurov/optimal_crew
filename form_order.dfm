@@ -185,7 +185,6 @@ object FormOrder: TFormOrder
         Font.Style = [fsBold]
         ParentFont = False
         TabOrder = 0
-        ExplicitWidth = 471
         object grid_crews: TStringGrid
           Left = 2
           Top = 15
@@ -202,7 +201,6 @@ object FormOrder: TFormOrder
           ParentFont = False
           TabOrder = 0
           OnDrawCell = grid_crewsDrawCell
-          ExplicitWidth = 467
         end
       end
       object GroupBox1: TGroupBox
@@ -213,8 +211,6 @@ object FormOrder: TFormOrder
         Align = alClient
         Caption = #1052#1072#1088#1096#1088#1091#1090' '#1085#1072' '#1082#1072#1088#1090#1077':'
         TabOrder = 1
-        ExplicitLeft = 472
-        ExplicitWidth = 120
         object WebBrowser1: TWebBrowser
           Left = 2
           Top = 15

@@ -8,7 +8,7 @@ uses crew_utils, // utils from robocap and mine
 	windows, //
 	IBQuery, IBDataBase, DB, WinInet, StrUtils, ComCtrls, IniFiles, ExtCtrls;
 
-const RUB_ZA_KM = 35.0;  // рублей за км
+const RUB_ZA_KM = 35.0; // рублей за км
 
 const CREW_SVOBODEN = 1;
 
@@ -72,6 +72,8 @@ const COORDS_BUF_SIZE = '{Last_minute_20}'; // больше не надо, во избежание ошиб
 
 const DEBUG_MEASURE_TIME = '''2011-10-03 13:57:50'''; // for back-up base
 
+const MAX_GET_ZAPROS = 10; // !!!
+
 type
 	TZapros = class(TObject)
 		// базовый класс для запроса времени, координат и прочего через php-скрипты
@@ -81,9 +83,15 @@ type
 		timer : TTimer;
 		constructor Create();
 		destructor Destroy; override;
-		procedure get_zapros(surl : string);
+		function get_zapros(surl : string) : integer;
+		function get_zapros_unlim(surl : string) : integer;
 		procedure timeout_error(Sender : TObject);
 		procedure zapros_complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+	private
+		procedure inc_counter();
+		procedure dec_counter();
+		procedure show_counter();
+		function get_request(surl : string; count_flag : boolean) : integer;
 	end;
 
 	TAdres = class(TObject)
@@ -103,8 +111,10 @@ type
 		function get_as_string() : string;
 		function get_as_color_string() : string;
 		procedure get_gps();
+		procedure get_gps_unlim();
 		function gps_ok() : boolean;
 	private
+		procedure def_gps(count_flag : boolean);
 		procedure gps_complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 		// procedure complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 	end;
@@ -116,8 +126,11 @@ type
 		zapros : TZapros;
 		constructor Create();
 		destructor Destroy; override;
-		procedure get_way_time_dist();
+		function get_way_time_dist() : integer;
+		function get_way_time_dist_unlim() : integer;
 		procedure set_way_time_dist(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+	private
+		function def_way_time_dist(count_flag : boolean) : integer;
 	end;
 
 	TBrowserComplete2Event = procedure(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
@@ -152,6 +165,8 @@ var
 	PGlobalStatusBar : Pointer;
 	// browser_form : Tform;
 	browser_panel : TPanel;
+	GetZaprosCounter : Int64;
+
 
 	// main_db : TIBDatabase;
 	// main_ta : TIBTransaction;
@@ -560,6 +575,28 @@ begin
 	self.zapros.browser.OnNavigateComplete2 := self.gps_complete;
 end;
 
+procedure TAdres.def_gps(count_flag : boolean);
+var surl : string;
+begin
+	surl := ac_taxi_url + 'order?i_generate_address=1&service=0&';
+	surl := surl + 'point_from[obj][]=' + self.street + '&';
+	surl := surl + 'point_from[house][]=' + self.house + '&';
+	surl := surl + 'point_from[corp][]=' + self.korpus + '&';
+	surl := surl + 'point_to[obj][]=' + self.street + '&';
+	surl := surl + 'point_to[house][]=' + self.house + '&';
+	surl := surl + 'point_to[corp][]=' + self.korpus + '&';
+
+	surl := '"' + surl + '"' + ' "DayGPSKoordinatPoAdresu" "foo"';
+	surl := surl + ' "cp1251"';
+	show_status(surl);
+	surl := param64(surl);
+	surl := PHP_Url + '?param=' + surl;
+	if count_flag then
+		self.zapros.get_zapros(surl)
+	else
+		self.zapros.get_zapros_unlim(surl);
+end;
+
 destructor TAdres.Destroy;
 begin
 	self.zapros.Free();
@@ -589,20 +626,12 @@ end;
 procedure TAdres.get_gps;
 var surl : string;
 begin
-	surl := ac_taxi_url + 'order?i_generate_address=1&service=0&';
-	surl := surl + 'point_from[obj][]=' + self.street + '&';
-	surl := surl + 'point_from[house][]=' + self.house + '&';
-	surl := surl + 'point_from[corp][]=' + self.korpus + '&';
-	surl := surl + 'point_to[obj][]=' + self.street + '&';
-	surl := surl + 'point_to[house][]=' + self.house + '&';
-	surl := surl + 'point_to[corp][]=' + self.korpus + '&';
+	self.def_gps(true);
+end;
 
-	surl := '"' + surl + '"' + ' "DayGPSKoordinatPoAdresu" "foo"';
-	surl := surl + ' "cp1251"';
-	show_status(surl);
-	surl := param64(surl);
-	surl := PHP_Url + '?param=' + surl;
-	self.zapros.get_zapros(surl);
+procedure TAdres.get_gps_unlim;
+begin
+	self.def_gps(false);
 end;
 
 procedure TAdres.gps_complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
@@ -725,13 +754,20 @@ begin
 	self.browser.Height := 10;
 
 	self.timer := TTimer.Create(browser_panel);
-	self.timer.Interval := 120000;
+	self.timer.Interval := 60 * 1000;
 	self.timer.Enabled := false;
 
 	// определяем обработчики по умолчанию,
 	// можно переопределить, если нужно
 	self.browser.OnNavigateComplete2 := self.zapros_complete;
 	self.timer.OnTimer := self.timeout_error;
+end;
+
+procedure TZapros.dec_counter;
+begin
+	// if GetZaprosCounter > 0 then
+	dec(GetZaprosCounter);
+	self.show_counter();
 end;
 
 destructor TZapros.Destroy;
@@ -741,14 +777,64 @@ begin
 	inherited;
 end;
 
-procedure TZapros.get_zapros(surl : string);
+function TZapros.get_request(surl : string; count_flag : boolean) : integer;
 begin
+	if count_flag and (GetZaprosCounter >= MAX_GET_ZAPROS) then
+		// если слишком много запросов, то не запрашиваем
+		// обходится при count_flag = false
+		exit(-1);
+
 	if self.browser.ReadyState < READYSTATE_COMPLETE then
 		// если уже идёт запрос, выходим
-		exit();
+		exit(0);
+	self.inc_counter();
 	self.timer.Enabled := true;
 	self.otvet := '';
+	result := 1;
 	self.browser.Navigate(surl);
+end;
+
+function TZapros.get_zapros(surl : string) : integer;
+begin
+	result := self.get_request(surl, true);
+	exit();
+
+	if GetZaprosCounter >= MAX_GET_ZAPROS then
+		// если слишком много запросов, то не запрашиваем
+		exit(-1);
+
+	if self.browser.ReadyState < READYSTATE_COMPLETE then
+		// если уже идёт запрос, выходим
+		exit(0);
+	self.inc_counter();
+	self.timer.Enabled := true;
+	self.otvet := '';
+	result := 1;
+	self.browser.Navigate(surl);
+end;
+
+function TZapros.get_zapros_unlim(surl : string) : integer;
+begin
+	result := self.get_request(surl, false);
+end;
+
+procedure TZapros.inc_counter;
+begin
+	inc(GetZaprosCounter);
+	self.show_counter();
+end;
+
+procedure TZapros.show_counter;
+begin
+	if PGlobalStatusBar = nil then
+		exit()
+	else
+		try
+			TStatusBar(PGlobalStatusBar).Panels[1].Text := //
+				'Get: ' + IntToStr(GetZaprosCounter);
+		except
+			exit();
+		end;
 end;
 
 procedure TZapros.timeout_error(Sender : TObject);
@@ -761,6 +847,7 @@ end;
 procedure TZapros.zapros_complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 begin
 	self.timer.Enabled := false;
+	self.dec_counter();
 	if self.otvet = 'ErrorTimeout' then
 		exit();
 	self.otvet := html_to_string(self.browser);
@@ -779,15 +866,7 @@ begin
 	self.zapros.browser.OnNavigateComplete2 := self.set_way_time_dist;
 end;
 
-destructor TWay.Destroy;
-begin
-	self.points.Clear();
-	self.points.Free();
-	self.zapros.Free();
-	inherited;
-end;
-
-procedure TWay.get_way_time_dist();
+function TWay.def_way_time_dist(count_flag : boolean) : integer;
 	procedure add_s(var s : string; s1, s2, s3, s4 : string; num : integer);
 	var ss : string;
 	begin
@@ -811,7 +890,7 @@ var i, c, n, t : integer;
 begin
 	c := self.points.Count;
 	if c < 2 then
-		exit();
+		exit(-1);
 	surl := ac_taxi_url + 'order?i_generate_address=1&service=0&';
 	for i := 0 to c - 1 do
 	begin
@@ -825,12 +904,29 @@ begin
 		a := TAdres(self.points.Items[i]);
 		add_s(surl, a.street, a.house, a.korpus, a.gps, n);
 	end;
-	// show_status(surl);
 	surl := '"' + surl + '"' + ' "DayVremyaPuti" "foo"';
 	surl := param64(surl);
 	surl := PHP_Url + '?param=' + surl;
-	// res := get_zapros(surl);
-	self.zapros.get_zapros(surl);
+	result := ifthen(count_flag, self.zapros.get_zapros(surl), // if true
+		self.zapros.get_zapros_unlim(surl)); // else
+end;
+
+destructor TWay.Destroy;
+begin
+	self.points.Clear();
+	self.points.Free();
+	self.zapros.Free();
+	inherited;
+end;
+
+function TWay.get_way_time_dist() : integer;
+begin
+	result := self.def_way_time_dist(true);
+end;
+
+function TWay.get_way_time_dist_unlim : integer;
+begin
+	result := self.def_way_time_dist(false);
 end;
 
 procedure TWay.set_way_time_dist(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);

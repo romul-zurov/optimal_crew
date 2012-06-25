@@ -134,7 +134,7 @@ procedure TFormOrder.Button_get_crewClick(Sender : TObject);
 begin
 	self.slist.Clear();
 	if TOrder(POrder).source.gps = '' then
-		TOrder(POrder).source.get_gps();
+		TOrder(POrder).source.get_gps_unlim();
 	self.Edit_gps.Text := 'Определяем доступные экипажи...';
 	self.Timer_get_gps.Enabled := True;
 end;
@@ -313,6 +313,7 @@ begin
 	add_row(self.grid_order, 'source.gps', order.source.gps);
 	add_row(self.grid_order, 'dest.gps', order.dest.gps);
 	add_row(self.grid_order, 'raw_dist_way', FloatToStrF(order.raw_dist_way, ffFixed, 8, 1));
+	add_row(self.grid_order, 'int_stops', order.raw_int_stops);
 end;
 
 procedure TFormOrder.Timer_get_crewsTimer(Sender : TObject);
@@ -328,8 +329,8 @@ begin
 	crew := TCrewList(self.PCrewList).crewByCrewId(StrToInt(cr_slist.Strings[self.cr_count]));
 	with TOrder(POrder).source do
 		crew.ap.setAdres(street, house, korpus, gps);
-	crew.def_time_to_ap(self.POrderList);
-	inc(self.cr_count);
+	if crew.def_time_to_ap(self.POrderList) = 1 then
+		inc(self.cr_count);
 end;
 
 procedure TFormOrder.Timer_get_gpsTimer(Sender : TObject);

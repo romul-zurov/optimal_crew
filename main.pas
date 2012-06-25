@@ -69,6 +69,8 @@ type
 		{ Private declarations }
 		flag_get_coords : boolean;
 		flag_get_orders : boolean;
+		procedure show_request(txt : string);
+		procedure show_OrderID(id : Integer);
 	public
 		{ Public declarations }
 		procedure show_orders_grid();
@@ -102,6 +104,11 @@ var
 implementation
 
 {$R *.dfm}
+
+procedure Tform_main.show_request(txt : string);
+begin
+	self.stbar_main.Panels[2].Text := txt;
+end;
 
 procedure Tform_main.show_result_crews_grid(var list : TCrewList);
 var pp : Pointer;
@@ -207,7 +214,7 @@ begin
 					if order.CrewId > -1 then
 					begin
 						// считаем ...
-						show_status('Расчёт окончания заказа № ' + IntToStr(order.id));
+						self.show_OrderID(order.id);
 						pc := crew_list.findByCrewId(order.CrewId);
 						// crew := crew_list.crew(pc);
 
@@ -420,16 +427,7 @@ begin
 	flag_order_get_time := false;
 	flag_coords_request := false;
 	index_current_order := 0;
-	// browser_form := TForm.Create(nil);
-	// with browser_form do
-	// begin
-	// Width := 0;
-	// height := 0;
-	// left := 0;
-	// top := 600;
-	// Show();
-	// end;
-	// browser_form.Hide;
+	GetZaprosCounter := 0;
 
 	DEBUG_SDATE_FROM := '2011-10-03 00:00:00'; // for backup database
 	DEBUG_SDATE_TO := '2011-10-04 00:00:00'; // for backup database
@@ -442,7 +440,6 @@ begin
 		grid_crews.ColWidths[2] := 180;
 		grid_crews.ColWidths[3] := 280;
 	end;
-	// form_main.DBGrid1.Hide();
 
 	sql_string_list := TSTringList.Create();
 	form_cur_crew := TFormCrew.Create(nil);
@@ -545,6 +542,11 @@ begin
 	show_order(grid_order_prior);
 end;
 
+procedure Tform_main.show_OrderID(id : Integer);
+begin
+	self.stbar_main.Panels[0].Text := 'Order ' + IntToStr(id);
+end;
+
 procedure Tform_main.show_orders(var list : TOrderList; var grid_order : TStringGrid; prior_flag : boolean);
 var pp : Pointer;
 	row, ord_id, cur_col, cur_row, adr_w : Integer;
@@ -569,18 +571,9 @@ begin
 			Cells[6, 0] := 'Адрес назначения';
 			Cells[7, 0] := 'Время подачи';
 
-			if self.cb_show_times_to_end.Checked then
-				ColWidths[2] := 200
-			else
-				ColWidths[2] := 0;
-
-			if self.cb_show_orders_id.Checked then
-				ColWidths[0] := 50
-			else
-				ColWidths[0] := 0;
-
+			ColWidths[0] := ifthen(self.cb_show_orders_id.Checked, 50, 0);
 			ColWidths[1] := 240; // 160;
-
+			ColWidths[2] := ifthen(self.cb_show_times_to_end.Checked, 300, 0);
 			ColWidths[3] := 180; // 260; // 80;
 			ColWidths[4] := 260; // 128; // 80;
 			ColWidths[7] := 88;
@@ -628,11 +621,12 @@ begin
 			grid_order.Cells[0, row] := IntToStr(order.id); // не отображается по умолчанию
 
 			grid_order.Cells[1, row] := order.status();
-			if self.cb_show_times_to_end.Checked then
-				grid_order.Cells[1, row] := grid_order.Cells[1, row] //
-					+ ' ' + time_without_date(order.datetime_of_time_to_ap);
 
-			grid_order.Cells[2, row] := order.time_to_end_as_string(); // не отображается по умолчанию
+			// не отображается по умолчанию
+			grid_order.Cells[2, row] := order.time_to_end_as_string() //
+				+ ' (' + time_without_date(order.datetime_of_time_to_ap) //
+				+ '/' + time_without_date(order.datetime_of_time_to_end) + ')';
+
 			grid_order.Cells[3, row] := order.state_as_string();
 
 			if order.CrewId > 0 then
@@ -687,9 +681,14 @@ begin
 	flag_ord := self.Timer_orders.Enabled;
 	self.Timer_coords.Enabled := false;
 	self.Timer_orders.Enabled := false;
+
+	self.show_request('Coords request...');
 	crews_request();
+	self.show_request('Coords complete.');
+
 	self.Timer_coords.Enabled := flag;
 	self.Timer_orders.Enabled := flag_ord;
+
 end;
 
 procedure Tform_main.Timer_get_time_orderTimer(Sender : TObject);
@@ -711,7 +710,9 @@ begin
 	// ---------------------------------------------------------
 	flag := self.Timer_orders.Enabled;
 	self.Timer_orders.Enabled := false;
+	self.show_request('Orders request...');
 	orders_request();
+	self.show_request('Orders complete.');
 	self.Timer_orders.Enabled := flag;
 end;
 
