@@ -329,7 +329,8 @@ begin
 	crew := TCrewList(self.PCrewList).crewByCrewId(StrToInt(cr_slist.Strings[self.cr_count]));
 	with TOrder(POrder).source do
 		crew.ap.setAdres(street, house, korpus, gps);
-	if crew.def_time_to_ap(self.POrderList) = 1 then
+	// if crew.def_time_to_ap(self.POrderList) = 1 then
+	if crew.def_time_to_ap() = 1 then
 		inc(self.cr_count);
 end;
 

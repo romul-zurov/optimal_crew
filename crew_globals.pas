@@ -28,6 +28,8 @@ const ORDER_PRINYAT = 1; // "принят", согласно ORDER_STATES
 
 const ORDER_VODITEL_PODTVERDIL = 2; // согласно ORDER_STATES
 
+const ORDER_V_OCHEREDI = 3; // согласно ORDER_STATES
+
 const ORDER_DONE = 4; // "завершён", согласно ORDER_STATES
 
 const ORDER_DISCONTNUED = 5; // "прекращён", согласно ORDER_STATES

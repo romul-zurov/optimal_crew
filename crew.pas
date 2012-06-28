@@ -141,7 +141,8 @@ type
 		procedure reset_old_coord();
 		function ret_data() : string;
 		function ret_data_to_ap(source_time : string; half_dist_way : double) : string;
-		function def_time_to_ap(var polist : Pointer) : Integer;
+		// function def_time_to_ap(var polist : Pointer) : Integer;
+		function def_time_to_ap() : Integer;
 		function pererasxod_color(half_dist_way : double) : string;
 	private
 		rasxod : double;
@@ -368,7 +369,9 @@ begin
 	self.POrder := nil;
 end;
 
-function TCrew.def_time_to_ap(var polist : Pointer) : Integer;
+// function TCrew.def_time_to_ap(var polist : Pointer) : Integer;
+function TCrew.def_time_to_ap() : Integer;
+var order : TOrder;
 begin
 	if //
 		not(self.state in [CREW_SVOBODEN, CREW_NAZAKAZE]) //
@@ -382,14 +385,26 @@ begin
 	end;
 	self.cur_pos.setAdres('', '', '', self.coord); // начало маршрута - текущая координата машины
 	self.way_to_ap.points.Clear(); // список точек маршрута
-	if self.state = CREW_SVOBODEN then
+
+	if (self.state = CREW_NAZAKAZE) and (self.POrder <> nil) then
+		try
+			order := TOrder(self.POrder);
+		except
+			order := nil;
+		end;
+
+	if //
+		(self.state = CREW_SVOBODEN) //
+	// заказ фактически завершён, экипаж свободен
+		or ((order <> nil) and (order.time_to_end = ORDER_AN_OK)) //
+		then
 	begin
 		self.way_to_ap.points.Add(Pointer(cur_pos));
 		self.POrder := nil; // на случай всяких там инцестов в self.set_time_to_ap
 	end
 	else
 	begin
-		self.POrder := TOrderList(polist).find_by_Id(self.OrderId);
+		// self.POrder := TOrderList(polist).find_by_Id(self.OrderId);  // уже не надо
 		self.way_to_ap.points.Add(Pointer(TOrder(self.POrder).dest));
 	end;
 
@@ -1513,18 +1528,30 @@ var cur_pos : TAdres;
 	cur_dt, ap_dt : TDateTime;
 	// na_bortu : boolean; - сделать self.na_bortu
 begin
+
 	if (self.destroy_flag) then // заказ отмечен на удаление, выходим нафиг
+	begin
+		self.time_to_end := -1;
+		exit();
+	end;
+
+	if self.state in [ORDER_DONE, ORDER_VODITEL_VYPOLNIL_ZAKAZ] then
+		// просто выходим не сбрасывая время
 		exit();
 
 	// проверяем состояние заказа, возможен ли вообще расчёт
-	if not(self.state in [ //
+	if //
+		not(self.state in [ //
 			ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, ORDER_VODITEL_PRINYAL, //
 		ORDER_VODITEL_PODTVERDIL, ORDER_KLIENT_NA_BORTU, //
 		ORDER_PRIGLASITE_KILIENTA, ORDER_KLIENT_NE_VYSHEL, //
 		ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
 			]) //
 		then
+	begin
+		self.time_to_end := -1;
 		exit();
+	end;
 
 	if self.time_to_end = ORDER_AN_OK then
 		// заказ уже был завершён, незачем считать его
@@ -1540,11 +1567,11 @@ begin
 		then
 		exit();
 
-	if self.count_int_stops > 0 then // заказы с промежут. остановками пока не обсчитываем
-	begin
-		self.time_to_end := ORDER_HAS_STOPS;
-		exit();
-	end;
+	// if self.count_int_stops > 0 then // заказы с промежут. остановками пока не обсчитываем
+	// begin
+	// self.time_to_end := ORDER_HAS_STOPS;
+	// exit();
+	// end;
 
 	crew := TCrew(pcrew);
 	if crew = nil then
@@ -1574,7 +1601,8 @@ begin
 	else
 		dobavka := 0;
 
-	self.stops_time := 0;
+	self.stops_time := 0 + self.count_int_stops * 10; // !!!!!!!!!!!!!
+
 	self.way_to_end.points.Clear(); // список точек маршрута
 	cur_pos := TAdres.Create('', '', '', crew.coord);
 	// начало маршрута - текущая координата машины
@@ -1938,7 +1966,7 @@ begin
 				if self.time_to_ap = 0 then
 				begin
 					if self.state in [ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
-					ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
+						ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
 						then
 						result := '!ожидание клиента'
 					else
@@ -1948,13 +1976,13 @@ begin
 				// self.time_to_ap > 0
 				begin
 					if self.state in [ORDER_PRIGLASITE_KILIENTA, ORDER_KLIENT_NE_VYSHEL, //
-					ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
+						ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
 						] //
 						then
 						result := 'ожидание клиента'
 					else
 						if self.state in [ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
-						ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
+							ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
 							then
 						begin
 							cur_dt := now(); prib_dt := IncMinute(cur_dt, self.time_to_ap);

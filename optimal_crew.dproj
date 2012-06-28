@@ -59,6 +59,7 @@
 				<Form>FormCrew</Form>
 			</DCCReference>
 			<None Include="TODO.txt"/>
+			<None Include="config.ini"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
