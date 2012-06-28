@@ -44,8 +44,6 @@ object FormDebug: TFormDebug
         Value = 50.000000000000000000
       end>
     TabOrder = 0
-    ExplicitWidth = 426
-    ExplicitHeight = 218
     object sg_orders: TStringGrid
       AlignWithMargins = True
       Left = 4
@@ -61,8 +59,7 @@ object FormDebug: TFormDebug
       FixedRows = 0
       ParentCtl3D = False
       TabOrder = 0
-      ExplicitWidth = 418
-      ExplicitHeight = 102
+      OnDblClick = sg_ordersDblClick
     end
     object sg_crews: TStringGrid
       AlignWithMargins = True
@@ -79,9 +76,6 @@ object FormDebug: TFormDebug
       FixedRows = 0
       ParentCtl3D = False
       TabOrder = 1
-      ExplicitTop = 112
-      ExplicitWidth = 418
-      ExplicitHeight = 102
     end
   end
 end

@@ -17,6 +17,7 @@ function replace_hour(const value : string; const MyTime : TDateTime) : string;
 function replace_minute(const value : string; const MyTime : TDateTime) : string;
 
 function dotStrtoFloat(s : string) : double;
+function float_to_dotstr_2_6(f : real) : string;
 function get_dist_from_coord(scoord1, scoord2 : string) : double;
 
 function reverseStringList(var list : TStringList) : Integer;
@@ -28,11 +29,22 @@ function time_without_date(dt : TDateTime) : string; overload;
 function source_time_to_datetime(date : string) : TDateTime;
 function get_substr(value : string; sub1, sub2 : string) : string;
 procedure RemoveDuplicates(const stringList : TStringList);
+function s_2_6(sc : string) : string;
 
 implementation
 
 procedure pass;
 begin
+end;
+
+function float_to_dotstr_2_6(f : real) : string;
+begin
+	result := StringReplace(FloatToStrF(f, ffFixed, 8, 6), ',', '.', [rfReplaceAll]);
+end;
+
+function s_2_6(sc : string) : string;
+begin
+	result := float_to_dotstr_2_6(dotStrtoFloat(sc));
 end;
 
 function reverseStringList(var list : TStringList) : Integer;

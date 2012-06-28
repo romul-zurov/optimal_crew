@@ -80,11 +80,12 @@ object FormOrder: TFormOrder
       object GroupBox_controls: TGroupBox
         Left = 1
         Top = 1
-        Width = 198
+        Width = 398
         Height = 120
         Align = alClient
         Caption = 'GroupBox_controls'
         TabOrder = 0
+        ExplicitWidth = 198
         object Button_get_crew: TButton
           Left = 3
           Top = 15
@@ -122,21 +123,23 @@ object FormOrder: TFormOrder
       object GroupBox_order: TGroupBox
         Left = 1
         Top = 121
-        Width = 198
+        Width = 398
         Height = 170
         Align = alClient
         Caption = 'GroupBox_order'
         TabOrder = 1
+        ExplicitWidth = 198
         object grid_order: TStringGrid
           Left = 2
           Top = 15
-          Width = 194
+          Width = 394
           Height = 153
           Align = alClient
           ColCount = 2
           DefaultRowHeight = 16
           FixedCols = 0
           TabOrder = 0
+          ExplicitWidth = 194
         end
       end
     end

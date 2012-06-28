@@ -1016,18 +1016,10 @@ begin
 end;
 
 function TCrewList.get_crews_coords() : Integer;
-	function s_2_6(sc : string) : string;
-	var n : double;
-	begin
-		n := dotStrtoFloat(sc);
-		sc := FloatToStrF(n, ffFixed, 8, 6);
-		sc := StringReplace(sc, ',', '.', [rfReplaceAll]);
-		exit(sc);
-	end;
-
 	function coords_to_str(fields : TFields) : Integer;
 	var field : TField; // main file
-		j, l, ID, GpsId : Integer; b : TBytes; pint : ^Integer; plat, plong : ^single;
+		j, l, ID, GpsId : Integer; b : TBytes;
+		pint : ^Integer; plat, plong : ^single;
 		s, scoords, slat, slong : string; date1, date2, date0 : TDateTime; crew : TCrew;
 		pp : Pointer;
 	begin
@@ -1743,7 +1735,47 @@ begin
 end;
 
 function TOrder.get_order_data() : string;
-var sel, s, h, k : string; res : TStringList;
+var sel, s, h, k : string;
+	res : TStringList;
+
+	procedure add_coo(var adr : TAdres; coo : string);
+	begin
+		if (not adr.gps_ok()) and (coo <> '0.000000,0.000000') then
+			adr.gps := coo;
+	end;
+
+	function coords2str(fields : TFields) : string;
+	var field : TField; // main file
+		j, l, cou : Integer;
+		sid, sordid : string;
+		b : TBytes;
+		plat, plong : ^single;
+		scoords, slat, slong : string;
+	begin
+		result := '';
+		// ID := fields[1].AsInteger; // номер заказа, не используетс€
+		// cou := fields.Count;
+		// sid := fields[0].AsString;
+		// sordid := fields[1].AsString;
+		field := fields[0];
+		l := field.DataSize;
+		setlength(b, l);
+		b := field.AsBytes;
+		j := 2;
+		while j < l do
+		begin
+			plong := @b[j + 4];
+			plat := @b[j];
+			slat := float_to_dotstr_2_6(plat^);
+			slong := float_to_dotstr_2_6(plong^);
+			scoords := slat + ',' + slong + '|'; //
+			result := result + scoords;
+			j := j + 9;
+		end;
+		if result[length(result)] = '|' then
+			Delete(result, length(result), 1);
+	end;
+
 begin
 	// CrewID : Integer; // crew ID for a order, -1 if not defined
 	// state : Integer; // -1 - not defined, 0 - прин€т, маршрут задан
@@ -1762,13 +1794,11 @@ begin
 		+ ' , ORDERS.STOPS_COUNT ' // кол-во промежут. остановок
 		+ ' , ORDERS.SUMM ' // —тоимость заказа без учета скидок(наценок) дл€ расчЄта длины маршрута
 		+ ' , ORDERS.STOPS ' // пром. остановки
-	// + ' , ORDER_COORDS.COORDS_ADDR   ' // координаты адресов заказа, пока не исп.
 		+ ' from ORDERS ' //
-	// + ' , ORDER_COORDS ' //
 		+ ' where ' //
 		+ ' ORDERS.ID = ' + IntToStr(self.ID) //
-	// + ' and ORDER_COORDS.ORDER_ID = ' + IntToStr(self.ID) //
-		; res := get_sql_stringlist(self.query, sel);
+		;
+	res := get_sql_stringlist(self.query, sel);
 	// result := res.Text; // return raw data as string
 	result := res[0];
 
@@ -1846,7 +1876,45 @@ begin
 	else
 		self.raw_int_stops := ''; // сбрасываем, если нет
 
-	exit(result);
+	// координаты адресов:
+	sel := 'select ' //
+		+ ' ORDER_COORDS.COORDS_ADDR   ' // координаты адресов заказа, пока не исп.
+		+ ' from ' //
+		+ ' ORDER_COORDS ' //
+		+ ' where ' //
+		+ ' ORDER_COORDS.ORDER_ID = ' + IntToStr(self.ID) //
+		;
+
+	self.query.Close();
+	self.query.SQL.Clear();
+	self.query.SQL.Add(sel);
+	try
+		self.query.Open();
+	except
+		show_status('неверный запрос координат адресов из Ѕƒ');
+		exit();
+	end;
+
+	while (not self.query.Eof) do
+	begin
+		res.Text := coords2str(self.query.fields);
+		result := result + res.Text;
+		self.query.Next();
+	end;
+	// ???
+	self.query.Close();
+
+	res.Text := StringReplace(res.Text, '|', #13#10, [rfReplaceAll]);
+	if res.Count < 2 then
+		pass()
+	else
+	begin
+		add_coo(self.source, res[0]);
+		add_coo(self.dest, res[res.Count - 1]);
+	end;
+
+//	res.Free();
+    exit(result);
 end;
 
 function TOrder.is_not_prior : boolean;

@@ -604,6 +604,10 @@ begin
 		for pp in list.Orders do
 		begin
 			order := list.order(pp);
+
+			if order.destroy_flag then // помеченные для удаления заказы не отображаем
+				continue;
+
 			if ( //
 				prior_flag //
 					and (order.source_time < prior_stime) //
@@ -615,10 +619,9 @@ begin
 				) //
 				then
 				continue;
-			if order.destroy_flag then // помеченные для удаления заказы не отображаем
-				continue;
 
-			grid_order.Cells[0, row] := IntToStr(order.id); // не отображается по умолчанию
+			// не отображается по умолчанию
+			grid_order.Cells[0, row] := IntToStr(order.id);
 
 			grid_order.Cells[1, row] := order.status();
 
@@ -627,7 +630,9 @@ begin
 				+ ' (' + time_without_date(order.datetime_of_time_to_ap) //
 				+ '/' + time_without_date(order.datetime_of_time_to_end) + ')';
 
-			grid_order.Cells[3, row] := order.state_as_string();
+			grid_order.Cells[3, row] := order.state_as_string() //
+			// отмечаем заказы с пром. остановками
+				+ ifthen(order.count_int_stops > 0, '~', '');
 
 			if order.CrewId > 0 then
 			begin

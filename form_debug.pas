@@ -4,7 +4,7 @@ interface
 
 uses
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-	Dialogs, Grids, ExtCtrls;
+	Dialogs, Grids, ExtCtrls, Clipbrd;
 
 type
 	TFormDebug = class(TForm)
@@ -12,6 +12,7 @@ type
 		sg_orders : TStringGrid;
 		sg_crews : TStringGrid;
 		procedure FormCloseQuery(Sender : TObject; var CanClose : Boolean);
+		procedure sg_ordersDblClick(Sender : TObject);
 	private
 		{ Private declarations }
 		procedure show_grid(var list : TSTringList; var grid : TStringGrid);
@@ -32,6 +33,12 @@ implementation
 procedure TFormDebug.FormCloseQuery(Sender : TObject; var CanClose : Boolean);
 begin
 	self.Hide();
+end;
+
+procedure TFormDebug.sg_ordersDblClick(Sender : TObject);
+begin
+	with self.sg_orders do
+		clipboard.SetTextBuf(PWideChar(Cells[Col, Row]));
 end;
 
 procedure TFormDebug.show_crews(var list : TSTringList);
