@@ -460,45 +460,7 @@ begin
 	exit(s); // 'Foo String';
 end;
 
-function create_order_and_crew_states(var IBQuery : TIBQuery) : integer;
-	procedure set_states(var states : Tstringlist; table_name : string);
-	var sel, s : string;
-		i : integer;
-		st : Tstringlist;
-	begin
-		sel := 'select ' //
-			+ ' ID, NAME ' //
-			+ ' from ' //
-			+ table_name;
-		st := get_sql_stringlist(IBQuery, sel);
-		for i := 0 to st.Count - 1 do
-		begin
-			s := st.Strings[i];
-			s := StringReplace(s, ' ', '_', [rfReplaceAll]);
-			s := StringReplace(s, '|', '=', [rfReplaceAll]);
-			states.Add(s);
-		end;
-		s := '-1=#не_определено';
-		states.Append(s);
-	end;
 
-begin
-	order_states := Tstringlist.Create();
-	set_states(order_states, 'ORDER_STATES');
-
-	crew_states := Tstringlist.Create();
-	set_states(crew_states, 'CREW_STATE');
-
-	with order_states do
-	begin
-		Append(IntToStr(ORDER_CREW_NO_COORD) + '=%нет_координат_экипажа');
-		Append(IntToStr(ORDER_BAD_ADRES) + '=!!!некорректный_адрес');
-		Append(IntToStr(ORDER_WAY_ERROR) + '=%ошибка_расчёта');
-		Append(IntToStr(ORDER_HAS_STOPS) + '=%заказ_с_остановками');
-	end;
-
-	exit(0);
-end;
 
 function sql_select(var query : TIBQuery; sel : string) : integer;
 begin
@@ -954,6 +916,47 @@ begin
 			self.dist_way := -1.0;
 			exit();
 		end;
+end;
+
+
+function create_order_and_crew_states(var IBQuery : TIBQuery) : integer;
+	procedure set_states(var states : Tstringlist; table_name : string);
+	var sel, s : string;
+		i : integer;
+		st : Tstringlist;
+	begin
+		sel := 'select ' //
+			+ ' ID, NAME ' //
+			+ ' from ' //
+			+ table_name;
+		st := get_sql_stringlist(IBQuery, sel);
+		for i := 0 to st.Count - 1 do
+		begin
+			s := st.Strings[i];
+			s := StringReplace(s, ' ', '_', [rfReplaceAll]);
+			s := StringReplace(s, '|', '=', [rfReplaceAll]);
+			states.Add(s);
+		end;
+		s := '-1=#не_определено';
+		states.Append(s);
+	end;
+
+begin
+	order_states := Tstringlist.Create();
+	set_states(order_states, 'ORDER_STATES');
+
+	crew_states := Tstringlist.Create();
+	set_states(crew_states, 'CREW_STATE');
+
+	with order_states do
+	begin
+		Append(IntToStr(ORDER_CREW_NO_COORD) + '=%нет_координат_экипажа');
+		Append(IntToStr(ORDER_BAD_ADRES) + '=!!!некорректный_адрес');
+		Append(IntToStr(ORDER_WAY_ERROR) + '=%ошибка_расчёта');
+		Append(IntToStr(ORDER_HAS_STOPS) + '=%заказ_с_остановками');
+	end;
+
+	exit(0);
 end;
 
 end.

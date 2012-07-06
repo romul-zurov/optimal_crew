@@ -58,6 +58,7 @@ type
 
 		constructor Create(OrderId : Integer; var IBQuery : TIBQuery);
 		destructor Destroy(); override;
+		procedure del_order(); // просто очищает заказ без удаления из памяти
 		procedure def_time_to_end(var pcrew : Pointer);
 		procedure def_time_to_ap(var pcrew : Pointer);
 		// function get_time_to_end(var PCrew : Pointer) : Integer;
@@ -88,6 +89,7 @@ type
 		function order(p : Pointer) : TOrder;
 		function find_by_Id(OrderId : Integer) : Pointer;
 		function is_defined(OrderId : Integer) : boolean;
+		function ret_free_order() : Pointer;
 		function Append(OrderId : Integer) : Pointer;
 		function get_current_orders() : TStringList;
 		function get_crews_id_as_string() : string;
@@ -295,7 +297,19 @@ end;
 { TCrew }
 
 function TCrew.append_coords(coord, time : string) : Integer;
+var i, count : Integer;
 begin
+	count := ifthen(self.coords.count < self.coords_times.count, self.coords.count, self.coords_times.count);
+	if (count <= 0) then
+		pass()
+	else
+		for i := (count - 1) downto 0 do
+			if self.coords_times.Strings[i] = '_' then
+			begin
+				self.coords_times.Strings[i] := time;
+				self.coords.Strings[i] := coord;
+				exit(0);
+			end;
 	self.coords.Append(coord);
 	self.coords_times.Append(time);
 	exit(0);
@@ -415,20 +429,25 @@ end;
 
 function TCrew.del_old_coords : Integer;
 var sdt : string;
-	Count, i : Integer;
+	count, i : Integer;
 begin
 	if DEBUG then
 		exit(0); // для бэк-ап базы координаты не отбрасываем :)
-	Count := ifthen(self.coords.Count < self.coords_times.Count, self.coords.Count, self.coords_times.Count);
-	if (Count <= 0) then
+	count := ifthen(self.coords.count < self.coords_times.count, self.coords.count, self.coords_times.count);
+	if (count <= 0) then
 		exit(-1);
 	sdt := replace_time(COORDS_BUF_SIZE, now());
-	for i := (Count - 1) downto 0 do
-		if self.coords_times.Strings[i] < sdt then
-		begin
-			self.coords_times.Delete(i);
-			self.coords.Delete(i);
-		end;
+	for i := (count - 1) downto 0 do
+		if self.coords_times.Strings[i] = '_' then
+			pass()
+		else
+			if self.coords_times.Strings[i] < sdt then
+			begin
+				// self.coords_times.Delete(i);
+				// self.coords.Delete(i);
+				self.coords_times.Strings[i] := '_';
+				self.coords.Strings[i] := '_';
+			end;
 	exit(0);
 end;
 
@@ -839,23 +858,27 @@ begin
 end;
 
 function TCrew.sort_coords_by_time_desc : Integer;
-var sl : TStringList; s : string; Count, i : Integer;
+var sl : TStringList; s : string; count, i : Integer;
 begin
-	Count := ifthen(self.coords.Count < self.coords_times.Count, self.coords.Count, self.coords_times.Count);
-	if (Count <= 0) then
+	count := ifthen(self.coords.count < self.coords_times.count, self.coords.count, self.coords_times.count);
+	if (count <= 0) then
 		exit(-1);
 	sl := TStringList.Create();
 	sl.Duplicates := dupIgnore; // не допускаем дубликатов
 	sl.Sorted := true;
-	for i := 0 to (Count - 1) do
+	for i := 0 to (count - 1) do
 		sl.Append(self.coords_times.Strings[i] + '|' + self.coords.Strings[i]);
 	reverseStringList(sl);
-	self.coords.Clear(); self.coords_times.Clear();
+	self.coords.Clear();
+	self.coords_times.Clear();
 	for s in sl do
 	begin
-		self.coords_times.Append(get_substr(s, '', '|'));
-		self.coords.Append(get_substr(s, '|', ''));
-	end; FreeAndNil(sl); exit(0);
+		// self.coords_times.Append(get_substr(s, '', '|'));
+		// self.coords.Append(get_substr(s, '|', ''));
+		self.append_coords(get_substr(s, '|', ''), get_substr(s, '', '|'));
+	end;
+	FreeAndNil(sl);
+	exit(0);
 end;
 
 function TCrew.state_as_string : string;
@@ -957,11 +980,11 @@ end;
 function TCrewList.del_all_none_crewId : Integer;
 var pp : Pointer; i : Integer;
 begin
-	for i := self.Crews.Count - 1 downto 0 do
+	for i := self.Crews.count - 1 downto 0 do
 	begin
 		pp := Pointer(self.Crews.Items[i]);
 		if (self.crew(pp).CrewID = -1) then
-			self.Crews.Delete(i);
+			self.Crews.delete(i);
 	end;
 	// for pp in self.Crews do
 	// if (self.crew(pp).CrewID = -1) then
@@ -980,7 +1003,7 @@ end;
 destructor TCrewList.Destroy;
 var i : Integer;
 begin
-	for i := self.Crews.Count - 1 downto 0 do
+	for i := self.Crews.count - 1 downto 0 do
 		TCrew(self.Crews.Items[i]).Free();
 
 	inherited;
@@ -1116,7 +1139,8 @@ begin
 		+ ' from CREWS ' //
 		+ ' where ' //
 		+ ' CREWS.ID in (' + screws_id + ') '; //
-	result := get_sql_stringlist(self.query, sel); self.set_crews_data(result);
+	result := get_sql_stringlist(self.query, sel);
+	self.set_crews_data(result);
 end;
 
 function TCrewList.get_crew_list_by_order_list(var List : TOrderList) : TStringList;
@@ -1150,7 +1174,7 @@ begin
 	self.Crews.Sort(sort_crews_by_state_dist);
 	result := TStringList.Create();
 
-	for i := 0 to self.Crews.Count - 1 do
+	for i := 0 to self.Crews.count - 1 do
 	begin
 		crew := self.crew(self.Crews.Items[i]);
 
@@ -1203,7 +1227,7 @@ begin
 			s := s + ',' + IntToStr(self.crew(pp).GpsId)
 		else
 			s := s + ',' + IntToStr(self.crew(pp).CrewID);
-	Delete(s, 1, 1); result := s;
+	delete(s, 1, 1); result := s;
 end;
 
 function TCrewList.get_nonfree_crewid_list_as_string() : string;
@@ -1214,7 +1238,7 @@ begin
 		if (self.crew(pp).state = CREW_NAZAKAZE) and (self.crew(pp).CrewID > -1) then
 			s := s + ',' + IntToStr(self.crew(pp).CrewID);
 	if length(s) > 0 then
-		Delete(s, 1, 1);
+		delete(s, 1, 1);
 	exit(s);
 end;
 
@@ -1287,8 +1311,10 @@ begin
 	// sl.Delimiter := '|';
 	for s in List do
 	begin
-		sl.Clear(); sl.Text := StringReplace(s, '|', #13#10, [rfReplaceAll]);
-		ID := StrToInt(sl.Strings[0]); GpsId := StrToInt(sl.Strings[1]);
+		sl.Clear();
+		sl.Text := StringReplace(s, '|', #13#10, [rfReplaceAll]);
+		ID := StrToInt(sl.Strings[0]);
+		GpsId := StrToInt(sl.Strings[1]);
 		if self.isGpsIdInList(GpsId) then
 			crew := self.crewByGpsId(GpsId)
 		else
@@ -1387,36 +1413,37 @@ end;
 constructor TOrder.Create(OrderId : Integer; var IBQuery : TIBQuery);
 begin
 	inherited Create();
-	self.ID := OrderId; self.CrewID := -1;
-	// want_CrewId := -1; // желаемый экипаж на заказе - НЕ НУЖЕН
-	self.prior_CrewId := -1; // предварительный экипаж на предвар. заказе
-	self.prior := false; // признак предварительного заказа
-	self.state := -1; // -1 - not defined, 0 - принят, маршрут задан
+
+	// self.CrewID := -1;
+	// self.prior_CrewId := -1; // предварительный экипаж на предвар. заказе
+	// self.prior := false; // признак предварительного заказа
+	// self.state := -1; // -1 - not defined, 0 - принят, маршрут задан
 	// .                 1 - в работе, 2 - выполнен, остальное см. crew_globals;
 	self.source := TAdres.Create('', '', '', ''); // address from
-	self.source_raw := '';
+	// self.source_raw := '';
 	self.dest := TAdres.Create('', '', '', ''); // address to
-	self.dest_raw := '';
-	self.source_time := ''; // время подачи экипажа
-	self.time_to_end := -1; // время до окончания заказа в минутах
-	self.time_to_ap := -1; // время до подъезда к адресу подачи в минутах
-	self.query := IBQuery;
-	self.deleted := false;
+	// self.dest_raw := '';
+	// self.source_time := ''; // время подачи экипажа
+	// self.time_to_end := -1; // время до окончания заказа в минутах
+	// self.time_to_ap := -1; // время до подъезда к адресу подачи в минутах
+
+	// self.deleted := false;
 	self.way_to_ap := TWay.Create();
 	self.way_to_end := TWay.Create();
 	self.way_to_ap.zapros.browser.OnNavigateComplete2 := self.set_time_to_ap;
 	self.way_to_end.zapros.browser.OnNavigateComplete2 := self.set_time_to_end;
-	self.stops_time := 0;
-	self.na_bortu := false;
-	self.pcrew := nil;
-	self.datetime_of_time_to_ap := IncHour(now(), -1);
-	self.datetime_of_time_to_end := self.datetime_of_time_to_ap;
-	self.count_int_stops := 0;
-	self.destroy_flag := false; // флаг, что заказ можно удалять из списка
-	self.destroy_time := '';
-	self.raw_dist_way := -1.0;
+	// self.na_bortu := false;
+	// self.pcrew := nil;
+	// self.datetime_of_time_to_ap := IncHour(now(), -1);
+	// self.datetime_of_time_to_end := self.datetime_of_time_to_ap;
+	// self.count_int_stops := 0;
+	// self.destroy_flag := false; // флаг, что заказ можно удалять из списка
+	// self.destroy_time := '';
+	// self.raw_dist_way := -1.0;
+	self.query := IBQuery;
+	self.del_order();
+	self.ID := OrderId;
 
-	// form := TFormOrder.Create(nil);
 end;
 
 procedure TOrder.def_time_to_ap(var pcrew : Pointer);
@@ -1713,6 +1740,35 @@ begin
 	self.way_to_end.get_way_time_dist();
 end;
 
+procedure TOrder.del_order();
+begin
+	self.ID := -1;
+	self.CrewID := -1;
+	self.prior_CrewId := -1; // предварительный экипаж на предвар. заказе
+	self.prior := false; // признак предварительного заказа
+	self.state := -1; // -1 - not defined, 0 - принят, маршрут задан
+	// .                 1 - в работе, 2 - выполнен, остальное см. crew_globals;
+	self.source.setAdres('', '', '', ''); // address from
+	self.source_raw := '';
+	self.dest.setAdres('', '', '', ''); // address to
+	self.dest_raw := '';
+	self.source_time := ''; // время подачи экипажа
+	self.time_to_end := -1; // время до окончания заказа в минутах
+	self.time_to_ap := -1; // время до подъезда к адресу подачи в минутах
+	self.deleted := false;
+	self.way_to_ap.points.Clear();
+	self.way_to_end.points.Clear();
+	self.stops_time := 0;
+	self.na_bortu := false;
+	self.pcrew := nil;
+	self.datetime_of_time_to_ap := IncHour(now(), -1);
+	self.datetime_of_time_to_end := self.datetime_of_time_to_ap;
+	self.count_int_stops := 0;
+	self.destroy_flag := false; // флаг, что заказ можно удалять из списка
+	self.destroy_time := '';
+	self.raw_dist_way := -1.0;
+end;
+
 destructor TOrder.Destroy;
 begin
 	// self.source.zapros.browser.Stop();
@@ -1773,7 +1829,7 @@ var sel, s, h, k : string;
 			j := j + 9;
 		end;
 		if result[length(result)] = '|' then
-			Delete(result, length(result), 1);
+			delete(result, length(result), 1);
 	end;
 
 begin
@@ -1905,16 +1961,16 @@ begin
 	self.query.Close();
 
 	res.Text := StringReplace(res.Text, '|', #13#10, [rfReplaceAll]);
-	if res.Count < 2 then
+	if res.count < 2 then
 		pass()
 	else
 	begin
 		add_coo(self.source, res[0]);
-		add_coo(self.dest, res[res.Count - 1]);
+		add_coo(self.dest, res[res.count - 1]);
 	end;
 
-//	res.Free();
-    exit(result);
+	// res.Free();
+	exit(result);
 end;
 
 function TOrder.is_not_prior : boolean;
@@ -2119,11 +2175,24 @@ end;
 function TOrderList.Append(OrderId : Integer) : Pointer;
 var i : Integer;
 begin
+	// если заказ уже в списке, возвращаем указатель на него
 	if self.is_defined(OrderId) then
-		exit(self.find_by_Id(OrderId));
-	// если заказ уже в списке, возвращаем
-	// .								   указатель на него
-	i := self.Orders.Add(TOrder.Create(OrderId, self.query)); result := Pointer(self.Orders[i]);
+		exit(self.find_by_Id(OrderId))
+	else
+	begin
+		// ищем "свободный" заказ в списке
+		result := self.ret_free_order();
+		if result = nil then
+		begin
+			i := self.Orders.Add(TOrder.Create(OrderId, self.query));
+			result := Pointer(self.Orders[i]);
+		end
+		else
+		begin
+			TOrder(result).ID := OrderId;
+			exit(result);
+		end;
+	end;
 end;
 
 function TOrderList.clear_order_list : Integer;
@@ -2144,7 +2213,7 @@ begin
 	cur_t := now(); s_now := date_to_full(cur_t);
 	s_past := replace_time(ORDER_DESTROY_TIME, cur_t);
 
-	for i := self.Orders.Count - 1 downto 0 do
+	for i := self.Orders.count - 1 downto 0 do
 	begin
 		order := self.order(self.Orders.Items[i]);
 		if //
@@ -2178,11 +2247,14 @@ end;
 
 function TOrderList.del_order(ListIndex : Integer) : Integer;
 begin
-	if ListIndex in [0 .. self.Orders.Count - 1] then
+	if ListIndex in [0 .. self.Orders.count - 1] then
 		try
-			TOrder(self.Orders.Items[ListIndex]).Free();
-			// FreeMem(self.Orders.Items[ListIndex]);
-			self.Orders.Delete(ListIndex); exit(0);
+			// TOrder(self.Orders.Items[ListIndex]).Free();
+			// self.Orders.Delete(ListIndex);
+
+			TOrder(self.Orders.Items[ListIndex]).del_order();
+
+			exit(0);
 		except
 			exit(-2)
 		end
@@ -2193,7 +2265,7 @@ end;
 destructor TOrderList.Destroy;
 var i : Integer;
 begin
-	for i := self.Orders.Count - 1 downto 0 do
+	for i := self.Orders.count - 1 downto 0 do
 		TOrder(self.Orders.Items[i]).Free();
 
 	inherited;
@@ -2214,7 +2286,7 @@ begin
 	s := '';
 	for pp in self.Orders do
 		s := s + ',' + IntToStr(self.order(pp).CrewID);
-	Delete(s, 1, 1);
+	delete(s, 1, 1);
 	result := s;
 end;
 
@@ -2273,7 +2345,8 @@ begin
 	// s1 := self.order(self.Append(StrToInt(s))).get_order_data();
 	// result.Append(s1);
 
-	result := self.get_orders_data(); self.del_bad_orders();
+	result := self.get_orders_data();
+	self.del_bad_orders();
 	// self.delete_all_none_adres();
 	self.Orders.Sort(sort_orders_by_source_time); exit(result);
 end;
@@ -2281,11 +2354,12 @@ end;
 function TOrderList.get_orders_data : TStringList;
 var pp : Pointer;
 begin
-	if self.Orders.Count = 0 then
+	if self.Orders.count = 0 then
 		exit();
 	result := TStringList.Create();
 	for pp in self.Orders do
-		result.Append(self.order(pp).get_order_data());
+		if TOrder(pp).ID > 0 then
+			result.Append(self.order(pp).get_order_data());
 	exit(result);
 end;
 
@@ -2306,6 +2380,15 @@ begin
 		result := TOrder(self.Orders.Items[i])
 	else
 		result := nil;
+end;
+
+function TOrderList.ret_free_order : Pointer;
+var pp : Pointer;
+begin
+	for pp in self.Orders do
+		if TOrder(pp).ID = -1 then
+			exit(pp);
+	exit(nil);
 end;
 
 { TOrderCrews }
