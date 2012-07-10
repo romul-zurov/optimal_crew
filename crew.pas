@@ -91,10 +91,10 @@ type
 		function is_defined(OrderId : Integer) : boolean;
 		function ret_free_order() : Pointer;
 		function Append(OrderId : Integer) : Pointer;
-		function get_current_orders() : TStringList;
+		function get_current_orders(var res : TStringList) : Integer;
 		function get_crews_id_as_string() : string;
 		function del_bad_orders() : Integer;
-		function get_orders_data() : TStringList;
+		function get_orders_data(var res : TStringList) : Integer;
 	end;
 
 	TCrew = class(TObject)
@@ -185,20 +185,21 @@ type
 		function get_crewid_list_as_string() : string;
 		function get_nonfree_crewid_list_as_string() : string;
 		function del_all_none_crewId() : Integer;
-		function set_crewId_by_gpsId(List : TStringList) : Integer;
+		function set_crewId_by_gpsId(var List : TStringList) : Integer;
 		function set_crews_state_by_crewId(var List : TStringList) : Integer;
 		function set_current_crews_coord() : Integer;
 		function set_crews_dist(coord : string) : Integer;
 		function set_ap(street, house, korpus, gps : string) : Integer;
+		function set_crews_data() : Integer;
 		function clear_crew_list() : Integer;
-		function get_crew_list_by_crewid_string(screws_id : string) : TStringList;
-		function get_crew_list_by_order_list(var List : TOrderList) : TStringList;
+		function get_crew_list_by_crewid_string(screws_id : string) : Integer;
+		function get_crew_list_by_order_list(var List : TOrderList) : Integer;
 		function get_crew_list_for_ap(new_ap : TAdres; Order_ID : Integer) : TStringList;
-		function get_crew_list() : TStringList;
-		function set_crews_data(List : TStringList) : Integer;
+		function get_crew_list() : Integer;
 		function get_crews_coords() : Integer;
 		function ret_crews_stringlist() : TStringList;
 	private
+		sql_crews_stringlist : TStringList;
 		function findById(ID : Integer; gps : boolean) : Pointer;
 		function get_id_list_as_string(gps : boolean) : string;
 		function del_crews_old_coords() : Integer;
@@ -332,6 +333,11 @@ begin
 		if self.POrder <> nil then
 			try
 				order := TOrder(self.POrder);
+
+				// временно отбрасыываем заказы с пром. остановками
+				if order.count_int_stops > 0 then
+					exit();
+
 				if (order.time_to_end = ORDER_AN_OK) then
 					// заказ –≈јЋ№Ќќ завершЄн, но водитель ещЄ не м€фкнул
 					// считаем экипаж свободным и мер€ем от текущей координаты
@@ -937,8 +943,9 @@ begin
 	inherited Create;
 	self.Crews := TList.Create();
 	self.query := TIBQuery(Pointer(IBQuery));
-	meausure_time := '';
 	// врем€ выборки координат из базы
+	self.meausure_time := '';
+	self.sql_crews_stringlist := TStringList.Create();
 end;
 
 function TCrewList.crew(p : Pointer) : TCrew;
@@ -1005,7 +1012,7 @@ var i : Integer;
 begin
 	for i := self.Crews.count - 1 downto 0 do
 		TCrew(self.Crews.Items[i]).Free();
-
+	FreeAndNil(self.sql_crews_stringlist);
 	inherited;
 end;
 
@@ -1128,26 +1135,30 @@ begin
 	exit(0);
 end;
 
-function TCrewList.get_crew_list_by_crewid_string(screws_id : string) : TStringList;
+function TCrewList.get_crew_list_by_crewid_string(screws_id : string) : Integer;
 var sel : string;
 begin
-	result := TStringList.Create();
+	// result := TStringList.Create();
 	if length(screws_id) = 0 then
-		exit(result);
+		exit(-1);
 	sel := //
 		'select CREWS.ID, CREWS.IDENTIFIER, CREWS.CODE, CREWS.NAME, CREWS.STATE ' //
 		+ ' from CREWS ' //
 		+ ' where ' //
 		+ ' CREWS.ID in (' + screws_id + ') '; //
-	result := get_sql_stringlist(self.query, sel);
-	self.set_crews_data(result);
+	// result := get_sql_stringlist(self.query, sel);
+	ret_sql_stringlist(self.query, sel, self.sql_crews_stringlist);
+	// self.set_crews_data(result);
+	self.set_crews_data();
 end;
 
-function TCrewList.get_crew_list_by_order_list(var List : TOrderList) : TStringList;
+function TCrewList.get_crew_list_by_order_list(var List : TOrderList) : Integer;
 var pp : Pointer;
-	order : TOrder; crew : TCrew;
+	order : TOrder;
+	crew : TCrew;
 begin
-	result := self.get_crew_list_by_crewid_string(List.get_crews_id_as_string());
+	// result := self.get_crew_list_by_crewid_string(List.get_crews_id_as_string());
+	self.get_crew_list_by_crewid_string(List.get_crews_id_as_string());
 	self.set_crews_orderId_by_order_list(List);
 	for pp in List.Orders do
 	begin
@@ -1160,6 +1171,7 @@ begin
 			crew.POrder := Pointer(order);
 		end;
 	end;
+    exit(0);
 end;
 
 function TCrewList.get_crew_list_for_ap(new_ap : TAdres; Order_ID : Integer) : TStringList;
@@ -1195,12 +1207,12 @@ begin
 	end;
 end;
 
-function TCrewList.get_crew_list() : TStringList;
+function TCrewList.get_crew_list() : Integer;
 var sel, screws_gpsid : string;
 begin
 	screws_gpsid := self.get_gpsid_list_as_string(); // gpsId экипажей из списка
 	if length(screws_gpsid) = 0 then
-		exit(nil);
+		exit(-1);
 	sel := //
 		'select CREWS.ID, CREWS.IDENTIFIER, CREWS.CODE, CREWS.NAME, CREWS.STATE ' //
 		+ ' from CREWS ' //
@@ -1208,9 +1220,12 @@ begin
 		+ ' CREWS.IDENTIFIER in (' + screws_gpsid + ') ' // только экипажи из списка
 	// + ' and CREWS.STATE in (1,3) '; // с состо€нием "свободен" и "на заказе"
 		;
-	result := get_sql_stringlist(self.query, sel);
-	self.set_crews_data(result);
-	// self.del_all_none_crewId(); self.del_all_none_crewId(); // так работает :-/
+	// result := get_sql_stringlist(self.query, sel);
+	// self.set_crews_data(result);
+
+	ret_sql_stringlist(self.query, sel, self.sql_crews_stringlist);
+	self.set_crews_data();
+	exit(0);
 end;
 
 function TCrewList.get_gpsid_list_as_string : string;
@@ -1282,34 +1297,37 @@ begin
 	exit(0);
 end;
 
-function TCrewList.set_crewId_by_gpsId(List : TStringList) : Integer;
-var sl : TStringList; s : string;
+function TCrewList.set_crewId_by_gpsId(var List : TStringList) : Integer;
+var sl : TStringList;
+	s : string;
 	crew : TCrew;
 begin
 	sl := TStringList.Create();
 	// sl.Delimiter := '|';
 	for s in List do
 	begin
-		sl.Clear(); sl.Text := StringReplace(s, '|', #13#10, [rfReplaceAll]);
-		crew := self.crewByGpsId(StrToInt(sl.Strings[0])); crew.CrewID := StrToInt(sl.Strings[1]);
+		sl.Clear();
+        sl.Text := StringReplace(s, '|', #13#10, [rfReplaceAll]);
+
+		crew := self.crewByGpsId(StrToInt(sl.Strings[0]));
+
+        crew.CrewID := StrToInt(sl.Strings[1]);
 		crew.Code := sl.Strings[2]; crew.name := sl.Strings[3];
 		crew.state := StrToInt(sl.Strings[4]);
-		// if crew.state = CREW_SVOBODEN then
-		// crew.state_as_string := '—вободен'
-		// else
-		// crew.state_as_string := 'Ќа заказе';
 	end;
-	// self.del_all_none_crewId(); self.del_all_none_crewId();
-	FreeAndNil(sl); exit(0);
+	FreeAndNil(sl);
+    exit(0);
 end;
 
-function TCrewList.set_crews_data(List : TStringList) : Integer;
-var sl : TStringList; s : string;
-	crew : TCrew; ID, GpsId : Integer;
+function TCrewList.set_crews_data() : Integer;
+var sl : TStringList;
+	s : string;
+	crew : TCrew;
+	ID, GpsId : Integer;
 begin
 	sl := TStringList.Create();
 	// sl.Delimiter := '|';
-	for s in List do
+	for s in self.sql_crews_stringlist do
 	begin
 		sl.Clear();
 		sl.Text := StringReplace(s, '|', #13#10, [rfReplaceAll]);
@@ -1748,9 +1766,9 @@ begin
 	self.prior := false; // признак предварительного заказа
 	self.state := -1; // -1 - not defined, 0 - прин€т, маршрут задан
 	// .                 1 - в работе, 2 - выполнен, остальное см. crew_globals;
-	self.source.setAdres('', '', '', ''); // address from
+	self.source.clear(); // address from
 	self.source_raw := '';
-	self.dest.setAdres('', '', '', ''); // address to
+	self.dest.clear(); // address to
 	self.dest_raw := '';
 	self.source_time := ''; // врем€ подачи экипажа
 	self.time_to_end := -1; // врем€ до окончани€ заказа в минутах
@@ -2290,8 +2308,9 @@ begin
 	result := s;
 end;
 
-function TOrderList.get_current_orders() : TStringList;
-var sel, s, s1 : string; res : TStringList;
+function TOrderList.get_current_orders(var res : TStringList) : Integer;
+var sel, s, s1 : string;
+	// res : TStringList;
 	sdate_from, sdate_to : string;
 begin
 	cur_time := now();
@@ -2331,36 +2350,33 @@ begin
 
 	// . заказы с промежуточными остановками тоже читаем, но не считаем пока
 	// + ' and (ORDERS.STOPS_COUNT is null  or  ORDERS.STOPS_COUNT = 0) ' //
-	// + ' order by ORDERS.SOURCE_TIME asc ' //
 		;
 
-	res := get_sql_stringlist(self.query, sel);
-	// result := TStringList.Create();
+	ret_sql_stringlist(self.query, sel, res);
 	for s in res do
 		if not self.is_defined(StrToInt(s)) then
 			// если заказа нет в списке, то добавл€ем
 			self.Append(StrToInt(s));
-	// запрашиваем его данные заказов
-	// если есть - всЄ равно зпрашиваем, а то вдруг обновились :))
-	// s1 := self.order(self.Append(StrToInt(s))).get_order_data();
-	// result.Append(s1);
 
-	result := self.get_orders_data();
+	// result := self.get_orders_data();
+	self.get_orders_data(res);
+
 	self.del_bad_orders();
-	// self.delete_all_none_adres();
-	self.Orders.Sort(sort_orders_by_source_time); exit(result);
+	self.Orders.Sort(sort_orders_by_source_time);
+	exit(0);
 end;
 
-function TOrderList.get_orders_data : TStringList;
+function TOrderList.get_orders_data(var res : TStringList) : Integer;
 var pp : Pointer;
 begin
 	if self.Orders.count = 0 then
-		exit();
-	result := TStringList.Create();
+		exit(-1);
+	// result := TStringList.Create();
+	res.Clear();
 	for pp in self.Orders do
 		if TOrder(pp).ID > 0 then
-			result.Append(self.order(pp).get_order_data());
-	exit(result);
+			res.Append(self.order(pp).get_order_data());
+	exit(0);
 end;
 
 function TOrderList.is_defined(OrderId : Integer) : boolean;

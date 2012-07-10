@@ -69,6 +69,8 @@ type
 		{ Private declarations }
 		flag_get_coords : boolean;
 		flag_get_orders : boolean;
+		deb_list : TSTringList;
+
 		procedure show_request(txt : string);
 		procedure show_OrderID(id : Integer);
 	public
@@ -93,7 +95,7 @@ var
 	flag_order_get_time : boolean;
 	flag_coords_request : boolean;
 	index_current_order : Integer;
-	deb_list : TSTringList;
+
 	// SDAY : string;
 	// SCOORDTIME : string;
 	// order_crew : TOrderCrews;
@@ -175,7 +177,8 @@ end;
 
 procedure Tform_main.orders_request();
 begin
-	deb_list := order_list.get_current_orders();
+	// deb_list := order_list.get_current_orders();
+	order_list.get_current_orders(deb_list);
 	crew_list.get_crew_list_by_order_list(order_list);
 
 	// координаты экипажей берутся по таймеру
@@ -408,6 +411,7 @@ procedure Tform_main.FormClose(Sender : TObject; var Action : TCloseAction);
 begin
 	FreeAndNil(order_list);
 	FreeAndNil(crew_list);
+	FreeAndNil(self.deb_list);
 	halt(0);
 end;
 
@@ -424,6 +428,7 @@ begin
 	self.GridPanel_grids.ColumnCollection.Items[1].value := 0;
 	self.flag_get_coords := false;
 	self.flag_get_orders := false;
+	self.deb_list := TSTringList.Create();
 	flag_order_get_time := false;
 	flag_coords_request := false;
 	index_current_order := 0;
@@ -716,7 +721,7 @@ begin
 	flag := self.Timer_orders.Enabled;
 	self.Timer_orders.Enabled := false;
 	self.show_request('Orders request...');
-	orders_request();
+	self.orders_request();
 	self.show_request('Orders complete.');
 	self.Timer_orders.Enabled := flag;
 end;

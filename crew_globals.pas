@@ -149,6 +149,7 @@ function get_zapros(surl : string) : string;
 function create_order_and_crew_states(var IBQuery : TIBQuery) : integer;
 function sql_select(var query : TIBQuery; sel : string) : integer;
 function get_sql_stringlist(var query : TIBQuery; sel : string) : Tstringlist;
+function ret_sql_stringlist(var query : TIBQuery; sel : string; var res : Tstringlist) : integer;
 function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
 function get_crew_way_time(var points : TList; var dist_way : double) : integer;
 procedure show_status(status : string);
@@ -460,8 +461,6 @@ begin
 	exit(s); // 'Foo String';
 end;
 
-
-
 function sql_select(var query : TIBQuery; sel : string) : integer;
 begin
 	query.Close();
@@ -516,6 +515,45 @@ begin
 	exit(sql_string_list);
 end;
 
+function ret_sql_stringlist(var query : TIBQuery; sel : string; var res : Tstringlist) : integer;
+var
+	sres : string;
+	// list : Tstringlist;
+	field : TField;
+	i : integer;
+begin
+	query.Close();
+	query.SQL.Clear();
+	query.SQL.Add(sel);
+	try
+		query.Prepare();
+	except
+		show_status('неверный запрос к БД');
+		exit(-1);
+	end;
+	query.Open();
+
+	// очищаем список вп-ду!
+	// sql_string_list.Destroy();
+	// sql_string_list := Tstringlist.Create();
+
+	res.Clear();
+
+	while (not query.Eof) do
+	begin
+		sres := '';
+		for field in query.fields do
+		begin
+			sres := sres + field.AsString + '|';
+		end;
+		if sres[length(sres)] = '|' then
+			Delete(sres, length(sres), 1);
+		res.Append(sres);
+		query.Next;
+	end;
+	exit(0);
+end;
+
 { TAdres }
 
 procedure TAdres.Clear;
@@ -524,6 +562,7 @@ begin
 	self.house := '';
 	self.korpus := '';
 	self.gps := '';
+    self.raw_adres := '';
 end;
 
 constructor TAdres.Create(street, house, korpus, gps : string);
@@ -917,7 +956,6 @@ begin
 			exit();
 		end;
 end;
-
 
 function create_order_and_crew_states(var IBQuery : TIBQuery) : integer;
 	procedure set_states(var states : Tstringlist; table_name : string);
