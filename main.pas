@@ -693,6 +693,18 @@ begin
 	self.Timer_orders.Enabled := false;
 
 	self.show_request('Coords request...');
+
+	{
+	  // пытаемся убрать хрень с прпаданием координат :(
+	  try
+	  db_main.Connected := false;
+	  db_main.Connected := true;
+	  show_status('успешное подключение к БД');
+	  except
+	  show_status('ошибка при открытии БД');
+	  end;
+	  }
+
 	crews_request();
 	self.show_request('Coords complete.');
 

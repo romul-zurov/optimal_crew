@@ -102,7 +102,6 @@ type
 		house : string;
 		korpus : string;
 		gps : string;
-		s_color : string; // цвет для некорректных адресов
 		zapros : TZapros;
 		constructor Create(street, house, korpus, gps : string);
 		destructor Destroy; override;
@@ -116,6 +115,7 @@ type
 		procedure get_gps_unlim();
 		function gps_ok() : boolean;
 	private
+		function s_color() : string; // цвет для некорректных адресов
 		procedure def_gps(count_flag : boolean);
 		procedure gps_complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 		// procedure complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
@@ -562,7 +562,7 @@ begin
 	self.house := '';
 	self.korpus := '';
 	self.gps := '';
-    self.raw_adres := '';
+	self.raw_adres := '';
 end;
 
 constructor TAdres.Create(street, house, korpus, gps : string);
@@ -573,7 +573,7 @@ begin
 	self.house := house;
 	self.korpus := korpus;
 	self.gps := gps;
-	self.s_color := '';
+	// self.s_color := '';
 	self.zapros := TZapros.Create();
 	self.zapros.browser.OnNavigateComplete2 := self.gps_complete;
 end;
@@ -609,7 +609,7 @@ end;
 function TAdres.get_as_color_string : string;
 begin
 	// result := self.s_color + self.get_as_string();
-	result := self.s_color + self.raw_adres;
+	result := self.s_color() + self.raw_adres;
 end;
 
 function TAdres.get_as_string : string;
@@ -645,10 +645,10 @@ begin
 	// self.gps := ''
 	// else
 	self.gps := self.zapros.otvet;
-	if pos('Error', self.gps) > 0 then
-		s_color := '!!!'
-	else
-		s_color := '';
+	// if pos('Error', self.gps) > 0 then
+	// s_color := '!!!'
+	// else
+	// s_color := '';
 end;
 
 function TAdres.gps_ok : boolean;
@@ -709,6 +709,11 @@ begin
 	self.raw_adres := adres;
 	ret_adr(adres, s, h, k);
 	self.setAdres(s, h, k, '');
+end;
+
+function TAdres.s_color : string;
+begin
+	result := ifthen((pos('Error', self.gps) > 0) or (length(self.gps) = 0), '!!!', '');
 end;
 
 procedure show_status(status : string);
