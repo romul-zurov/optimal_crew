@@ -179,10 +179,8 @@ end;
 
 procedure Tform_main.orders_request();
 begin
-	// deb_list := order_list.get_current_orders();
-
-	// order_list.get_current_orders(deb_list);
-	order_list.get_current_orders_with_data();
+	order_list.get_current_orders(deb_list);
+	// order_list.get_current_orders_with_data();
 
 	crew_list.get_crew_list_by_order_list(order_list);
 
@@ -550,7 +548,7 @@ procedure Tform_main.show_counts;
 begin
 	self.stbar_main.Panels[3].Text := //
 		IntToStr(self.grid_order_current.RowCount - 1) + //
-	// '/' + IntToStr(self.grid_order_prior.RowCount - 1) + //
+		'/' + IntToStr(self.grid_order_prior.RowCount - 1) + //
 		'/' + IntToStr(order_list.Orders.Count) + '*' //
 		;
 end;

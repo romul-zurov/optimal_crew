@@ -2531,7 +2531,7 @@ begin
 		if not self.is_defined(ord_id) then
 			// если заказа нет в списке, то добавляем
 			self.Append(ord_id);
-		order := self.order(self.find_by_Id(ord_id));
+		order := TOrder(self.find_by_Id(ord_id));
 
 		// заполняем данные заказа
 		if res.Strings[0] <> '' then
