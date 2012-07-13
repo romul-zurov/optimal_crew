@@ -410,6 +410,7 @@ begin
 	self.cur_pos.setAdres('', '', '', self.coord); // начало маршрута - текуща€ координата машины
 	self.way_to_ap.points.Clear(); // список точек маршрута
 
+    order := nil;
 	if (self.state = CREW_NAZAKAZE) and (self.POrder <> nil) then
 		try
 			order := TOrder(self.POrder);
@@ -632,13 +633,15 @@ begin
 					if t1 > -1 then
 					begin
 						// теперь считаем врем€ маршрута от конца текушего заказа до јѕ
-						d1 := self.dist_way; points.Add(Pointer(order.dest));
+						d1 := self.dist_way;
+						points.Add(Pointer(order.dest));
 						// от конца выполн€емого заказа
 						points.Add(Pointer(n_ap)); // втора€ - заданый јѕ
 						t2 := get_crew_way_time(points, d2);
 						if t2 > -1 then
 						begin
-							result := t1 + t2; self.dist_way := d1 + d2;
+							result := t1 + t2;
+							self.dist_way := d1 + d2;
 						end;
 					end;
 			end;
@@ -2600,13 +2603,13 @@ begin
 			order.raw_int_stops := ''; // сбрасываем, если нет
 	end;
 
-    // удал€ем плохие заказы
+	// удал€ем плохие заказы
 	self.del_bad_orders();
 
 	// читаем координаты адресов
-    self.get_adres_coords();
+	self.get_adres_coords();
 
-    // сортируем по времени подачи:
+	// сортируем по времени подачи:
 	self.Orders.Sort(sort_orders_by_source_time);
 
 	FreeAndNil(sl);

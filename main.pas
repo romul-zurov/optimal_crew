@@ -70,6 +70,7 @@ type
 		flag_get_coords : boolean;
 		flag_get_orders : boolean;
 		deb_list : TSTringList;
+		Interval : int64;
 
 		procedure show_request(txt : string);
 		procedure show_counts();
@@ -185,16 +186,9 @@ begin
 
 	crew_list.get_crew_list_by_order_list(order_list);
 
-	// координаты экипажей берутся по таймеру
-	// crew_list.get_crews_coords();
-	// crew_list.Crews.Sort(sort_crews_by_crewid);
-
 	// Show orders:
-	form_debug.show_orders(deb_list); // for info
+	// form_debug.show_orders(deb_list); // for info
 
-	// отображение сетки - по таймеру Timer_show_order_grid
-	// show_orders_grid(); - не нужно, сетка обновляется по таймеру
-	// show_result_crews_grid(crew_list); // - не нужно, сетка обновляется по таймеру
 end;
 
 procedure Tform_main.get_orders_times();
@@ -305,6 +299,7 @@ begin
 				ac_taxi_url := FIniFile.ReadString('Url', 'Main_Url', '');
 				PHP_Url := FIniFile.ReadString('Url', 'PHP_Url', '');
 				form_main.Timer_coords.Interval := StrToInt(FIniFile.ReadString('Const', 'Timer_Coords', ''));
+				CoordsInterval := form_main.Timer_coords.Interval;
 				form_main.Timer_orders.Interval := StrToInt(FIniFile.ReadString('Const', 'Timer_Orders', ''));
 			finally
 			end;
@@ -476,7 +471,7 @@ begin
 
 		// активируем таймеры:
 		form_main.Timer_orders.Enabled := true;
-		form_main.Timer_coords.Enabled := true;
+		// form_main.Timer_coords.Enabled := true;
 		form_main.Timer_get_time_order.Enabled := true;
 		form_main.Timer_show_order_grid.Enabled := true;
 	end;
@@ -555,8 +550,8 @@ procedure Tform_main.show_counts;
 begin
 	self.stbar_main.Panels[3].Text := //
 		IntToStr(self.grid_order_current.RowCount - 1) + //
-//		'/' + IntToStr(self.grid_order_prior.RowCount - 1) + //
-		'/' + IntToStr(order_list.Orders.Count) + '*'//
+	// '/' + IntToStr(self.grid_order_prior.RowCount - 1) + //
+		'/' + IntToStr(order_list.Orders.Count) + '*' //
 		;
 end;
 
@@ -721,7 +716,7 @@ begin
 	  end;
 	  }
 
-	crews_request();
+	self.crews_request();
 	self.show_request('Coords complete.');
 
 	self.Timer_coords.Enabled := flag;
@@ -748,17 +743,23 @@ begin
 	// ---------------------------------------------------------
 	flag := self.Timer_orders.Enabled;
 	self.Timer_orders.Enabled := false;
-	self.show_request('Orders request...');
-	self.orders_request();
-	self.show_request('Orders complete.');
+	if self.Interval > CoordsInterval then
+	begin
+		self.Interval := 0;
+		self.Timer_coordsTimer(Sender);
+	end
+	else
+	begin
+		self.Interval := self.Interval + self.Timer_orders.Interval;
+		self.show_request('Orders request...');
+		self.orders_request();
+		self.show_request('Orders complete.');
+	end;
 	self.Timer_orders.Enabled := flag;
 end;
 
 procedure Tform_main.Timer_show_order_gridTimer(Sender : TObject);
 begin
-	// exit();
-	// --------------------------------------------------------
-
 	self.show_orders_grid();
 end;
 
