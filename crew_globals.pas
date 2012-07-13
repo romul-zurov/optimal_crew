@@ -154,6 +154,7 @@ function get_gps_coords_for_adres(ulica, dom, korpus : string) : string;
 function get_crew_way_time(var points : TList; var dist_way : double) : integer;
 procedure show_status(status : string);
 function get_set_gps(var adr : TAdres) : string;
+procedure string_to_stringlist(source : string; var res : Tstringlist);
 
 var
 	sql_string_list : Tstringlist;
@@ -1000,6 +1001,12 @@ begin
 	end;
 
 	exit(0);
+end;
+
+procedure string_to_stringlist(source : string; var res : Tstringlist);
+begin
+	res.Clear();
+	res.Text := StringReplace(source, '|', #13#10, [rfReplaceAll]);
 end;
 
 end.

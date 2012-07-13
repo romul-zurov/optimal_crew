@@ -339,6 +339,9 @@ object form_main: Tform_main
           Width = 200
         end
         item
+          Width = 100
+        end
+        item
           Width = 50
         end>
     end
@@ -380,7 +383,7 @@ object form_main: Tform_main
   end
   object Timer_get_time_order: TTimer
     Enabled = False
-    Interval = 256
+    Interval = 128
     OnTimer = Timer_get_time_orderTimer
     Left = 208
     Top = 192

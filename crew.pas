@@ -95,6 +95,10 @@ type
 		function get_crews_id_as_string() : string;
 		function del_bad_orders() : Integer;
 		function get_orders_data(var res : TStringList) : Integer;
+		function get_current_orders_with_data() : Integer;
+	private
+		procedure get_adres_coords();
+		function orders_id_as_string() : string;
 	end;
 
 	TCrew = class(TObject)
@@ -1171,7 +1175,7 @@ begin
 			crew.POrder := Pointer(order);
 		end;
 	end;
-    exit(0);
+	exit(0);
 end;
 
 function TCrewList.get_crew_list_for_ap(new_ap : TAdres; Order_ID : Integer) : TStringList;
@@ -1246,15 +1250,14 @@ begin
 end;
 
 function TCrewList.get_nonfree_crewid_list_as_string() : string;
-var s : string; pp : Pointer;
+var pp : Pointer;
 begin
-	s := '';
+	result := '';
 	for pp in self.Crews do
 		if (self.crew(pp).state = CREW_NAZAKAZE) and (self.crew(pp).CrewID > -1) then
-			s := s + ',' + IntToStr(self.crew(pp).CrewID);
-	if length(s) > 0 then
-		delete(s, 1, 1);
-	exit(s);
+			result := result + ',' + IntToStr(self.crew(pp).CrewID);
+	if length(result) > 0 then
+		delete(result, 1, 1);
 end;
 
 function TCrewList.isCrewIdInList(ID : Integer) : boolean;
@@ -1307,16 +1310,16 @@ begin
 	for s in List do
 	begin
 		sl.Clear();
-        sl.Text := StringReplace(s, '|', #13#10, [rfReplaceAll]);
+		sl.Text := StringReplace(s, '|', #13#10, [rfReplaceAll]);
 
 		crew := self.crewByGpsId(StrToInt(sl.Strings[0]));
 
-        crew.CrewID := StrToInt(sl.Strings[1]);
+		crew.CrewID := StrToInt(sl.Strings[1]);
 		crew.Code := sl.Strings[2]; crew.name := sl.Strings[3];
 		crew.state := StrToInt(sl.Strings[4]);
 	end;
 	FreeAndNil(sl);
-    exit(0);
+	exit(0);
 end;
 
 function TCrewList.set_crews_data() : Integer;
@@ -1766,9 +1769,9 @@ begin
 	self.prior := false; // признак предварительного заказа
 	self.state := -1; // -1 - not defined, 0 - принят, маршрут задан
 	// .                 1 - в работе, 2 - выполнен, остальное см. crew_globals;
-	self.source.clear(); // address from
+	self.source.Clear(); // address from
 	self.source_raw := '';
-	self.dest.clear(); // address to
+	self.dest.Clear(); // address to
 	self.dest_raw := '';
 	self.source_time := ''; // время подачи экипажа
 	self.time_to_end := -1; // время до окончания заказа в минутах
@@ -2298,6 +2301,98 @@ begin
 	exit(nil);
 end;
 
+procedure TOrderList.get_adres_coords;
+var sel, s, h, k : string;
+	res : TStringList;
+	order : TOrder;
+	ord_id : Integer;
+
+	procedure add_coo(var adr : TAdres; coo : string);
+	begin
+		if (not adr.gps_ok()) and (coo <> '0.000000,0.000000') then
+			adr.gps := coo;
+	end;
+
+	function coords2str(fields : TFields) : string;
+	var field : TField; // main file
+		j, l, cou : Integer;
+		sid, sordid : string;
+		b : TBytes;
+		plat, plong : ^single;
+		scoords, slat, slong : string;
+	begin
+		result := '';
+		// ID := fields[1].AsInteger; // номер заказа, не используется
+		// cou := fields.Count;
+		// sid := fields[0].AsString;
+		// sordid := fields[1].AsString;
+		field := fields[0];
+		l := field.DataSize;
+		setlength(b, l);
+		b := field.AsBytes;
+		j := 2;
+		while j < l do
+		begin
+			plong := @b[j + 4];
+			plat := @b[j];
+			slat := float_to_dotstr_2_6(plat^);
+			slong := float_to_dotstr_2_6(plong^);
+			scoords := slat + ',' + slong + '|'; //
+			result := result + scoords;
+			j := j + 9;
+		end;
+		if result[length(result)] = '|' then
+			delete(result, length(result), 1);
+	end;
+
+begin
+	res := TStringList.Create();
+
+	// координаты адресов:
+	sel := 'select ' //
+		+ ' ORDER_COORDS.COORDS_ADDR   ' // координаты адресов заказа
+		+ ' , ORDER_COORDS.ORDER_ID ' // order.ID
+		+ ' from ' //
+		+ ' ORDER_COORDS ' //
+		+ ' where ' //
+		+ ' ORDER_COORDS.ORDER_ID in ( ' + self.orders_id_as_string() + ' ) ' //
+		;
+
+	self.query.Close();
+	self.query.SQL.Clear();
+	self.query.SQL.Add(sel);
+	try
+		self.query.Open();
+	except
+		show_status('неверный запрос координат адресов из БД');
+		exit();
+	end;
+
+	while (not self.query.Eof) do
+	begin
+		ord_id := StrToInt(self.query.fields[1].AsString);
+		if self.is_defined(ord_id) then
+		begin
+			order := TOrder(self.find_by_Id(ord_id));
+			res.Clear();
+			res.Text := coords2str(self.query.fields);
+			res.Text := StringReplace(res.Text, '|', #13#10, [rfReplaceAll]);
+			if res.count < 2 then
+				pass()
+			else
+			begin
+				add_coo(order.source, res[0]);
+				add_coo(order.dest, res[res.count - 1]);
+			end;
+		end;
+		self.query.Next();
+	end;
+	// ???
+	self.query.Close();
+
+	FreeAndNil(res);
+end;
+
 function TOrderList.get_crews_id_as_string : string;
 var s : string; pp : Pointer;
 begin
@@ -2379,6 +2474,146 @@ begin
 	exit(0);
 end;
 
+function TOrderList.get_current_orders_with_data : Integer;
+var sel, s, s1 : string;
+	res, sl : TStringList;
+	sdate_from, sdate_to : string;
+	ord_id : Integer;
+	order : TOrder;
+begin
+	cur_time := now();
+	sdate_from := '''' + replace_time('{Last_day_1}', cur_time) + '''';
+	sdate_to := '''' + replace_time('{Last_day_-1}', cur_time) + '''';
+
+	sel := 'select ' //
+		+ ' ORDERS.CREWID, ORDERS.STATE, ORDERS.SOURCE_TIME ' //
+		+ ' , ORDERS.SOURCE, ORDERS.DESTINATION ' //
+		+ ' , ORDERS.DELETED ' // deleted and canceled orders
+		+ ' , ORDERS.PRIOR_CREW_ID ' // prior_crew
+		+ ' , ORDERS.STOPS_COUNT ' // кол-во промежут. остановок
+		+ ' , ORDERS.SUMM ' // Стоимость заказа без учета скидок(наценок) для расчёта длины маршрута
+		+ ' , ORDERS.STOPS ' // пром. остановки
+
+		+ ' , ORDERS.ID ' //
+
+		+ ' from ORDERS ' //
+		+ ' where ' //
+
+	// + ' ORDERS.ID = ' + IntToStr(self.ID) //
+
+	// отбрасываем удалённые и отменённые заказы
+		+ ' (ORDERS.DELETED is null or ORDERS.DELETED = 0) '
+
+	// . только заказы с состоянием "принят", "в работе" и т.п.
+	// . см. данные таблицы ORDER_STATES
+		+ ' and (ORDERS.STATE in ' //
+		+ '   (select ORDER_STATES.ID from ORDER_STATES where ORDER_STATES.SYSTEMSTATE in (0, 1) ) '
+	//
+		+ ' ) ' //
+
+	// фильтр по дате :
+	// в числе прочего убирает глючные незакрытые заказы
+		+ ' and ORDERS.SOURCE_TIME > ' + sdate_from + ' ' //
+	// + ' and ORDERS.SOURCE_TIME < ' + sdate_to + ' ' // ну так, что б уж поменьше
+		;
+	res := TStringList.Create();
+	sl := TStringList.Create();
+
+	ret_sql_stringlist(self.query, sel, sl);
+
+	for s in sl do
+	begin
+		string_to_stringlist(s, res);
+		ord_id := StrToInt(res.Strings[10]);
+		if not self.is_defined(ord_id) then
+			// если заказа нет в списке, то добавляем
+			self.Append(ord_id);
+		order := self.order(self.find_by_Id(ord_id));
+
+		// заполняем данные заказа
+		if res.Strings[0] <> '' then
+			order.CrewID := StrToInt(res.Strings[0])
+		else
+		begin
+			if order.CrewID > -1 then
+			begin
+				// снимаем экипаж с заказа
+				order.time_to_end := -1;
+				order.time_to_ap := -1;
+				order.pcrew := nil;
+			end;
+			order.CrewID := -1; // !!!
+		end;
+
+		try
+			order.state := StrToInt(res.Strings[1]);
+		except
+			order.state := -1;
+		end;
+
+		order.source_time := date_to_full(res.Strings[2]);
+		order.source.set_raw_adres(res.Strings[3]);
+		order.dest.set_raw_adres(res.Strings[4]);
+
+		// проверяем удалённые и отменённые заказы
+		if (length(res.Strings[5]) = 0) or (res.Strings[5] = '0') then
+			order.deleted := false
+		else
+			order.deleted := true;
+
+		// предварительно назначенный экипаж:
+		if (length(res.Strings[6]) > 0) then
+			try
+				order.prior_CrewId := StrToInt(res.Strings[6]);
+			except
+				order.prior_CrewId := -1;
+			end
+		else
+			order.prior_CrewId := -1; // сбрасываем, если нет
+
+		// кол-во промежут. остановок
+		if (length(res.Strings[7]) > 0) then
+			try
+				order.count_int_stops := StrToInt(res.Strings[7]);
+			except
+				order.count_int_stops := 0;
+			end
+		else
+			order.count_int_stops := 0; // сбрасываем, если нет
+
+		if (length(res.Strings[8]) > 0) then
+			try
+				order.raw_dist_way := dotStrtoFloat(res.Strings[8]) / RUB_ZA_KM;
+			except
+				order.raw_dist_way := -1.0;
+			end
+		else
+			order.raw_dist_way := -1.0; // сбрасываем, если нет
+
+		if (length(res.Strings[9]) > 0) then
+			try
+				order.raw_int_stops := res.Strings[9];
+			except
+				order.raw_int_stops := '';
+			end
+		else
+			order.raw_int_stops := ''; // сбрасываем, если нет
+	end;
+
+    // удаляем плохие заказы
+	self.del_bad_orders();
+
+	// читаем координаты адресов
+    self.get_adres_coords();
+
+    // сортируем по времени подачи:
+	self.Orders.Sort(sort_orders_by_source_time);
+
+	FreeAndNil(sl);
+	FreeAndNil(res);
+	exit(0);
+end;
+
 function TOrderList.is_defined(OrderId : Integer) : boolean;
 var pp : Pointer;
 begin
@@ -2396,6 +2631,17 @@ begin
 		result := TOrder(self.Orders.Items[i])
 	else
 		result := nil;
+end;
+
+function TOrderList.orders_id_as_string : string;
+var pp : Pointer;
+begin
+	result := '';
+	for pp in self.Orders do
+		if (not self.order(pp).deleted) and (self.order(pp).ID > 0) then
+			result := result + ',' + IntToStr(self.order(pp).ID);
+	if length(result) > 0 then
+		delete(result, 1, 1);
 end;
 
 function TOrderList.ret_free_order : Pointer;

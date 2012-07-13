@@ -72,6 +72,7 @@ type
 		deb_list : TSTringList;
 
 		procedure show_request(txt : string);
+		procedure show_counts();
 		procedure show_OrderID(id : Integer);
 	public
 		{ Public declarations }
@@ -178,7 +179,10 @@ end;
 procedure Tform_main.orders_request();
 begin
 	// deb_list := order_list.get_current_orders();
-	order_list.get_current_orders(deb_list);
+
+	// order_list.get_current_orders(deb_list);
+	order_list.get_current_orders_with_data();
+
 	crew_list.get_crew_list_by_order_list(order_list);
 
 	// координаты экипажей берутся по таймеру
@@ -547,6 +551,15 @@ begin
 	show_order(grid_order_prior);
 end;
 
+procedure Tform_main.show_counts;
+begin
+	self.stbar_main.Panels[3].Text := //
+		IntToStr(self.grid_order_current.RowCount - 1) + //
+//		'/' + IntToStr(self.grid_order_prior.RowCount - 1) + //
+		'/' + IntToStr(order_list.Orders.Count) + '*'//
+		;
+end;
+
 procedure Tform_main.show_OrderID(id : Integer);
 begin
 	self.stbar_main.Panels[0].Text := 'Order ' + IntToStr(id);
@@ -590,8 +603,6 @@ begin
 				div 2; // 210
 			ColWidths[5] := ifthen(adr_w > 192, adr_w, 192);
 			ColWidths[6] := ColWidths[5];
-			// ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
-			// - ColWidths[3] - ColWidths[4] - ColWidths[5];
 		end;
 
 		// запоминаем, где был "курсор"
@@ -610,7 +621,11 @@ begin
 		begin
 			order := list.order(pp);
 
-			if order.destroy_flag then // помеченные для удаления заказы не отображаем
+			if //
+				order.destroy_flag // помеченные для удаления заказы
+				or //
+				(order.id < 0) // "стёртые" заказы
+				then // не отображаем!
 				continue;
 
 			if ( //
@@ -680,6 +695,7 @@ procedure Tform_main.show_orders_grid;
 begin
 	self.show_orders(order_list, form_main.grid_order_current, false);
 	self.show_orders(order_list, form_main.grid_order_prior, true);
+	self.show_counts();
 end;
 
 procedure Tform_main.Timer_coordsTimer(Sender : TObject);
