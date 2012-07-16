@@ -7,7 +7,7 @@ uses
 	crew, //
 	crew_globals, //
 	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-	Dialogs, Grids, StdCtrls, ExtCtrls, OleCtrls, SHDocVw, Math, StrUtils;
+	Dialogs, Grids, StdCtrls, ExtCtrls, OleCtrls, SHDocVw, Math, StrUtils, ComCtrls;
 
 type
 	TFormOrder = class(TForm)
@@ -28,6 +28,7 @@ type
 		Timer_show_crews : TTimer;
 		Edit_gps : TEdit;
 		cb_debug : TCheckBox;
+		stbar_crews : TStatusBar;
 		procedure FormCreate(Sender : TObject);
 		procedure FormClose(Sender : TObject; var Action : TCloseAction);
 		procedure Button_get_timeClick(Sender : TObject);
@@ -222,6 +223,7 @@ begin
 			Cells[6, r] := get_substr(s, '||||||', '');
 			inc(r);
 		end;
+	self.stbar_crews.Panels[0].Text := inttostr(self.grid_crews.RowCount - 1);
 end;
 
 procedure TFormOrder.show_order(POrd : Pointer);
@@ -243,7 +245,7 @@ begin
 	// выводим пстую шапку
 	self.show_crews();
 	// определяем список подходящихз экипажей
-	self.cr_slist := TCrewList(self.PCrewList).get_crew_list_for_ap(TOrder(POrder).source, TOrder(POrder).ID);
+	TCrewList(self.PCrewList).get_crew_list_for_ap(TOrder(POrder).source, TOrder(POrder).ID, self.cr_slist);
 	if self.cr_slist.Count = 0 then
 	begin
 		ShowMessage('Нет подходящих экипажей!');

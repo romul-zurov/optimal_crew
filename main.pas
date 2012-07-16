@@ -179,8 +179,8 @@ end;
 
 procedure Tform_main.orders_request();
 begin
-	order_list.get_current_orders(deb_list);
-	// order_list.get_current_orders_with_data();
+	// order_list.get_current_orders(deb_list);
+	order_list.get_current_orders_with_data();
 
 	crew_list.get_crew_list_by_order_list(order_list);
 
@@ -550,6 +550,11 @@ begin
 		IntToStr(self.grid_order_current.RowCount - 1) + //
 		'/' + IntToStr(self.grid_order_prior.RowCount - 1) + //
 		'/' + IntToStr(order_list.Orders.Count) + '*' //
+		;
+	self.stbar_main.Panels[4].Text := //
+		IntToStr(crew_list.free_crews_count()) //
+		+ '|' + IntToStr(crew_list.not_free_crews_count()) //
+		+ '/' + IntToStr(order_list.orders_time_to_end_count()) //
 		;
 end;
 
