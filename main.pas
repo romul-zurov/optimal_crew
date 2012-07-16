@@ -43,6 +43,7 @@ type
 		cb_timers_orders_coords : TCheckBox;
 		cb_show_times_to_end : TCheckBox;
 		cb_show_orders_id : TCheckBox;
+		Timer_main : TTimer;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -65,10 +66,12 @@ type
 		procedure Button_orders_coordsClick(Sender : TObject);
 		procedure grid_order_currentDrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
 			State : TGridDrawState);
+		procedure Timer_mainTimer(Sender : TObject);
 	private
 		{ Private declarations }
 		flag_get_coords : boolean;
 		flag_get_orders : boolean;
+		flag_show_orders : boolean;
 		deb_list : TSTringList;
 		Interval : int64;
 
@@ -168,8 +171,10 @@ end;
 
 procedure Tform_main.crews_request();
 begin
+	self.show_request('Coords request...');
 	flag_coords_request := true; // блокируем таймер в п-дууу :))
 	crew_list.get_crews_coords();
+	self.show_request('Coords complete.');
 	crew_list.Crews.Sort(sort_crews_by_crewid);
 	self.show_result_crews_grid(crew_list);
 	if form_cur_crew.Showing then
@@ -179,14 +184,13 @@ end;
 
 procedure Tform_main.orders_request();
 begin
+	self.show_request('Orders request...');
+
 	// order_list.get_current_orders(deb_list);
 	order_list.get_current_orders_with_data();
 
 	crew_list.get_crew_list_by_order_list(order_list);
-
-	// Show orders:
-	// form_debug.show_orders(deb_list); // for info
-
+	self.show_request('Orders complete.');
 end;
 
 procedure Tform_main.get_orders_times();
@@ -425,6 +429,7 @@ begin
 	self.GridPanel_grids.ColumnCollection.Items[1].value := 0;
 	self.flag_get_coords := false;
 	self.flag_get_orders := false;
+	self.flag_show_orders := false;
 	self.deb_list := TSTringList.Create();
 	flag_order_get_time := false;
 	flag_coords_request := false;
@@ -449,11 +454,11 @@ begin
 	form_main.grid_order_current.RowCount := 2;
 	form_main.grid_order_prior.RowCount := 2;
 	PGlobalStatusBar := Pointer(form_main.stbar_main);
+
+	order_list := TOrderList.Create(self.ibquery_main);
 	crew_list := TCrewList.Create(self.ibquery_coords);
 	form_cur_order.PCrewList := Pointer(crew_list);
 	form_cur_order.POrderList := Pointer(order_list);
-	order_list := TOrderList.Create(self.ibquery_main);
-	// crews_count := 0;
 
 	form_main.panel_ap.Show();
 
@@ -469,9 +474,10 @@ begin
 
 		// активируем таймеры:
 		form_main.Timer_orders.Enabled := true;
-		// form_main.Timer_coords.Enabled := true;
-		form_main.Timer_get_time_order.Enabled := true;
+		form_main.Timer_coords.Enabled := true;
+		// form_main.Timer_get_time_order.Enabled := true;
 		form_main.Timer_show_order_grid.Enabled := true;
+		self.Timer_main.Enabled := true; // !!!
 	end;
 
 	// пр€чем список экипажей
@@ -699,6 +705,10 @@ end;
 procedure Tform_main.Timer_coordsTimer(Sender : TObject);
 var flag, flag_ord : boolean;
 begin
+	self.Timer_coords.Enabled := false;
+	self.flag_get_coords := true;
+	exit();
+
 	if flag_coords_request then
 		exit();
 	flag := self.Timer_coords.Enabled;
@@ -737,11 +747,49 @@ begin
 	self.get_orders_times();
 end;
 
+procedure Tform_main.Timer_mainTimer(Sender : TObject);
+begin
+	// выключаем нафиг, чтоб не дЄргать сам себ€
+	self.Timer_main.Enabled := false;
+
+	if flag_order_get_time then // расчЄт уже идЄт, неча отвлекать
+		pass()
+	else
+	begin
+		self.get_orders_times(); // по-любому 1 раз просчЄт
+
+		if self.flag_get_coords then
+		begin
+			self.crews_request();
+			self.flag_get_coords := false;
+			self.Timer_coords.Enabled := true;
+		end
+		else
+			if self.flag_get_orders then
+			begin
+				self.orders_request();
+				self.flag_get_orders := false;
+				self.Timer_orders.Enabled := true;
+			end;
+
+		if self.flag_show_orders then
+		begin
+			self.show_orders_grid();
+			self.flag_show_orders := false;
+			self.Timer_show_order_grid.Enabled := true;
+		end;
+	end;
+
+	// включаем таймер
+	self.Timer_main.Enabled := true;
+end;
+
 procedure Tform_main.Timer_ordersTimer(Sender : TObject);
 var flag : boolean;
 begin
-	// self.flag_get_orders := true;
-	// exit();
+	self.Timer_orders.Enabled := false;
+	self.flag_get_orders := true;
+	exit();
 
 	// ---------------------------------------------------------
 	flag := self.Timer_orders.Enabled;
@@ -763,6 +811,10 @@ end;
 
 procedure Tform_main.Timer_show_order_gridTimer(Sender : TObject);
 begin
+	self.Timer_show_order_grid.Enabled := false;
+	self.flag_show_orders := true;
+	exit();
+
 	self.show_orders_grid();
 end;
 

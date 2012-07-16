@@ -1085,9 +1085,10 @@ function TCrewList.get_crews_coords() : Integer;
 		field := fields[3];
 		l := field.DataSize;
 		setlength(b, l);
+		b := field.AsBytes;
 		// создаём условную дельту по времени для координат
 		date0 := (date2 - date1) / (l div 12);
-		b := field.AsBytes;
+
 		j := 0;
 		while j < l do
 		begin
@@ -1113,9 +1114,13 @@ function TCrewList.get_crews_coords() : Integer;
 		exit(0);
 	end;
 
-var sel : string; stime : string;
+var
+	sel : string;
+	stime : string;
+	cur_time : TDateTime;
 begin
-	stime := replace_time(COORDS_BUF_SIZE, now());
+	cur_time := now();
+	stime := replace_time(COORDS_BUF_SIZE, cur_time);
 	if (self.meausure_time = '') or (self.meausure_time < stime) then
 		// если запроса координат не было слишком или был давно, то запрашиваем его
 		// за период COORDS_BUF_SIZE
@@ -1123,15 +1128,16 @@ begin
 
 	stime := '''' + self.meausure_time + ''''; // время запроса координат
 	// теперь сохраняем текущее время для следующей выборки
-	self.meausure_time := date_to_full(now()); // replace_time('{Last_minute_0}', now());
+	// self.meausure_time := date_to_full(cur_time);
+	self.meausure_time := replace_time('{Last_minute_1}', cur_time); // !!!
 
 	if DEBUG then
 		stime := DEBUG_MEASURE_TIME; // for back-up DB
 
 	sel := 'select ID, MEASURE_START_TIME, MEASURE_END_TIME, COORDS ' //
 		+ 'from CREWS_COORDS ' //
-		+ ' where MEASURE_START_TIME > ' + stime //
-	// + ' order by MEASURE_START_TIME ASC, ID ASC';
+	// + ' where MEASURE_START_TIME > ' + stime //
+		+ ' where MEASURE_END_TIME > ' + stime // !!!
 		;
 
 	// sql_select(self.query, sel);
@@ -1189,7 +1195,7 @@ begin
 	self.set_crews_orderId_by_order_list(List);
 	for pp in List.Orders do
 	begin
-		order := List.order(pp);
+		order := TOrder(pp);
 		crew := self.crewByCrewId(order.CrewID);
 		if (order <> nil) and (crew <> nil) then
 		begin
@@ -2380,8 +2386,9 @@ var sel, s, h, k : string;
 			result := result + scoords;
 			j := j + 9;
 		end;
-		if result[length(result)] = '|' then
-			delete(result, length(result), 1);
+		if length(result) > 0 then
+			if result[length(result)] = '|' then
+				delete(result, length(result), 1);
 	end;
 
 begin
@@ -2446,6 +2453,7 @@ function TOrderList.get_current_orders(var res : TStringList) : Integer;
 var sel, s, s1 : string;
 	// res : TStringList;
 	sdate_from, sdate_to : string;
+	cur_time : TDateTime;
 begin
 	cur_time := now();
 	if DEBUG then
@@ -2519,6 +2527,7 @@ var sel, s, s1 : string;
 	sdate_from, sdate_to : string;
 	ord_id : Integer;
 	order : TOrder;
+	cur_time : TDateTime;
 begin
 	cur_time := now();
 	sdate_from := '''' + replace_time('{Last_day_1}', cur_time) + '''';

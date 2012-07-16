@@ -161,7 +161,7 @@ var
 	DEBUG : boolean;
 	DEBUG_SDATE_FROM : string;
 	DEBUG_SDATE_TO : string;
-	cur_time : TDateTime;
+//	cur_time : TDateTime;
 	ac_taxi_url : string;
 	PHP_Url : string;
 	order_states : Tstringlist;

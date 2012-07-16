@@ -414,4 +414,11 @@ object form_main: Tform_main
     Left = 688
     Top = 128
   end
+  object Timer_main: TTimer
+    Enabled = False
+    Interval = 250
+    OnTimer = Timer_mainTimer
+    Left = 272
+    Top = 120
+  end
 end
