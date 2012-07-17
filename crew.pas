@@ -730,7 +730,11 @@ begin
 	if self.sort_coords_by_time_desc() < 0 then
 		exit(-1);
 
-	coord_stime := self.coords_times[0];
+	if self.coords_times.count > 0 then
+		coord_stime := self.coords_times[0]
+	else
+		coord_stime := '';
+
 	cur_stime := replace_time(CREW_CUR_COORD_TIME, now());
 	if (length(coord_stime) < 8) // '20120802'
 		or (coord_stime < cur_stime) //
@@ -882,7 +886,9 @@ begin
 end;
 
 function TCrew.sort_coords_by_time_desc : Integer;
-var sl : TStringList; s : string; count, i : Integer;
+var sl : TStringList;
+	s, sc, st : string;
+	count, i : Integer;
 begin
 	count := ifthen(self.coords.count < self.coords_times.count, self.coords.count, self.coords_times.count);
 	if (count <= 0) then
@@ -891,15 +897,25 @@ begin
 	sl.Duplicates := dupIgnore; // не допускаем дубликатов
 	sl.Sorted := true;
 	for i := 0 to (count - 1) do
-		sl.Append(self.coords_times.Strings[i] + '|' + self.coords.Strings[i]);
+		if length(self.coords.Strings[i]) >= 19 // '30.123456,59.123456'
+			then
+			sl.Append(self.coords_times.Strings[i] + '|' + self.coords.Strings[i]);
 	reverseStringList(sl);
 	self.coords.Clear();
 	self.coords_times.Clear();
-	for s in sl do
+	if sl.count > 0 then
 	begin
-		// self.coords_times.Append(get_substr(s, '', '|'));
-		// self.coords.Append(get_substr(s, '|', ''));
-		self.append_coords(get_substr(s, '|', ''), get_substr(s, '', '|'));
+		for i := 0 to sl.count - 1 do
+		begin
+			s := sl.Strings[i];
+			st := get_substr(s, '', '|');
+			sc := get_substr(s, '|', '');
+			if (i = 0) or (sc <> self.coords.Strings[self.coords.count - 1]) then
+			begin
+				self.coords_times.Append(st);
+				self.coords.Append(sc);
+			end;
+		end;
 	end;
 	FreeAndNil(sl);
 	exit(0);
@@ -1129,7 +1145,7 @@ begin
 	stime := '''' + self.meausure_time + ''''; // время запроса координат
 	// теперь сохраняем текущее время для следующей выборки
 	// self.meausure_time := date_to_full(cur_time);
-	self.meausure_time := replace_time('{Last_minute_1}', cur_time); // !!!
+	self.meausure_time := replace_time('{Last_second_30}', cur_time); // !!!
 
 	if DEBUG then
 		stime := DEBUG_MEASURE_TIME; // for back-up DB
@@ -1161,9 +1177,9 @@ begin
 	// ???
 	self.query.Close();
 
-	self.get_crew_list();
-	self.set_current_crews_coord();
 	self.del_crews_old_coords();
+	self.set_current_crews_coord();
+	self.get_crew_list();
 	self.del_all_none_crewId();
 	exit(0);
 end;

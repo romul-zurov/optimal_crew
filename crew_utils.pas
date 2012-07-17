@@ -288,7 +288,8 @@ var p1, p2, n : Integer;
 begin
 	res := value;
 	repeat
-		p1 := pos('{Last_minute_', res); p2 := posex('}', res, p1);
+		p1 := pos('{Last_minute_', res);
+		p2 := posex('}', res, p1);
 		if (p1 > 0) and (p2 > 0) then
 		begin
 			p1 := p1 + 13; s := copy(res, p1, p2 - p1);
@@ -311,17 +312,51 @@ begin
 	result := res;
 end;
 
+function replace_second(const value : string; const MyTime : TDateTime) : string;
+var p1, p2, n : Integer;
+	res, s, s2 : string;
+
+begin
+	res := value;
+	repeat
+		p1 := pos('{Last_second_', res);
+		p2 := posex('}', res, p1);
+		if (p1 > 0) and (p2 > 0) then
+		begin
+			p1 := p1 + 13; s := copy(res, p1, p2 - p1);
+			if s <> '' then
+			begin
+				try
+					n := strtoint(s);
+					if (n >= -59) and (n <= 59) then
+					begin
+						DateTimeToString(s2, 'yyyy-mm-dd hh:nn:ss', IncSecond(MyTime, n * (-1)));
+						res := ReplaceStr(res, '{Last_second_' + s + '}', s2);
+					end;
+				except
+					n := 0;
+				end;
+			end;
+		end;
+	until (p1 = 0) or (p2 = 0) or (n <= 0);
+
+	result := res;
+end;
+
 function replace_time(const value : string; const MyTime : TDateTime) : string;
 begin
 	result := value;
-	if pos('{Last_minute_', value) > 0 then
-		result := replace_minute(value, MyTime)
+	if pos('{Last_second_', value) > 0 then
+		result := replace_second(value, MyTime)
 	else
-		if pos('{Last_hour_', value) > 0 then
-			result := replace_hour(value, MyTime)
+		if pos('{Last_minute_', value) > 0 then
+			result := replace_minute(value, MyTime)
 		else
-			if pos('{Last_day_', value) > 0 then
-				result := replace_day(value, MyTime);
+			if pos('{Last_hour_', value) > 0 then
+				result := replace_hour(value, MyTime)
+			else
+				if pos('{Last_day_', value) > 0 then
+					result := replace_day(value, MyTime);
 end;
 
 procedure RemoveDuplicates(const stringList : TStringList);

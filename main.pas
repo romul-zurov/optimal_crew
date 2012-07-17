@@ -44,6 +44,8 @@ type
 		cb_show_times_to_end : TCheckBox;
 		cb_show_orders_id : TCheckBox;
 		Timer_main : TTimer;
+		DataSource_coords : TDataSource;
+		Timer_pass : TTimer;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -67,6 +69,7 @@ type
 		procedure grid_order_currentDrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
 			State : TGridDrawState);
 		procedure Timer_mainTimer(Sender : TObject);
+		procedure Timer_passTimer(Sender : TObject);
 	private
 		{ Private declarations }
 		flag_get_coords : boolean;
@@ -752,36 +755,32 @@ begin
 	// выключаем нафиг, чтоб не дёргать сам себя
 	self.Timer_main.Enabled := false;
 
-	if flag_order_get_time then // расчёт уже идёт, неча отвлекать
-		pass()
-	else
+	 self.get_orders_times(); // по-любому 1 раз просчёт
+
+	if self.flag_get_coords then
 	begin
-		self.get_orders_times(); // по-любому 1 раз просчёт
-
-		if self.flag_get_coords then
+		self.crews_request();
+		self.flag_get_coords := false;
+		self.Timer_coords.Enabled := true;
+	end
+	else
+		if self.flag_get_orders then
 		begin
-			self.crews_request();
-			self.flag_get_coords := false;
-			self.Timer_coords.Enabled := true;
-		end
-		else
-			if self.flag_get_orders then
-			begin
-				self.orders_request();
-				self.flag_get_orders := false;
-				self.Timer_orders.Enabled := true;
-			end;
-
-		if self.flag_show_orders then
-		begin
-			self.show_orders_grid();
-			self.flag_show_orders := false;
-			self.Timer_show_order_grid.Enabled := true;
+			self.orders_request();
+			self.flag_get_orders := false;
+			self.Timer_orders.Enabled := true;
 		end;
+
+	if self.flag_show_orders then
+	begin
+		self.show_orders_grid();
+		self.flag_show_orders := false;
+		self.Timer_show_order_grid.Enabled := true;
 	end;
 
 	// включаем таймер
-	self.Timer_main.Enabled := true;
+	// self.Timer_main.Enabled := true;
+	self.Timer_pass.Enabled := true; // !!!
 end;
 
 procedure Tform_main.Timer_ordersTimer(Sender : TObject);
@@ -807,6 +806,12 @@ begin
 		self.show_request('Orders complete.');
 	end;
 	self.Timer_orders.Enabled := flag;
+end;
+
+procedure Tform_main.Timer_passTimer(Sender : TObject);
+begin
+	self.Timer_pass.Enabled := false;
+	self.Timer_main.Enabled := true;
 end;
 
 procedure Tform_main.Timer_show_order_gridTimer(Sender : TObject);

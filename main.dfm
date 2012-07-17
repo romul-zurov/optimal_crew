@@ -351,8 +351,8 @@ object form_main: Tform_main
   end
   object db_main: TIBDatabase
     LoginPrompt = False
-    Left = 632
-    Top = 88
+    Left = 648
+    Top = 72
   end
   object ta_main: TIBTransaction
     DefaultDatabase = db_main
@@ -361,27 +361,27 @@ object form_main: Tform_main
       'rec_version'
       'nowait'
       'read')
-    Left = 568
-    Top = 128
+    Left = 600
+    Top = 112
   end
   object ibquery_main: TIBQuery
     Database = db_main
     Transaction = ta_main
-    Left = 584
-    Top = 216
+    Left = 608
+    Top = 176
   end
   object Timer_coords: TTimer
     Enabled = False
     Interval = 60000
     OnTimer = Timer_coordsTimer
-    Left = 432
-    Top = 192
+    Left = 360
+    Top = 208
   end
   object Timer_orders: TTimer
     Enabled = False
     Interval = 10000
     OnTimer = Timer_ordersTimer
-    Left = 344
+    Left = 296
     Top = 192
   end
   object Timer_get_time_order: TTimer
@@ -389,20 +389,20 @@ object form_main: Tform_main
     Interval = 128
     OnTimer = Timer_get_time_orderTimer
     Left = 208
-    Top = 192
+    Top = 288
   end
   object Timer_show_order_grid: TTimer
     Enabled = False
-    Interval = 2048
+    Interval = 1024
     OnTimer = Timer_show_order_gridTimer
-    Left = 80
-    Top = 192
+    Left = 216
+    Top = 176
   end
   object ibquery_coords: TIBQuery
     Database = db_main
     Transaction = ta_coords
-    Left = 704
-    Top = 208
+    Left = 688
+    Top = 176
   end
   object ta_coords: TIBTransaction
     DefaultDatabase = db_main
@@ -412,13 +412,25 @@ object form_main: Tform_main
       'nowait'
       'read')
     Left = 688
-    Top = 128
+    Top = 112
   end
   object Timer_main: TTimer
     Enabled = False
-    Interval = 250
+    Interval = 200
     OnTimer = Timer_mainTimer
     Left = 272
+    Top = 120
+  end
+  object DataSource_coords: TDataSource
+    DataSet = ibquery_coords
+    Left = 688
+    Top = 248
+  end
+  object Timer_pass: TTimer
+    Enabled = False
+    Interval = 800
+    OnTimer = Timer_passTimer
+    Left = 336
     Top = 120
   end
 end
