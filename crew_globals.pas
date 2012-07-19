@@ -8,6 +8,8 @@ uses crew_utils, // utils from robocap and mine
 	windows, //
 	IBQuery, IBDataBase, DB, WinInet, StrUtils, ComCtrls, IniFiles, ExtCtrls;
 
+//const FOO_COORD = '-'; // '-' < любой цифры
+
 const RUB_ZA_KM = 35.0; // рублей за км
 
 const CREW_SVOBODEN = 1;

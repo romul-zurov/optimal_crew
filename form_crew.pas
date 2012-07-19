@@ -106,42 +106,22 @@ begin
 	// координаты
 	with self.grid_coords do
 	begin
-		rowcount := 0;
+		rowcount := 1;
 		rows[0].Clear();
-		colcount := 2;
-		ColWidths[0] := 120;
-		ColWidths[1] := Width - ColWidths[0] - 20;
+		colcount := 1;
+		ColWidths[0] := Width - 20;
 	end;
-	for i := 0 to crew.coords.Count - 1 do
-		add_row(self.grid_coords, crew.coords_times.Strings[i], crew.coords.Strings[i]);
+	for i := crew.coords_full.Count - 1 downto 0 do
+		with self.grid_coords do
+		begin
+			Cells[0, rowcount - 1] := crew.coords_full.Strings[i];
+			rowcount := rowcount + 1;
+		end;
 	with self.grid_coords do
 		if rowcount > 1 then
 			rowcount := rowcount - 1;
 
 	self.Show();
-
-
-	// CrewID : Integer;
-	// GpsId : Integer;
-	// state : Integer; // состояние: 1 - свободен, 3 - на заказе;
-	// state_as_string : string;
-	// Code : string;
-	// name : string;
-	// coord : string; // текущая (самая свежая) координата GPS
-	// dist : double; // расстояние до адреса подачи (АП) радиальное, по прямой, метров;
-	// dist_way : double; // длина маршрута до АП, км;
-	// dist_way_as_string : string; // то же;
-	// time : Integer; // время подъезда к АП в минутах;
-	// time_as_string : string; // оно же в виде часы-минуты;
-	// coords : TStringList; // gps-трек за выбранный промежуток времени;
-	// coords_times : TStringList; // gps-трек за выбранный промежуток времени;
-	// // coord_list : TStringList;
-	// OrderId : Integer; // ID заказа занятого экипажа
-	// order_way : string; // маршрут занятого экипажа
-	//
-	// source : TAdres; // address_from for state==3
-	// dest : TAdres; // address_to for state==3
-	// ap : TAdres; // адрес подачи экипажа
 
 end;
 

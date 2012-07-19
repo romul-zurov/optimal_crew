@@ -129,11 +129,10 @@ begin
 		with grid_crews do
 		begin
 			Width := form_main.GroupBox_crew.Width - 10;
-			ColCount := 4; // 5;
+			ColCount := 3; //4; // 5;
 			ColWidths[0] := 30; // 300;
-			ColWidths[1] := 120; // 60;
-			ColWidths[2] := 120; // 60;
-			ColWidths[3] := 90;
+			ColWidths[1] := 240; // 60;
+			ColWidths[2] := 90;
 		end;
 
 		grid_crews.RowCount := 0;
@@ -149,12 +148,12 @@ begin
 			grid_crews.Cells[0, r] := IntToStr(crew.CrewId); // + ' | ' + crew.name;
 			// grid_crews.Cells[0, r] := IntToStr(crew.CrewId);
 			// grid_crews.Cells[1, r] := IntToStr(crew.Time);
-			grid_crews.Cells[1, r] := crew.Coord;
-			if crew.coords_times.Count > 0 then
-				grid_crews.Cells[2, r] := crew.coords_times[0]
+//			grid_crews.Cells[1, r] := crew.Coord;
+			if crew.coords_full.Count > 0 then
+				grid_crews.Cells[1, r] := crew.coords_full[crew.coords_full.Count -1]
 			else
-				grid_crews.Cells[2, r] := '';
-			grid_crews.Cells[3, r] := crew.state_as_string();
+				grid_crews.Cells[1, r] := '';
+			grid_crews.Cells[2, r] := crew.state_as_string();
 			// grid_crews.Cells[3, r] := FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
 			// grid_crews.Cells[4, r] := crew.time_as_string;
 			inc(r);
