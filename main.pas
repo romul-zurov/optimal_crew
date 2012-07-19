@@ -129,7 +129,7 @@ begin
 		with grid_crews do
 		begin
 			Width := form_main.GroupBox_crew.Width - 10;
-			ColCount := 3; //4; // 5;
+			ColCount := 3; // 4; // 5;
 			ColWidths[0] := 30; // 300;
 			ColWidths[1] := 240; // 60;
 			ColWidths[2] := 90;
@@ -148,9 +148,9 @@ begin
 			grid_crews.Cells[0, r] := IntToStr(crew.CrewId); // + ' | ' + crew.name;
 			// grid_crews.Cells[0, r] := IntToStr(crew.CrewId);
 			// grid_crews.Cells[1, r] := IntToStr(crew.Time);
-//			grid_crews.Cells[1, r] := crew.Coord;
+			// grid_crews.Cells[1, r] := crew.Coord;
 			if crew.coords_full.Count > 0 then
-				grid_crews.Cells[1, r] := crew.coords_full[crew.coords_full.Count -1]
+				grid_crews.Cells[1, r] := crew.coords_full[crew.coords_full.Count - 1]
 			else
 				grid_crews.Cells[1, r] := '';
 			grid_crews.Cells[2, r] := crew.state_as_string();
@@ -475,9 +475,9 @@ begin
 
 		// активируем таймеры:
 		form_main.Timer_orders.Enabled := true;
-		form_main.Timer_coords.Enabled := true;
+		// form_main.Timer_coords.Enabled := true;
 		// form_main.Timer_get_time_order.Enabled := true;
-		form_main.Timer_show_order_grid.Enabled := true;
+		// form_main.Timer_show_order_grid.Enabled := true;
 		self.Timer_main.Enabled := true; // !!!
 	end;
 
@@ -753,13 +753,14 @@ begin
 	// выключаем нафиг, чтоб не дёргать сам себя
 	self.Timer_main.Enabled := false;
 
-	 self.get_orders_times(); // по-любому 1 раз просчёт
+	self.get_orders_times(); // по-любому 1 раз просчёт
 
 	if self.flag_get_coords then
 	begin
 		self.crews_request();
 		self.flag_get_coords := false;
-		self.Timer_coords.Enabled := true;
+		// self.Timer_coords.Enabled := true;
+		self.Timer_orders.Enabled := true;
 	end
 	else
 		if self.flag_get_orders then
@@ -769,23 +770,35 @@ begin
 			self.Timer_orders.Enabled := true;
 		end;
 
-	if self.flag_show_orders then
-	begin
-		self.show_orders_grid();
-		self.flag_show_orders := false;
-		self.Timer_show_order_grid.Enabled := true;
-	end;
+	self.show_orders_grid();
+	(*
+	  if self.flag_show_orders then
+	  begin
+	  self.show_orders_grid();
+	  self.flag_show_orders := false;
+	  self.Timer_show_order_grid.Enabled := true;
+	  end;
+	  *)
 
 	// включаем таймер
-	// self.Timer_main.Enabled := true;
-	self.Timer_pass.Enabled := true; // !!!
+	self.Timer_main.Enabled := true;
+	// self.Timer_pass.Enabled := true; // !!!
 end;
 
 procedure Tform_main.Timer_ordersTimer(Sender : TObject);
 var flag : boolean;
 begin
 	self.Timer_orders.Enabled := false;
-	self.flag_get_orders := true;
+	if self.Interval > CoordsInterval then
+	begin
+		self.Interval := 0;
+		self.flag_get_coords := true;
+	end
+	else
+	begin
+		self.Interval := self.Interval + self.Timer_orders.Interval;
+		self.flag_get_orders := true;
+	end;
 	exit();
 
 	// ---------------------------------------------------------

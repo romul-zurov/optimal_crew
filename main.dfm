@@ -374,15 +374,15 @@ object form_main: Tform_main
     Enabled = False
     Interval = 60000
     OnTimer = Timer_coordsTimer
-    Left = 360
-    Top = 208
+    Left = 336
+    Top = 288
   end
   object Timer_orders: TTimer
     Enabled = False
     Interval = 10000
     OnTimer = Timer_ordersTimer
     Left = 296
-    Top = 192
+    Top = 176
   end
   object Timer_get_time_order: TTimer
     Enabled = False
@@ -395,8 +395,8 @@ object form_main: Tform_main
     Enabled = False
     Interval = 1024
     OnTimer = Timer_show_order_gridTimer
-    Left = 216
-    Top = 176
+    Left = 64
+    Top = 280
   end
   object ibquery_coords: TIBQuery
     Database = db_main
@@ -416,16 +416,15 @@ object form_main: Tform_main
   end
   object Timer_main: TTimer
     Enabled = False
-    Interval = 200
     OnTimer = Timer_mainTimer
     Left = 272
     Top = 120
   end
   object Timer_pass: TTimer
     Enabled = False
-    Interval = 800
+    Interval = 500
     OnTimer = Timer_passTimer
-    Left = 336
-    Top = 120
+    Left = 448
+    Top = 280
   end
 end

@@ -170,8 +170,6 @@ type
 		ap_korpus : string;
 		ap_gps : string;
 
-		meausure_time : string; // время выборки координат из базы
-
 		constructor Create(var IBQuery : TIBQuery);
 		destructor Destroy(); override;
 		function crew(p : Pointer) : TCrew; overload;
@@ -896,16 +894,19 @@ end;
 
 function TCrewList.clear_crew_list : Integer;
 begin
-	self.Crews.Clear(); exit(0);
+	self.Crews.Clear();
+	exit(0);
 end;
 
 constructor TCrewList.Create(var IBQuery : TIBQuery);
 begin
 	inherited Create;
-	self.Crews := TList.Create(); self.query := TIBQuery(Pointer(IBQuery));
+	self.Crews := TList.Create();
+	self.query := TIBQuery(Pointer(IBQuery));
 	// время выборки координат из базы
-	self.meausure_time := ''; self.sql_crews_stringlist := TStringList.Create();
-	self.tmp_slist := TStringList.Create(); self.coords_last_id := -1;
+	self.sql_crews_stringlist := TStringList.Create();
+	self.tmp_slist := TStringList.Create();
+	self.coords_last_id := -1;
 end;
 
 function TCrewList.crew(p : Pointer) : TCrew;
@@ -1064,23 +1065,6 @@ begin
 			+ '''' //
 			+ ' ' //
 			;
-
-		(*
-		  cur_time := now();
-		  stime := replace_time(COORDS_BUF_SIZE, cur_time);
-		  if (self.meausure_time = '') or (self.meausure_time < stime) then
-		  // если запроса координат не было слишком или был давно, то запрашиваем его
-		  // за период COORDS_BUF_SIZE
-		  self.meausure_time := stime;
-
-		  stime := '''' + self.meausure_time + ''''; // время запроса координат
-		  // теперь сохраняем текущее время для следующей выборки
-		  // self.meausure_time := date_to_full(cur_time);
-		  self.meausure_time := replace_time('{Last_second_30}', cur_time); // !!!
-
-		  if DEBUG then
-		  stime := DEBUG_MEASURE_TIME; // for back-up DB
-		  *)
 	end
 	else
 		sel_where := ' ID > ' + IntToStr(self.coords_last_id) + ' ';
@@ -1093,20 +1077,20 @@ begin
 	// + ' MEASURE_END_TIME > ' + stime // !!!
 		;
 
-	// sql_select(self.query, sel);
-	// вместо ^^^^^^^^^^ делаем прямо по пунктам:
-	self.query.Close(); self.query.SQL.Clear(); self.query.SQL.Add(sel);
+	self.query.Close();
+	self.query.SQL.Clear();
+	self.query.SQL.Add(sel);
 	try
 		self.query.Open();
 	except
 		show_status('неверный запрос GPS-координат из БД');
 		exit(-1);
 	end;
-	// show_status('запрос произведён');
 
 	while (not self.query.Eof) do
 	begin
-		coords_to_str(self.query.fields); self.query.Next();
+		coords_to_str(self.query.fields);
+		self.query.Next();
 	end;
 	// ???
 	self.query.Close();
