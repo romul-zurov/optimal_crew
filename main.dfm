@@ -421,11 +421,6 @@ object form_main: Tform_main
     Left = 272
     Top = 120
   end
-  object DataSource_coords: TDataSource
-    DataSet = ibquery_coords
-    Left = 688
-    Top = 248
-  end
   object Timer_pass: TTimer
     Enabled = False
     Interval = 800

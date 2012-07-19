@@ -153,6 +153,7 @@ type
 		function pererasxod_color(half_dist_way : double) : string;
 	private
 		rasxod : double;
+		tmp_sort_slist : TStringList;
 		function time_to_str(time : Integer) : string;
 		function time_str() : string; // в виде '00000056'
 		function dist_way_str() : string; // в виде '000015.6' для сортировки TStringList.sort()
@@ -208,6 +209,8 @@ type
 		function not_free_crews_count() : Integer;
 	private
 		sql_crews_stringlist : TStringList;
+		tmp_slist : TStringList;
+		coords_last_id : int64;
 		function findById(ID : Integer; gps : boolean) : Pointer;
 		function get_id_list_as_string(gps : boolean) : string;
 		function del_crews_old_coords() : Integer;
@@ -395,6 +398,11 @@ begin
 	// self.points := TList.Create();
 	self.cur_pos := TAdres.Create('', '', '', '');
 	self.POrder := nil;
+	// tmp-лист для сортировки
+	self.tmp_sort_slist := TStringList.Create();
+	self.tmp_sort_slist.Duplicates := dupIgnore; // не допускаем дубликатов
+	self.tmp_sort_slist.Sorted := true;
+	// -----------------------
 end;
 
 // function TCrew.def_time_to_ap(var polist : Pointer) : Integer;
@@ -473,7 +481,7 @@ begin
 	// self.source.Free();
 	// self.dest.Free();
 	// self.ap.Free();
-
+	FreeAndNil(self.tmp_sort_slist);
 	inherited;
 end;
 
@@ -886,28 +894,27 @@ begin
 end;
 
 function TCrew.sort_coords_by_time_desc : Integer;
-var sl : TStringList;
+var
 	s, sc, st : string;
 	count, i : Integer;
 begin
 	count := ifthen(self.coords.count < self.coords_times.count, self.coords.count, self.coords_times.count);
 	if (count <= 0) then
 		exit(-1);
-	sl := TStringList.Create();
-	sl.Duplicates := dupIgnore; // не допускаем дубликатов
-	sl.Sorted := true;
+
+	self.tmp_sort_slist.Clear();
 	for i := 0 to (count - 1) do
 		if length(self.coords.Strings[i]) >= 19 // '30.123456,59.123456'
 			then
-			sl.Append(self.coords_times.Strings[i] + '|' + self.coords.Strings[i]);
-	reverseStringList(sl);
+			self.tmp_sort_slist.Append(self.coords_times.Strings[i] + '|' + self.coords.Strings[i]);
+	reverseStringList(self.tmp_sort_slist);
 	self.coords.Clear();
 	self.coords_times.Clear();
-	if sl.count > 0 then
+	if self.tmp_sort_slist.count > 0 then
 	begin
-		for i := 0 to sl.count - 1 do
+		for i := 0 to self.tmp_sort_slist.count - 1 do
 		begin
-			s := sl.Strings[i];
+			s := self.tmp_sort_slist.Strings[i];
 			st := get_substr(s, '', '|');
 			sc := get_substr(s, '|', '');
 			if (i = 0) or (sc <> self.coords.Strings[self.coords.count - 1]) then
@@ -917,7 +924,6 @@ begin
 			end;
 		end;
 	end;
-	FreeAndNil(sl);
 	exit(0);
 end;
 
@@ -980,6 +986,8 @@ begin
 	// время выборки координат из базы
 	self.meausure_time := '';
 	self.sql_crews_stringlist := TStringList.Create();
+	self.tmp_slist := TStringList.Create();
+	self.coords_last_id := -1;
 end;
 
 function TCrewList.crew(p : Pointer) : TCrew;
@@ -1047,6 +1055,7 @@ begin
 	for i := self.Crews.count - 1 downto 0 do
 		TCrew(self.Crews.Items[i]).Free();
 	FreeAndNil(self.sql_crews_stringlist);
+	FreeAndNil(self.tmp_slist);
 	inherited;
 end;
 
@@ -1090,12 +1099,20 @@ end;
 
 function TCrewList.get_crews_coords() : Integer;
 	function coords_to_str(fields : TFields) : Integer;
-	var field : TField; // main file
-		j, l, ID, GpsId : Integer; b : TBytes;
-		pint : ^Integer; plat, plong : ^single;
-		s, scoords, slat, slong : string; date1, date2, date0 : TDateTime; crew : TCrew;
+	var
+		field : TField; // main file
+		j, l, ID, GpsId : Integer;
+		b : TBytes;
+		pint : ^Integer;
+		plat, plong : ^single;
+		s, scoords, slat, slong : string;
+		date1, date2, date0 : TDateTime;
+		crew : TCrew;
 		pp : Pointer;
 	begin
+		ID := StrToInt(fields[0].AsString);
+		if ID > self.coords_last_id then // !
+			self.coords_last_id := ID;
 		date1 := fields[1].AsDateTime;
 		date2 := fields[2].AsDateTime;
 		field := fields[3];
@@ -1122,7 +1139,9 @@ function TCrewList.get_crews_coords() : Integer;
 					crew := self.crew(self.Append(GpsId))
 				else
 					crew := self.crew(pp);
-				crew.append_coords(scoords, date_to_full(date1));
+				// crew.append_coords(scoords, date_to_full(date1));
+				crew.coords.Append(scoords);
+				crew.coords_times.Append(date_to_full(date1));
 			end;
 			date1 := date1 + date0;
 			j := j + 12;
@@ -1131,29 +1150,45 @@ function TCrewList.get_crews_coords() : Integer;
 	end;
 
 var
-	sel : string;
-	stime : string;
+	sel, stime : string;
+	sel_where : string;
 	cur_time : TDateTime;
 begin
-	cur_time := now();
-	stime := replace_time(COORDS_BUF_SIZE, cur_time);
-	if (self.meausure_time = '') or (self.meausure_time < stime) then
-		// если запроса координат не было слишком или был давно, то запрашиваем его
-		// за период COORDS_BUF_SIZE
-		self.meausure_time := stime;
+	if self.coords_last_id < 0 then
+	begin
+		sel_where := ' MEASURE_START_TIME > ' //
+			+ '''' //
+			+ replace_time(COORDS_BUF_SIZE, now()) //
+			+ '''' //
+			+ ' ' //
+			;
 
-	stime := '''' + self.meausure_time + ''''; // время запроса координат
-	// теперь сохраняем текущее время для следующей выборки
-	// self.meausure_time := date_to_full(cur_time);
-	self.meausure_time := replace_time('{Last_second_30}', cur_time); // !!!
+		(*
+		  cur_time := now();
+		  stime := replace_time(COORDS_BUF_SIZE, cur_time);
+		  if (self.meausure_time = '') or (self.meausure_time < stime) then
+		  // если запроса координат не было слишком или был давно, то запрашиваем его
+		  // за период COORDS_BUF_SIZE
+		  self.meausure_time := stime;
 
-	if DEBUG then
-		stime := DEBUG_MEASURE_TIME; // for back-up DB
+		  stime := '''' + self.meausure_time + ''''; // время запроса координат
+		  // теперь сохраняем текущее время для следующей выборки
+		  // self.meausure_time := date_to_full(cur_time);
+		  self.meausure_time := replace_time('{Last_second_30}', cur_time); // !!!
+
+		  if DEBUG then
+		  stime := DEBUG_MEASURE_TIME; // for back-up DB
+		  *)
+	end
+	else
+		sel_where := ' ID > ' + IntToStr(self.coords_last_id) + ' ';
 
 	sel := 'select ID, MEASURE_START_TIME, MEASURE_END_TIME, COORDS ' //
 		+ 'from CREWS_COORDS ' //
-	// + ' where MEASURE_START_TIME > ' + stime //
-		+ ' where MEASURE_END_TIME > ' + stime // !!!
+		+ ' where ' //
+		+ sel_where //
+	// + ' MEASURE_START_TIME > ' + stime //
+	// + ' MEASURE_END_TIME > ' + stime // !!!
 		;
 
 	// sql_select(self.query, sel);
@@ -2142,7 +2177,7 @@ end;
 
 function TOrder.time_to_ap_as_string : string;
 var prib_dt, ap_dt, cur_dt : TDateTime;
-	opozdanie, porog : Int64; s_opoz : string;
+	opozdanie, porog : int64; s_opoz : string;
 begin
 	if self.time_to_ap = ORDER_AP_OK then
 	begin

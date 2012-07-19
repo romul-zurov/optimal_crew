@@ -44,7 +44,6 @@ type
 		cb_show_times_to_end : TCheckBox;
 		cb_show_orders_id : TCheckBox;
 		Timer_main : TTimer;
-		DataSource_coords : TDataSource;
 		Timer_pass : TTimer;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
