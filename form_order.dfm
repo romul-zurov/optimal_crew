@@ -201,7 +201,6 @@ object FormOrder: TFormOrder
           ParentFont = False
           TabOrder = 0
           OnDrawCell = grid_crewsDrawCell
-          ExplicitHeight = 273
         end
         object stbar_crews: TStatusBar
           Left = 2
@@ -215,9 +214,6 @@ object FormOrder: TFormOrder
             item
               Width = 50
             end>
-          ExplicitLeft = 248
-          ExplicitTop = 272
-          ExplicitWidth = 0
         end
       end
       object GroupBox1: TGroupBox
@@ -258,7 +254,7 @@ object FormOrder: TFormOrder
   end
   object Timer_get_crews: TTimer
     Enabled = False
-    Interval = 512
+    Interval = 100
     OnTimer = Timer_get_crewsTimer
     Left = 432
     Top = 128

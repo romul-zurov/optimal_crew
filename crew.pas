@@ -421,7 +421,11 @@ begin
 	end;
 
 	self.way_to_ap.points.Add(Pointer(self.ap));
+
 	// вызываем расчёт
+	if self.way_to_ap.zapros.get_flag_zapros() then
+		// грязнохак :-/
+		self.way_to_ap.zapros.browser.Stop();
 	result := self.way_to_ap.get_way_time_dist_unlim();
 end;
 

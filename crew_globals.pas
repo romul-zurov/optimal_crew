@@ -8,7 +8,7 @@ uses crew_utils, // utils from robocap and mine
 	windows, //
 	IBQuery, IBDataBase, DB, WinInet, StrUtils, ComCtrls, IniFiles, ExtCtrls;
 
-//const FOO_COORD = '-'; // '-' < любой цифры
+// const FOO_COORD = '-'; // '-' < любой цифры
 
 const RUB_ZA_KM = 35.0; // рублей за км
 
@@ -76,7 +76,7 @@ const COORDS_BUF_SIZE = '{Last_minute_20}'; // больше не надо, во избежание ошиб
 
 const DEBUG_MEASURE_TIME = '''2011-10-03 13:57:50'''; // for back-up base
 
-const MAX_GET_ZAPROS = 10; // !!!
+const MAX_GET_ZAPROS = 16; // 24; // !!!
 
 type
 	TZapros = class(TObject)
@@ -91,11 +91,15 @@ type
 		function get_zapros_unlim(surl : string) : integer;
 		procedure timeout_error(Sender : TObject);
 		procedure zapros_complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+		function get_flag_zapros() : boolean;
 	private
+		flag_zapros : boolean;
+		flag_count : boolean;
+
 		procedure inc_counter();
 		procedure dec_counter();
 		procedure show_counter();
-		function get_request(surl : string; count_flag : boolean) : integer;
+		function get_request(surl : string { ; count_flag : boolean } ) : integer;
 	end;
 
 	TAdres = class(TObject)
@@ -163,7 +167,7 @@ var
 	DEBUG : boolean;
 	DEBUG_SDATE_FROM : string;
 	DEBUG_SDATE_TO : string;
-//	cur_time : TDateTime;
+	// cur_time : TDateTime;
 	ac_taxi_url : string;
 	PHP_Url : string;
 	order_states : Tstringlist;
@@ -172,7 +176,7 @@ var
 	// browser_form : Tform;
 	browser_panel : TPanel;
 	GetZaprosCounter : Int64;
-    CoordsInterval : Int64;
+	CoordsInterval : Int64;
 
 
 	// main_db : TIBDatabase;
@@ -758,21 +762,28 @@ end;
 constructor TZapros.Create;
 begin
 	self.otvet := '';
-	self.browser := TWebBrowser.Create(nil);
-	TWinControl(self.browser).Parent := browser_panel; // global panel
+	self.flag_zapros := false;
+	self.flag_count := true;
+	CoInitialize(nil);
+	try
+		self.browser := TWebBrowser.Create(nil);
+//		TWinControl(self.browser).Parent := browser_panel; // global panel
 
-	self.browser.Silent := true;
-	self.browser.Width := 10;
-	self.browser.Height := 10;
+		self.browser.Silent := true;
+		self.browser.Width := 10;
+		self.browser.Height := 10;
 
-	self.timer := TTimer.Create(browser_panel);
-	self.timer.Interval := 60 * 1000;
-	self.timer.Enabled := false;
+		self.timer := TTimer.Create(browser_panel);
+		self.timer.Interval := 60 * 1000;
+		self.timer.Enabled := false;
 
-	// определяем обработчики по умолчанию,
-	// можно переопределить, если нужно
-	self.browser.OnNavigateComplete2 := self.zapros_complete;
-	self.timer.OnTimer := self.timeout_error;
+		// определяем обработчики по умолчанию,
+		// можно переопределить, если нужно
+		self.browser.OnNavigateComplete2 := self.zapros_complete;
+		self.timer.OnTimer := self.timeout_error;
+	finally
+		CoUnInitialize();
+	end;
 end;
 
 procedure TZapros.dec_counter;
@@ -789,45 +800,49 @@ begin
 	inherited;
 end;
 
-function TZapros.get_request(surl : string; count_flag : boolean) : integer;
+function TZapros.get_flag_zapros : boolean;
 begin
-	if count_flag and (GetZaprosCounter >= MAX_GET_ZAPROS) then
+	result := self.flag_zapros;
+end;
+
+function TZapros.get_request(surl : string { ; count_flag : boolean } ) : integer;
+begin
+	if //
+		self.flag_count and //
+		(GetZaprosCounter >= MAX_GET_ZAPROS) then
 		// если слишком много запросов, то не запрашиваем
 		// обходится при count_flag = false
 		exit(-1);
 
-	if self.browser.ReadyState < READYSTATE_COMPLETE then
+	// if self.browser.ReadyState < READYSTATE_COMPLETE then
+	if self.flag_zapros then
 		// если уже идёт запрос, выходим
 		exit(0);
+
 	self.inc_counter();
 	self.timer.Enabled := true;
 	self.otvet := '';
 	result := 1;
-	self.browser.Navigate(surl);
+	self.flag_zapros := true;
+	CoInitialize(nil);
+	try
+		self.browser.Navigate(surl);
+	finally
+		CoUnInitialize();
+	end;
 end;
 
 function TZapros.get_zapros(surl : string) : integer;
 begin
-	result := self.get_request(surl, true);
+	self.flag_count := true;
+	result := self.get_request(surl);
 	exit();
-
-	if GetZaprosCounter >= MAX_GET_ZAPROS then
-		// если слишком много запросов, то не запрашиваем
-		exit(-1);
-
-	if self.browser.ReadyState < READYSTATE_COMPLETE then
-		// если уже идёт запрос, выходим
-		exit(0);
-	self.inc_counter();
-	self.timer.Enabled := true;
-	self.otvet := '';
-	result := 1;
-	self.browser.Navigate(surl);
 end;
 
 function TZapros.get_zapros_unlim(surl : string) : integer;
 begin
-	result := self.get_request(surl, false);
+	self.flag_count := false;
+	result := self.get_request(surl);
 end;
 
 procedure TZapros.inc_counter;
@@ -852,6 +867,7 @@ end;
 procedure TZapros.timeout_error(Sender : TObject);
 begin
 	self.timer.Enabled := false;
+	self.flag_zapros := false;
 	self.otvet := 'ErrorTimeout';
 	self.browser.Stop();
 end;
@@ -859,6 +875,7 @@ end;
 procedure TZapros.zapros_complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 begin
 	self.timer.Enabled := false;
+	self.flag_zapros := false;
 	self.dec_counter();
 	if self.otvet = 'ErrorTimeout' then
 		exit();

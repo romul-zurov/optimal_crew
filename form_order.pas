@@ -65,10 +65,8 @@ var
 implementation
 
 {$R *.dfm}
-// prprocedure TFormOrder.Button_get_timeClick(Sender: TObject);
-// begin
-//
-// end;
+
+uses main; // для доступа к thread
 
 procedure TFormOrder.grid_crewsDrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
 	State : TGridDrawState);
@@ -162,6 +160,7 @@ begin
 	self.Timer_get_gps.Enabled := false;
 	self.Timer_get_crews.Enabled := false;
 	self.Timer_show_crews.Enabled := false;
+	form_main.thread_times.cont();
 	self.Hide();
 end;
 
@@ -256,6 +255,9 @@ begin
 	// выводим шапку
 	self.show_crews();
 
+	// тормозим осн. расчёт
+	form_main.thread_times.pause();
+
 	// запускаем таймеры
 	self.cr_count := 0;
 	self.Timer_get_crews.Enabled := True;
@@ -325,6 +327,7 @@ begin
 	begin
 		self.cr_count := 0;
 		self.Timer_get_crews.Enabled := false;
+		form_main.thread_times.cont();
 		exit();
 	end;
 

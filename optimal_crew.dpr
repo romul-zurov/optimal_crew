@@ -8,7 +8,8 @@ uses
   form_order in 'form_order.pas' {FormOrder},
   crew_globals in 'crew_globals.pas',
   form_debug in 'form_debug.pas' {FormDebug},
-  form_crew in 'form_crew.pas' {FormCrew};
+  form_crew in 'form_crew.pas' {FormCrew},
+  thread_get_times in 'thread_get_times.pas';
 
 {$R *.res}
 

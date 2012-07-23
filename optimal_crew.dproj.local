@@ -19,5 +19,6 @@
     <Transaction>2012.04.05 03:13:11.862.dfm,D:\work\optimal_crew\Unit1.dfm=D:\work\optimal_crew\form_debug.dfm</Transaction>
     <Transaction>2012.04.08 01:04:17.647.pas,D:\work\optimal_crew\Unit1.pas=D:\work\optimal_crew\form_crew.pas</Transaction>
     <Transaction>2012.04.08 01:04:17.647.dfm,D:\work\optimal_crew\Unit1.dfm=D:\work\optimal_crew\form_crew.dfm</Transaction>
+    <Transaction>2012.07.20 15:14:25.723.pas,D:\work\optimal_crew\Unit1.pas=D:\work\optimal_crew\thread_get_times.pas</Transaction>
   </Transactions>
 </BorlandProject>

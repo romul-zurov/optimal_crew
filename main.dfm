@@ -269,6 +269,10 @@ object form_main: Tform_main
           object TabSheet_prior: TTabSheet
             Caption = #1055#1088#1077#1076#1074#1072#1088#1080#1090#1077#1083#1100#1085#1099#1077
             ImageIndex = 1
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object grid_order_prior: TStringGrid
               AlignWithMargins = True
               Left = 3
@@ -381,8 +385,8 @@ object form_main: Tform_main
     Enabled = False
     Interval = 10000
     OnTimer = Timer_ordersTimer
-    Left = 296
-    Top = 176
+    Left = 248
+    Top = 96
   end
   object Timer_get_time_order: TTimer
     Enabled = False
@@ -416,9 +420,10 @@ object form_main: Tform_main
   end
   object Timer_main: TTimer
     Enabled = False
+    Interval = 500
     OnTimer = Timer_mainTimer
-    Left = 272
-    Top = 120
+    Left = 144
+    Top = 232
   end
   object Timer_pass: TTimer
     Enabled = False

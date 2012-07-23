@@ -58,6 +58,7 @@
 			<DCCReference Include="form_crew.pas">
 				<Form>FormCrew</Form>
 			</DCCReference>
+			<DCCReference Include="thread_get_times.pas"/>
 			<None Include="TODO.txt"/>
 			<None Include="config.ini"/>
 			<BuildConfiguration Include="Base">
