@@ -3,19 +3,24 @@ unit thread_get_times;
 interface
 
 uses
-	Classes;
+	Classes, ExtCtrls;
 
 type
 	TThread_get_times = class(TThread)
 	private
 		{ Private declarations }
 		flag_pass : boolean;
+		flag_get_db : boolean;
+		interval : Int64;
+		timer : TTimer;
 
 		procedure do_get_times();
+		procedure do_get_db();
+		procedure flag_on_get_db(Sender : TObject);
 	protected
-		constructor Create();
 		procedure Execute; override;
 	public
+    	procedure init();
 		procedure pause();
 		procedure cont();
 	end;
@@ -62,9 +67,35 @@ begin
 	self.flag_pass := false;
 end;
 
-constructor TThread_get_times.Create;
+procedure TThread_get_times.Init;
 begin
 	self.flag_pass := false;
+	self.flag_get_db := false;
+	self.interval := 0;
+
+	self.timer := TTimer.Create(nil);
+	self.timer.interval := form_main.interval_orders_req;
+	self.timer.OnTimer := self.flag_on_get_db;
+	self.timer.Enabled := true;
+end;
+
+procedure TThread_get_times.flag_on_get_db(Sender : TObject);
+begin
+	self.flag_get_db := true;
+end;
+
+procedure TThread_get_times.do_get_db;
+begin
+	if self.interval > form_main.interval_coords_req then
+	begin
+		self.interval := 0;
+		form_main.crews_request();
+	end
+	else
+	begin
+		self.interval := self.interval + self.timer.interval;
+		form_main.orders_request();
+	end;
 end;
 
 procedure TThread_get_times.do_get_times;
@@ -77,13 +108,33 @@ end;
 procedure TThread_get_times.Execute;
 begin
 	{ Place thread code here }
+
+    (*
+	// !!!!
+	if not self.timer.Enabled then
+	begin
+		self.timer := TTimer.Create(nil);
+		self.timer.interval := 5 * 1000;
+		self.timer.OnTimer := self.flag_on_get_db;
+		self.timer.Enabled := true;
+	end;
+	// !!!
+    *)
+
 	while true do
 	begin
 		if self.Terminated then
 			exit();
 		if self.flag_pass then
 		else
-			synchronize(self.do_get_times);
+		begin
+			// synchronize(self.do_get_times);
+			if self.flag_get_db then
+			begin
+				synchronize(self.do_get_db);
+				self.flag_get_db := false;
+			end;
+		end;
 	end;
 end;
 

@@ -269,10 +269,6 @@ object form_main: Tform_main
           object TabSheet_prior: TTabSheet
             Caption = #1055#1088#1077#1076#1074#1072#1088#1080#1090#1077#1083#1100#1085#1099#1077
             ImageIndex = 1
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 0
             object grid_order_prior: TStringGrid
               AlignWithMargins = True
               Left = 3
@@ -365,14 +361,14 @@ object form_main: Tform_main
       'rec_version'
       'nowait'
       'read')
-    Left = 600
-    Top = 112
+    Left = 608
+    Top = 136
   end
   object ibquery_main: TIBQuery
     Database = db_main
     Transaction = ta_main
-    Left = 608
-    Top = 176
+    Left = 576
+    Top = 200
   end
   object Timer_coords: TTimer
     Enabled = False
@@ -385,8 +381,8 @@ object form_main: Tform_main
     Enabled = False
     Interval = 10000
     OnTimer = Timer_ordersTimer
-    Left = 248
-    Top = 96
+    Left = 80
+    Top = 280
   end
   object Timer_get_time_order: TTimer
     Enabled = False
@@ -397,16 +393,16 @@ object form_main: Tform_main
   end
   object Timer_show_order_grid: TTimer
     Enabled = False
-    Interval = 1024
+    Interval = 2000
     OnTimer = Timer_show_order_gridTimer
-    Left = 64
-    Top = 280
+    Left = 216
+    Top = 152
   end
   object ibquery_coords: TIBQuery
     Database = db_main
     Transaction = ta_coords
-    Left = 688
-    Top = 176
+    Left = 728
+    Top = 200
   end
   object ta_coords: TIBTransaction
     DefaultDatabase = db_main
@@ -415,15 +411,15 @@ object form_main: Tform_main
       'rec_version'
       'nowait'
       'read')
-    Left = 688
-    Top = 112
+    Left = 704
+    Top = 136
   end
   object Timer_main: TTimer
     Enabled = False
     Interval = 500
     OnTimer = Timer_mainTimer
-    Left = 144
-    Top = 232
+    Left = 272
+    Top = 112
   end
   object Timer_pass: TTimer
     Enabled = False

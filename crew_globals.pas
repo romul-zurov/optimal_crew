@@ -176,7 +176,7 @@ var
 	// browser_form : Tform;
 	browser_panel : TPanel;
 	GetZaprosCounter : Int64;
-	CoordsInterval : Int64;
+//	CoordsInterval : Int64;
 
 
 	// main_db : TIBDatabase;

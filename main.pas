@@ -89,6 +89,7 @@ type
 		{ Public declarations }
 		flag_order_get_time_process : boolean;
 		thread_times : TThread_get_times;
+		interval_coords_req, interval_orders_req : Cardinal;
 
 		procedure show_orders_grid();
 		procedure show_orders(var list : TOrderList; var grid_order : TStringGrid; prior_flag : boolean);
@@ -212,47 +213,46 @@ begin
 		index_current_order := 0;
 
 	self.flag_order_get_time_process := true; // блокируем таймер вп-ду :)
-	// while index_current_order < order_list.Orders.Count do begin
-	try
-		order := TOrder(order_list.Orders.Items[index_current_order]);
-	except
-		order := nil;
-	end;
-	if order <> nil then
+	while index_current_order < order_list.Orders.Count do
 	begin
-		if not order.destroy_flag then
+		try
+			order := TOrder(order_list.Orders.Items[index_current_order]);
+		except
+			order := nil;
+		end;
+		if order <> nil then
 		begin
-			if order.is_not_prior() then
+			if not order.destroy_flag then
 			begin
-				self.show_OrderID(order.id);
-				if order.CrewId > -1 then
+				if order.is_not_prior() then
 				begin
-					// считаем ...
-					pc := crew_list.findByCrewId(order.CrewId);
-					// if order.State = ORDER_VODITEL_PODTVERDIL then
-					order.def_time_to_ap(pc);
-					order.def_time_to_end(pc);
-				end
-				else
-				begin
-					// если экипаж не назначен
-					// запрашиваем gps-координату АП - пригодится при подборе :)
-					if //
-					// (order.State = ORDER_PRINYAT) and //
-						(order.source.gps = '') //
-						then
-						order.source.get_gps();
+					self.show_OrderID(order.id);
+					if order.CrewId > -1 then
+					begin
+						// считаем ...
+						pc := crew_list.findByCrewId(order.CrewId);
+						// if order.State = ORDER_VODITEL_PODTVERDIL then
+						order.def_time_to_ap(pc);
+						order.def_time_to_end(pc);
+					end
+					else
+					begin
+						// если экипаж не назначен
+						// запрашиваем gps-координату АП - пригодится при подборе :)
+						if //
+						// (order.State = ORDER_PRINYAT) and //
+							(order.source.gps = '') //
+							then
+							order.source.get_gps();
+					end;
+					// и выходим
+					goto quit;
 				end;
-				// и выходим
-				goto quit;
 			end;
 		end;
+		// если заказ не удовл., переходим к следующему
+		inc(index_current_order);
 	end;
-	{
-	  // если заказ не удовл., переходим к следующему
-	  inc(index_current_order);
-	  end;
-	  }
 
 quit :
 	inc(index_current_order);
@@ -309,9 +309,10 @@ begin
 				password := FIniFile.ReadString('Base', 'Password', '');
 				ac_taxi_url := FIniFile.ReadString('Url', 'Main_Url', '');
 				PHP_Url := FIniFile.ReadString('Url', 'PHP_Url', '');
-				form_main.Timer_coords.Interval := StrToInt(FIniFile.ReadString('Const', 'Timer_Coords', ''));
-				CoordsInterval := form_main.Timer_coords.Interval;
-				form_main.Timer_orders.Interval := StrToInt(FIniFile.ReadString('Const', 'Timer_Orders', ''));
+				self.interval_coords_req := StrToInt(FIniFile.ReadString('Const', 'Timer_Coords', ''));
+				form_main.Timer_coords.Interval := self.interval_coords_req;
+				self.interval_orders_req := StrToInt(FIniFile.ReadString('Const', 'Timer_Orders', ''));
+				form_main.Timer_orders.Interval := self.interval_orders_req;
 			finally
 			end;
 		end;
@@ -484,15 +485,16 @@ begin
 		first_request(); // первый запрос
 
 		// активируем таймеры:
-		form_main.Timer_orders.Enabled := true;
+		// form_main.Timer_orders.Enabled := true;
 		// form_main.Timer_coords.Enabled := true;
 		// form_main.Timer_get_time_order.Enabled := true;
-		// form_main.Timer_show_order_grid.Enabled := true;
-		// self.Timer_main.Enabled := true; // !!!
+		self.Timer_show_order_grid.Enabled := true;
+		self.Timer_main.Enabled := true; //
 
 		CoInitialize(nil);
 		self.thread_times := TThread_get_times.Create(true);
 		self.thread_times.Priority := tpLowest;
+		self.thread_times.init();
 		self.thread_times.Start();
 	end;
 
@@ -814,9 +816,9 @@ end;
 procedure Tform_main.Timer_ordersTimer(Sender : TObject);
 var flag : boolean;
 begin
-	// self.Timer_orders.Enabled := false;
+	exit(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-	if self.Interval > CoordsInterval then
+	if self.Interval > self.interval_coords_req then
 	begin
 		self.Interval := 0;
 		self.flag_get_coords := true;
@@ -850,7 +852,7 @@ begin
 	// ---------------------------------------------------------
 	flag := self.Timer_orders.Enabled;
 	self.Timer_orders.Enabled := false;
-	if self.Interval > CoordsInterval then
+	if self.Interval > self.interval_coords_req then
 	begin
 		self.Interval := 0;
 		self.Timer_coordsTimer(Sender);
@@ -875,7 +877,9 @@ end;
 
 procedure Tform_main.Timer_show_order_gridTimer(Sender : TObject);
 begin
-	exit();
+	self.show_counts();
+	self.show_orders_grid();
+	exit(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	self.Timer_show_order_grid.Enabled := false;
 	self.flag_show_orders := true;

@@ -51,6 +51,8 @@ type
 
 		raw_dist_way : double; // условная "длина" маршрута, определяемая из его цены, км
 
+		dobavka_v_ocheredi : Integer;
+
 
 		// form : TFormOrder; // form to show order
 
@@ -838,7 +840,8 @@ begin
 
 	if dob < 0 then
 	begin
-		self.set_time(ORDER_WAY_ERROR, -1); exit();
+		self.set_time(ORDER_WAY_ERROR, -1);
+		exit();
 	end;
 
 	if (self.way_to_ap.time < 0) then
@@ -1293,19 +1296,26 @@ begin
 	// sl.Delimiter := '|';
 	for s in self.sql_crews_stringlist do
 	begin
-		sl.Clear(); sl.Text := StringReplace(s, '|', #13#10, [rfReplaceAll]); ID := StrToInt(sl.Strings[0]);
+		sl.Clear();
+        sl.Text := StringReplace(s, '|', #13#10, [rfReplaceAll]);
+        ID := StrToInt(sl.Strings[0]);
 		GpsId := StrToInt(sl.Strings[1]);
 		if self.isGpsIdInList(GpsId) then
 			crew := self.crewByGpsId(GpsId)
 		else
 			crew := self.crew(self.Append(GpsId));
 
-		crew.CrewID := ID; crew.GpsId := GpsId; crew.Code := sl.Strings[2]; crew.name := sl.Strings[3];
+		crew.CrewID := ID;
+        crew.GpsId := GpsId;
+        crew.Code := sl.Strings[2];
+        crew.name := sl.Strings[3];
 		crew.state := StrToInt(sl.Strings[4]);
 		if crew.state = 11 then
 			// "на заказе с бордюра" приравниваем к "свободен"
 			crew.state := CREW_SVOBODEN;
-	end; FreeAndNil(sl); exit(0);
+	end;
+    FreeAndNil(sl);
+    exit(0);
 end;
 
 function TCrewList.set_crews_dist(coord : string) : Integer;
@@ -1339,7 +1349,7 @@ begin
 			then
 		begin
 			self.crewByCrewId(order.CrewID).OrderId := order.ID;
-			self.crewByCrewId(order.CrewID).POrder := Pointer(order);
+			self.crewByCrewId(order.CrewID).POrder := pp;//Pointer(order);
 		end;
 	end;
 	// убираем сслыки на заказы у свободных экипажей
@@ -1417,16 +1427,29 @@ begin
 	// self.destroy_flag := false; // флаг, что заказ можно удалять из списка
 	// self.destroy_time := '';
 	// self.raw_dist_way := -1.0;
-	self.query := IBQuery; self.del_order(); self.ID := OrderId;
+	self.query := IBQuery;
+	self.del_order();
+	self.ID := OrderId;
 
 end;
 
 procedure TOrder.def_time_to_ap(var pcrew : Pointer);
-var cur_pos : TAdres; gps : string;
+var cur_pos : TAdres;
+	gps : string;
 	d : double;
 	// points : TList;
 	// время на остановки для экипажа на заказе
 	crew : TCrew; res : Integer;
+
+	procedure do_def();
+	begin
+		self.way_to_ap.points.Clear(); // очищаем список точек маршрута
+		self.way_to_ap.points.Add(Pointer(cur_pos)); // от "начальной" точки
+		self.way_to_ap.points.Add(Pointer(self.source)); // до начала данного маршрута
+		// вызываем расчёт
+		self.way_to_ap.get_way_time_dist();
+	end;
+
 begin
 	// проверяем состояние заказа, возможен ли вообще расчёт
 	if //
@@ -1434,7 +1457,8 @@ begin
 		or (pcrew = nil) //
 	// or (self.state <> ORDER_VODITEL_PODTVERDIL) //
 		or not(self.state in [ //
-			ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, ORDER_VODITEL_PRINYAL, //
+			ORDER_V_OCHEREDI, //
+		ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, ORDER_VODITEL_PRINYAL, //
 		ORDER_VODITEL_PODTVERDIL, //
 		ORDER_PRIGLASITE_KILIENTA, ORDER_KLIENT_NE_VYSHEL, //
 		ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
@@ -1443,7 +1467,8 @@ begin
 		or (self.source.isEmpty) //
 		then
 	begin
-		self.time_to_ap := -1; exit();
+		self.time_to_ap := -1;
+		exit();
 	end;
 
 	if self.time_to_ap = ORDER_AP_OK then
@@ -1474,34 +1499,57 @@ begin
 	if pos('Error', gps) > 0 then
 	begin
 		self.source.gps := '';
-		self.time_to_ap := ORDER_BAD_ADRES; exit();
+		self.time_to_ap := ORDER_BAD_ADRES;
+		exit();
 	end;
 	if gps = '' then
 	// нет координаты у адреса подачи
 	begin
-		self.source.get_gps(); exit();
+		self.source.get_gps();
+		exit();
 	end;
-
-	if (not crew.was_in_coord(gps)) then // водитель в АП не был ещё
+	if (self.state = ORDER_V_OCHEREDI) then
 	begin
-		// заполняем точки маршрута
-		cur_pos := TAdres.Create('', '', '', crew.coord);
-		// начало маршрута - текущая координата машины
-		self.way_to_ap.points.Clear(); // список точек маршрута
-		self.way_to_ap.points.Add(Pointer(cur_pos)); self.way_to_ap.points.Add(Pointer(self.source));
-		// вызываем расчёт
-		self.way_to_ap.get_way_time_dist();
+		try
+			self.dobavka_v_ocheredi := TOrder(crew.POrder).time_to_end;
+			if (self.dobavka_v_ocheredi = ORDER_AN_OK) or (self.dobavka_v_ocheredi >= 0) then
+			begin
+				if self.dobavka_v_ocheredi = ORDER_AN_OK then
+				begin
+					self.dobavka_v_ocheredi := 0;
+					cur_pos := TAdres.Create('', '', '', crew.coord) // тек. коорд. экипажа
+				end
+				else
+					cur_pos := TOrder(crew.POrder).dest;
+				do_def();
+			end
+			else
+			begin
+				self.time_to_ap := -1;
+				exit();
+			end;
+		except
+			self.time_to_ap := -1;
+			exit();
+		end;
 	end
 	else
-	begin
-		// если уже был
-		if crew.now_in_coord(gps) then
-			// экипаж в настоящий момент находится в АП
-			self.time_to_ap := 0
+		if (not crew.was_in_coord(gps)) then // водитель в АП не был ещё
+		begin
+			// начало маршрута - текущая координата машины
+			cur_pos := TAdres.Create('', '', '', crew.coord);
+			do_def();
+		end
 		else
-			// был, но уехал, видимо, забрал клиента, ага :)
-			self.time_to_ap := ORDER_AP_OK;
-	end;
+		begin
+			// если уже был
+			if crew.now_in_coord(gps) then
+				// экипаж в настоящий момент находится в АП
+				self.time_to_ap := 0
+			else
+				// был, но уехал, видимо, забрал клиента, ага :)
+				self.time_to_ap := ORDER_AP_OK;
+		end;
 end;
 
 procedure TOrder.def_time_to_end(var pcrew : Pointer);
@@ -1713,9 +1761,11 @@ begin
 	self.stops_time := 0; self.na_bortu := false; self.pcrew := nil;
 	self.datetime_of_time_to_ap := IncHour(now(), -1);
 	self.datetime_of_time_to_end := self.datetime_of_time_to_ap; self.count_int_stops := 0;
-	self.destroy_flag := false;
 	// флаг, что заказ можно удалять из списка
-	self.destroy_time := ''; self.raw_dist_way := -1.0;
+	self.destroy_flag := false;
+	self.destroy_time := '';
+	self.raw_dist_way := -1.0;
+	self.dobavka_v_ocheredi := 0;
 end;
 
 destructor TOrder.Destroy;
@@ -1907,18 +1957,17 @@ begin
 	result := self.source_time < replace_time('{Last_hour_-1}', now());
 end;
 
-procedure TOrder.set_time_to_ap(ASender : TObject;
-
-	const pDisp : IDispatch;
-
-	var url : OleVariant);
+procedure TOrder.set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 begin
 	self.way_to_ap.set_way_time_dist(ASender, pDisp, url);
 	if self.way_to_ap.time < 0 then
 		self.time_to_ap := ORDER_WAY_ERROR
 	else
 	begin
-		self.time_to_ap := self.way_to_ap.time;
+		if self.state = ORDER_V_OCHEREDI then
+			self.time_to_ap := self.way_to_ap.time + self.dobavka_v_ocheredi
+		else
+			self.time_to_ap := self.way_to_ap.time;
 		// сбрасываем время расчёта
 		// self.datetime_of_time_to_ap := replace_time('{Last_minute_0}', now());
 		self.datetime_of_time_to_ap := now();
@@ -2228,12 +2277,19 @@ var sel, s, h, k : string; res : TStringList;
 		// cou := fields.Count;
 		// sid := fields[0].AsString;
 		// sordid := fields[1].AsString;
-		field := fields[0]; l := field.DataSize; setlength(b, l); b := field.AsBytes; j := 2;
+		field := fields[0]; l := field.DataSize;
+		setlength(b, l);
+		b := field.AsBytes;
+		j := 2;
 		while j < l do
 		begin
-			plong := @b[j + 4]; plat := @b[j]; slat := float_to_dotstr_2_6(plat^);
-			slong := float_to_dotstr_2_6(plong^); scoords := slat + ',' + slong + '|'; //
-			result := result + scoords; j := j + 9;
+			plat := @b[j];
+			plong := @b[j + 4];
+			slat := float_to_dotstr_2_6(plat^);
+			slong := float_to_dotstr_2_6(plong^);
+			scoords := slat + ',' + slong + '|'; //
+			result := result + scoords;
+			j := j + 9;
 		end;
 		if length(result) > 0 then
 			if result[length(result)] = '|' then
