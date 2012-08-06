@@ -160,7 +160,7 @@ begin
 	self.Timer_get_gps.Enabled := false;
 	self.Timer_get_crews.Enabled := false;
 	self.Timer_show_crews.Enabled := false;
-	form_main.thread_times.cont();
+	// form_main.thread_times.cont();
 	self.Hide();
 end;
 
@@ -243,8 +243,10 @@ procedure TFormOrder.start_def_times;
 begin
 	// выводим пстую шапку
 	self.show_crews();
-	// определяем список подходящихз экипажей
-	TCrewList(self.PCrewList).get_crew_list_for_ap(TOrder(POrder).source, TOrder(POrder).ID, self.cr_slist);
+	// определяем список подходящих экипажей
+	TCrewList(self.PCrewList).get_crew_list_for_ap( //
+		TOrder(POrder).source, TOrder(POrder).ID, self.cr_slist //
+		);
 	if self.cr_slist.Count = 0 then
 	begin
 		ShowMessage('Нет подходящих экипажей!');
@@ -256,7 +258,7 @@ begin
 	self.show_crews();
 
 	// тормозим осн. расчёт
-	form_main.thread_times.pause();
+	// form_main.thread_times.pause();
 
 	// запускаем таймеры
 	self.cr_count := 0;
@@ -318,6 +320,7 @@ begin
 	add_row(self.grid_order, 'dest.gps', order.dest.gps);
 	add_row(self.grid_order, 'raw_dist_way', FloatToStrF(order.raw_dist_way, ffFixed, 8, 1));
 	add_row(self.grid_order, 'int_stops', order.raw_int_stops);
+	add_row(self.grid_order, 'POrder', inttostr(Integer(Pointer(order))));
 end;
 
 procedure TFormOrder.Timer_get_crewsTimer(Sender : TObject);
@@ -327,7 +330,7 @@ begin
 	begin
 		self.cr_count := 0;
 		self.Timer_get_crews.Enabled := false;
-		form_main.thread_times.cont();
+		// form_main.thread_times.cont();
 		exit();
 	end;
 

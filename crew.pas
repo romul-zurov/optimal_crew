@@ -1138,22 +1138,25 @@ begin
 		crew := self.crewByCrewId(order.CrewID);
 		if (order <> nil) and (crew <> nil) then
 		begin
-			crew.source := order.source; crew.dest := order.dest;
-			crew.POrder := Pointer(order);
+			crew.source := order.source;
+			crew.dest := order.dest;
+			// crew.POrder := Pointer(order); // не надо, уже сделано в set_crews_orderId_by_order_list
 		end;
-	end; exit(0);
+	end;
+	exit(0);
 end;
 
-function TCrewList.get_crew_list_for_ap(new_ap : TAdres; Order_ID : Integer; var res_slist : TStringList)
-	: Integer;
-var crew : TCrew; i : Integer;
+function TCrewList.get_crew_list_for_ap( //
+	new_ap : TAdres; Order_ID : Integer; var res_slist : TStringList //
+	) : Integer;
+var crew : TCrew;
+	i : Integer;
 
 begin
 	with new_ap do
 		self.set_ap(street, house, korpus, gps);
 	self.set_crews_dist(self.ap_gps);
 	self.Crews.Sort(sort_crews_by_state_dist);
-	// result := TStringList.Create();
 	res_slist.Clear();
 
 	for i := 0 to self.Crews.count - 1 do
@@ -1174,7 +1177,8 @@ begin
 			and (crew.dist >= 0) //
 			then
 			res_slist.Add(IntToStr(crew.CrewID))
-	end; exit(0);
+	end;
+	exit(0);
 end;
 
 function TCrewList.get_crew_list() : Integer;
@@ -1193,7 +1197,9 @@ begin
 	// result := get_sql_stringlist(self.query, sel);
 	// self.set_crews_data(result);
 
-	ret_sql_stringlist(self.query, sel, self.sql_crews_stringlist); self.set_crews_data(); exit(0);
+	ret_sql_stringlist(self.query, sel, self.sql_crews_stringlist);
+	self.set_crews_data();
+	exit(0);
 end;
 
 function TCrewList.get_gpsid_list_as_string : string;
@@ -1297,8 +1303,8 @@ begin
 	for s in self.sql_crews_stringlist do
 	begin
 		sl.Clear();
-        sl.Text := StringReplace(s, '|', #13#10, [rfReplaceAll]);
-        ID := StrToInt(sl.Strings[0]);
+		sl.Text := StringReplace(s, '|', #13#10, [rfReplaceAll]);
+		ID := StrToInt(sl.Strings[0]);
 		GpsId := StrToInt(sl.Strings[1]);
 		if self.isGpsIdInList(GpsId) then
 			crew := self.crewByGpsId(GpsId)
@@ -1306,16 +1312,16 @@ begin
 			crew := self.crew(self.Append(GpsId));
 
 		crew.CrewID := ID;
-        crew.GpsId := GpsId;
-        crew.Code := sl.Strings[2];
-        crew.name := sl.Strings[3];
+		crew.GpsId := GpsId;
+		crew.Code := sl.Strings[2];
+		crew.name := sl.Strings[3];
 		crew.state := StrToInt(sl.Strings[4]);
 		if crew.state = 11 then
 			// "на заказе с бордюра" приравниваем к "свободен"
 			crew.state := CREW_SVOBODEN;
 	end;
-    FreeAndNil(sl);
-    exit(0);
+	FreeAndNil(sl);
+	exit(0);
 end;
 
 function TCrewList.set_crews_dist(coord : string) : Integer;
@@ -1349,7 +1355,7 @@ begin
 			then
 		begin
 			self.crewByCrewId(order.CrewID).OrderId := order.ID;
-			self.crewByCrewId(order.CrewID).POrder := pp;//Pointer(order);
+			self.crewByCrewId(order.CrewID).POrder := pp; // Pointer(order);
 		end;
 	end;
 	// убираем сслыки на заказы у свободных экипажей
@@ -2084,11 +2090,13 @@ begin
 						then
 						result := 'ожидание клиента'
 					else
-						if self.state in [ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
+						if self.state in [ORDER_V_OCHEREDI, //
+							ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
 							ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
 							then
 						begin
-							cur_dt := now(); prib_dt := IncMinute(cur_dt, self.time_to_ap);
+							cur_dt := now();
+							prib_dt := IncMinute(cur_dt, self.time_to_ap);
 							ap_dt := source_time_to_datetime(self.source_time);
 							// насколько опаздываем/раньше
 							opozdanie := MinutesBetween(prib_dt, ap_dt);
@@ -2423,8 +2431,10 @@ var sel, s, s1 : string;
 	res, sl : TStringList; sdate_from, sdate_to : string; ord_id : Integer; order : TOrder;
 	cur_time : TDateTime;
 begin
-	cur_time := now(); sdate_from := '''' + replace_time('{Last_day_1}', cur_time) + '''';
-	sdate_to := '''' + replace_time('{Last_day_-1}', cur_time) + ''''; res := TStringList.Create();
+	cur_time := now(); //
+	sdate_from := '''' + replace_time('{Last_day_1}', cur_time) + ''''; //
+	sdate_to := '''' + replace_time('{Last_day_-1}', cur_time) + ''''; //
+	res := TStringList.Create();
 	sl := TStringList.Create();
 
 	// запрашиваем ID новых заказов
@@ -2491,9 +2501,11 @@ begin
 			if order.CrewID > -1 then
 			begin
 				// снимаем экипаж с заказа
-				order.time_to_end := -1; order.time_to_ap := -1; order.pcrew := nil;
-			end; order.CrewID := -1;
-			// !!!
+				order.time_to_end := -1;
+				order.time_to_ap := -1;
+				order.pcrew := nil;
+			end;
+			order.CrewID := -1; // !!!
 		end;
 
 		try
@@ -2502,8 +2514,9 @@ begin
 			order.state := -1;
 		end;
 
-		order.source_time := date_to_full(res.Strings[2]); order.source.set_raw_adres(res.Strings[3]);
-		order.dest.set_raw_adres(res.Strings[4]);
+		order.source_time := date_to_full(res.Strings[2]); //
+		order.source.set_raw_adres(res.Strings[3]); //
+		order.dest.set_raw_adres(res.Strings[4]); //
 
 		// проверяем удалённые и отменённые заказы
 		if (length(res.Strings[5]) = 0) or (res.Strings[5] = '0') then
@@ -2560,7 +2573,9 @@ begin
 	// сортируем по времени подачи:
 	self.Orders.Sort(sort_orders_by_source_time);
 
-	FreeAndNil(sl); FreeAndNil(res); exit(0);
+	FreeAndNil(sl);
+	FreeAndNil(res);
+	exit(0);
 end;
 
 function TOrderList.is_defined(OrderId : Integer) : boolean;

@@ -17,12 +17,13 @@ type
 		procedure do_get_times();
 		procedure do_get_db();
 		procedure flag_on_get_db(Sender : TObject);
+
+		procedure pause();
+		procedure cont();
 	protected
 		procedure Execute; override;
 	public
-    	procedure init();
-		procedure pause();
-		procedure cont();
+		procedure init();
 	end;
 
 implementation
@@ -67,7 +68,7 @@ begin
 	self.flag_pass := false;
 end;
 
-procedure TThread_get_times.Init;
+procedure TThread_get_times.init;
 begin
 	self.flag_pass := false;
 	self.flag_get_db := false;
@@ -109,17 +110,17 @@ procedure TThread_get_times.Execute;
 begin
 	{ Place thread code here }
 
-    (*
-	// !!!!
-	if not self.timer.Enabled then
-	begin
-		self.timer := TTimer.Create(nil);
-		self.timer.interval := 5 * 1000;
-		self.timer.OnTimer := self.flag_on_get_db;
-		self.timer.Enabled := true;
-	end;
-	// !!!
-    *)
+	(*
+	  // !!!!
+	  if not self.timer.Enabled then
+	  begin
+	  self.timer := TTimer.Create(nil);
+	  self.timer.interval := 5 * 1000;
+	  self.timer.OnTimer := self.flag_on_get_db;
+	  self.timer.Enabled := true;
+	  end;
+	  // !!!
+	  *)
 
 	while true do
 	begin
