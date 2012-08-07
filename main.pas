@@ -197,7 +197,6 @@ begin
 
 	// order_list.get_current_orders(deb_list);
 	order_list.get_current_orders_with_data();
-
 	crew_list.get_crew_list_by_order_list(order_list);
 end;
 

@@ -103,6 +103,7 @@ begin
 	add_row(self.grid_crew, 'Coord', crew.coord);
 	add_row(self.grid_crew, 'OrderID', inttostr(crew.OrderId));
 	add_row(self.grid_crew, 'POrder', inttostr(integer(crew.POrder)));
+	add_row(self.grid_crew, 'POrder_vocheredi', inttostr(integer(crew.POrder_vocheredi)));
 
 	// координаты
 	with self.grid_coords do

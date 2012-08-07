@@ -71,7 +71,7 @@ object FormCrew: TFormCrew
       RowCollection = <
         item
           SizeStyle = ssAbsolute
-          Value = 160.000000000000000000
+          Value = 200.000000000000000000
         end
         item
           Value = 100.000000000000000000
@@ -81,16 +81,17 @@ object FormCrew: TFormCrew
         Left = 1
         Top = 1
         Width = 333
-        Height = 160
+        Height = 200
         Align = alClient
         Caption = 'GroupBox_crew'
         TabOrder = 0
+        ExplicitHeight = 160
         object grid_crew: TStringGrid
           AlignWithMargins = True
           Left = 5
           Top = 18
           Width = 323
-          Height = 137
+          Height = 177
           Align = alClient
           ColCount = 4
           Ctl3D = False
@@ -100,22 +101,25 @@ object FormCrew: TFormCrew
           FixedRows = 0
           ParentCtl3D = False
           TabOrder = 0
+          ExplicitHeight = 137
         end
       end
       object GroupBox_coords: TGroupBox
         Left = 1
-        Top = 161
+        Top = 201
         Width = 333
-        Height = 223
+        Height = 183
         Align = alClient
         Caption = 'GPS-'#1090#1088#1077#1082' '#1101#1082#1080#1087#1072#1078#1072':'
         TabOrder = 1
+        ExplicitTop = 161
+        ExplicitHeight = 223
         object grid_coords: TStringGrid
           AlignWithMargins = True
           Left = 5
           Top = 18
           Width = 323
-          Height = 200
+          Height = 160
           Align = alClient
           ColCount = 4
           Ctl3D = False
@@ -126,6 +130,7 @@ object FormCrew: TFormCrew
           ParentCtl3D = False
           TabOrder = 0
           OnDblClick = grid_coordsDblClick
+          ExplicitHeight = 200
         end
       end
     end
