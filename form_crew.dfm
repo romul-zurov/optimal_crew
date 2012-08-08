@@ -85,7 +85,6 @@ object FormCrew: TFormCrew
         Align = alClient
         Caption = 'GroupBox_crew'
         TabOrder = 0
-        ExplicitHeight = 160
         object grid_crew: TStringGrid
           AlignWithMargins = True
           Left = 5
@@ -101,7 +100,6 @@ object FormCrew: TFormCrew
           FixedRows = 0
           ParentCtl3D = False
           TabOrder = 0
-          ExplicitHeight = 137
         end
       end
       object GroupBox_coords: TGroupBox
@@ -112,8 +110,6 @@ object FormCrew: TFormCrew
         Align = alClient
         Caption = 'GPS-'#1090#1088#1077#1082' '#1101#1082#1080#1087#1072#1078#1072':'
         TabOrder = 1
-        ExplicitTop = 161
-        ExplicitHeight = 223
         object grid_coords: TStringGrid
           AlignWithMargins = True
           Left = 5
@@ -130,7 +126,6 @@ object FormCrew: TFormCrew
           ParentCtl3D = False
           TabOrder = 0
           OnDblClick = grid_coordsDblClick
-          ExplicitHeight = 200
         end
       end
     end

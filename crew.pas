@@ -318,13 +318,33 @@ begin
 		exit();
 
 	coord_from := '';
-	if (self.state = CREW_NAZAKAZE) { and (self.POrder <> nil) } then
+	if (self.state = CREW_NAZAKAZE) then
 	begin
-		// если экипаж на заказе, то расстояние меряем от точки высадки
-		if self.POrder <> nil then
+		order := nil;
+        // если экипаж на заказе "в очереди" то берём АН этого заказа
+		if self.POrder_vocheredi <> nil then
+		begin
+			try
+				order := TOrder(self.POrder_vocheredi);
+			except
+				order := nil;
+			end;
+		end;
+
+        // иначе берём заказ, на котором экипаж
+		if (order = nil) and (self.POrder <> nil) then
+		begin
 			try
 				order := TOrder(self.POrder);
+			except
+				order := nil;
+			end;
+		end;
 
+		// расстояние меряем от АН заказа
+		if order <> nil then
+		begin
+			try
 				// временно отбрасыываем заказы с пром. остановками
 				if order.count_int_stops > 0 then
 					exit();
@@ -339,12 +359,10 @@ begin
 			except
 				coord_from := ''; // на всякий случай
 			end;
+		end;
 	end
 	else
 		coord_from := self.coord;
-
-	// if coord_from = '' then
-	// coord_from := self.coord;
 
 	if coord_from = '' then
 		exit()
@@ -402,12 +420,28 @@ begin
 	self.way_to_ap.points.Clear(); // список точек маршрута
 
 	order := nil;
-	if (self.state = CREW_NAZAKAZE) and (self.POrder <> nil) then
-		try
-			order := TOrder(self.POrder);
-		except
-			order := nil;
+	if (self.state = CREW_NAZAKAZE) then
+	begin
+		if self.POrder_vocheredi <> nil then
+		begin
+			try
+				order := TOrder(self.POrder_vocheredi);
+				if order.state <> ORDER_V_OCHEREDI then
+					order := nil;
+			except
+				order := nil;
+			end;
+		end
+		else
+		begin
+			if (self.POrder <> nil) then
+				try
+					order := TOrder(self.POrder);
+				except
+					order := nil;
+				end;
 		end;
+	end;
 
 	if //
 		(self.state = CREW_SVOBODEN) //
@@ -420,8 +454,12 @@ begin
 	end
 	else
 	begin
-		// self.POrder := TOrderList(polist).find_by_Id(self.OrderId);  // уже не надо
-		self.way_to_ap.points.Add(Pointer(TOrder(self.POrder).dest));
+		// self.way_to_ap.points.Add(Pointer(TOrder(self.POrder).dest));
+		try
+			self.way_to_ap.points.Add(Pointer(order.dest));
+		except
+			exit(-1);
+		end;
 	end;
 
 	self.way_to_ap.points.Add(Pointer(self.ap));
@@ -823,22 +861,47 @@ end;
 
 procedure TCrew.set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 var dob : Integer;
+	order : TOrder;
 	// dob2 : double; // при подборе экипажа для экипажа "на заказе" длинц пути
 	// учитываем только от точки высадки до АП, не прибавляя текущий путь!
 begin
 	self.way_to_ap.set_way_time_dist(ASender, pDisp, url);
 
 	dob := 0;
-	if (self.state = CREW_NAZAKAZE) and (self.POrder <> nil) then
-		// для экипажа "на заказе добавляем время до окончания тек. заказа
-		try
-			dob := TOrder(self.POrder).time_to_end;
-			// если заказ завершён, то как для свободного экипажа
-			if dob = ORDER_AN_OK then
-				dob := 0;
-		except
-			dob := 0; // на всякий случай :)
+	order := nil;
+	if (self.state = CREW_NAZAKAZE) then
+	begin
+		if self.POrder_vocheredi <> nil then
+		begin
+			try
+				order := TOrder(self.POrder_vocheredi);
+				if order.state <> ORDER_V_OCHEREDI then
+					order := nil;
+			except
+				order := nil;
+			end;
 		end;
+		if order = nil then
+			if self.POrder <> nil then
+				try
+					order := TOrder(self.POrder);
+				except
+					order := nil;
+				end;
+
+		if (order <> nil) then
+		begin
+			// для экипажа "на заказе добавляем время до окончания тек. заказа
+			try
+				dob := order.time_to_end;
+				// если заказ завершён, то как для свободного экипажа
+				if dob = ORDER_AN_OK then
+					dob := 0;
+			except
+				dob := 0; // на всякий случай :)
+			end;
+		end;
+	end;
 
 	if dob < 0 then
 	begin
@@ -1563,7 +1626,7 @@ begin
 	end
 	else
 	begin
-    	self.dobavka_v_ocheredi := 0; // на всякий случай, ну её...
+		self.dobavka_v_ocheredi := 0; // на всякий случай, ну её...
 		if (not crew.was_in_coord(gps)) then // водитель в АП не был ещё
 		begin
 			// начало маршрута - текущая координата машины
@@ -1605,14 +1668,16 @@ begin
 	// проверяем состояние заказа, возможен ли вообще расчёт
 	if //
 		not(self.state in [ //
-			ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, ORDER_VODITEL_PRINYAL, //
+			ORDER_V_OCHEREDI, //
+		ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, ORDER_VODITEL_PRINYAL, //
 		ORDER_VODITEL_PODTVERDIL, ORDER_KLIENT_NA_BORTU, //
 		ORDER_PRIGLASITE_KLIENTA, ORDER_KLIENT_NE_VYSHEL, //
 		ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
 			]) //
 		then
 	begin
-		self.time_to_end := -1; exit();
+		self.time_to_end := -1;
+		exit();
 	end;
 
 	if self.time_to_end = ORDER_AN_OK then
@@ -1653,7 +1718,7 @@ begin
 	if self.dest.gps = '' then
 	begin
 		self.dest.get_gps();
-        exit();
+		exit();
 	end;
 
 	cur_dt := now();
@@ -1673,48 +1738,69 @@ begin
 	// если экипаж на заказе, то проверяем, был ли он в точках source и dest
 	// если нет - добавляем их в маршрут и прибавляем время на остановки
 	self.na_bortu := false;
-	// if (self.state <> ORDER_KLIENT_NA_BORTU) then // клиент НЕ на борту
-	if ( //
-		self.state in [ //
-			ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, ORDER_VODITEL_PRINYAL, //
-		ORDER_VODITEL_PODTVERDIL //
-			] //
-		) //
-		then // клиент НЕ на борту
+
+	if (self.state = ORDER_V_OCHEREDI) then // особый случай
 	begin
-		if self.time_to_ap = ORDER_AP_OK then
-			self.na_bortu := true
-			// клиент на борту и водятел УЕХАЛ уже с АП, не сменив статус!
+		if self.time_to_ap > 0 then
+		begin
+			// определяем точки и паузу
+			self.way_to_end.points.Clear(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			self.way_to_end.points.Add(Pointer(self.source));
+			self.way_to_end.points.Add(Pointer(self.dest));
+			self.stops_time := ifthen(dobavka > self.time_to_ap, dobavka, self.time_to_ap);
+			self.stops_time := self.stops_time + 10 + 3;
+		end
 		else
-			if self.time_to_ap < 0 then
-				exit() // ошибка либо не считалось
-			else
-				if self.time_to_ap = 0 then // водитель на месте и ждёт
-				begin
-					self.na_bortu := true;
-					self.stops_time := dobavka + 10;
-				end
-				else
-				// определяем точки и паузу
-				begin
-					self.way_to_end.points.Clear(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-					self.way_to_end.points.Add(Pointer(self.source));
-					self.way_to_end.points.Add(Pointer(self.dest));
-					self.stops_time := ifthen(dobavka > self.time_to_ap, dobavka, self.time_to_ap);
-					self.stops_time := self.stops_time + 10 + 3;
-				end;
+		begin
+			exit() // ошибка либо не считалось
+		end;
 	end
 	else
-		if (self.state in [ //
-				ORDER_PRIGLASITE_KLIENTA, ORDER_KLIENT_NE_VYSHEL, //
-			ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
-				]) //
-			then
+	begin
+		if ( //
+			self.state in [ //
+				ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, ORDER_VODITEL_PRINYAL, //
+			ORDER_VODITEL_PODTVERDIL //
+				] //
+			) //
+			then // клиент НЕ на борту
 		begin
-			// если водитель ожидает клиента, накидываем время на ожидание
-			self.na_bortu := true;
-			self.stops_time := dobavka + 10;
+			if self.time_to_ap = ORDER_AP_OK then
+				self.na_bortu := true
+				// клиент на борту и водятел УЕХАЛ уже с АП, не сменив статус!
+			else
+				if self.time_to_ap < 0 then
+					exit() // ошибка либо не считалось
+				else
+					if self.time_to_ap = 0 then // водитель на месте и ждёт
+					begin
+						self.na_bortu := true;
+						self.stops_time := dobavka + 10;
+					end
+					else
+					// определяем точки и паузу
+					begin
+						self.way_to_end.points.Clear(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+						self.way_to_end.points.Add(Pointer(self.source));
+						self.way_to_end.points.Add(Pointer(self.dest));
+						self.stops_time := ifthen(dobavka > self.time_to_ap, dobavka, self.time_to_ap);
+						self.stops_time := self.stops_time + 10 + 3;
+					end;
+		end
+		else
+		begin
+			if (self.state in [ //
+					ORDER_PRIGLASITE_KLIENTA, ORDER_KLIENT_NE_VYSHEL, //
+				ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
+					]) //
+				then
+			begin
+				// если водитель ожидает клиента, накидываем время на ожидание
+				self.na_bortu := true;
+				self.stops_time := dobavka + 10;
+			end;
 		end;
+	end;
 
 	// если уже забрал, но не высадил
 	if (self.na_bortu) or (self.state = ORDER_KLIENT_NA_BORTU) then
@@ -1753,7 +1839,8 @@ begin
 		end;
 	end;
 
-	self.pcrew := pcrew; self.datetime_of_time_to_end := now(); // засекаем момент взятия времени
+	self.pcrew := pcrew;
+	self.datetime_of_time_to_end := now(); // засекаем момент взятия времени
 	self.way_to_end.get_way_time_dist();
 end;
 

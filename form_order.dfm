@@ -137,6 +137,7 @@ object FormOrder: TFormOrder
           DefaultRowHeight = 16
           FixedCols = 0
           TabOrder = 0
+          OnDblClick = grid_orderDblClick
         end
       end
     end

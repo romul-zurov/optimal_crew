@@ -6,7 +6,7 @@ uses
 	crew_utils, //
 	crew, //
 	crew_globals, //
-	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+	Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms, Clipbrd,
 	Dialogs, Grids, StdCtrls, ExtCtrls, OleCtrls, SHDocVw, Math, StrUtils, ComCtrls;
 
 type
@@ -42,6 +42,9 @@ type
 			State : TGridDrawState);
 
 		procedure cb_debugClick(Sender : TObject);
+
+		procedure grid_orderDblClick(Sender : TObject);
+
 	private
 		{ Private declarations }
 		POrder : Pointer;
@@ -111,6 +114,12 @@ begin
 			Canvas.FillRect(Rect);
 			Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], sub, ''));
 		end;
+end;
+
+procedure TFormOrder.grid_orderDblClick(Sender : TObject);
+begin
+	with self.grid_order do
+		clipboard.SetTextBuf(PWideChar(Cells[Col, Row]));
 end;
 
 procedure TFormOrder.ret_sl(var cr_sl : tstringlist; first : boolean; var sl : tstringlist);
