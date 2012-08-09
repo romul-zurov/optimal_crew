@@ -321,7 +321,7 @@ begin
 	if (self.state = CREW_NAZAKAZE) then
 	begin
 		order := nil;
-        // если экипаж на заказе "в очереди" то берём АН этого заказа
+		// если экипаж на заказе "в очереди" то берём АН этого заказа
 		if self.POrder_vocheredi <> nil then
 		begin
 			try
@@ -331,7 +331,7 @@ begin
 			end;
 		end;
 
-        // иначе берём заказ, на котором экипаж
+		// иначе берём заказ, на котором экипаж
 		if (order = nil) and (self.POrder <> nil) then
 		begin
 			try
@@ -2523,6 +2523,7 @@ function TOrderList.get_current_orders_with_data : Integer;
 var sel, s, s1 : string;
 	res, sl : TStringList; sdate_from, sdate_to : string; ord_id : Integer; order : TOrder;
 	cur_time : TDateTime;
+	pord : Pointer;
 begin
 	cur_time := now(); //
 	sdate_from := '''' + replace_time('{Last_day_1}', cur_time) + ''''; //
@@ -2583,8 +2584,36 @@ begin
 
 	for s in sl do
 	begin
-		string_to_stringlist(s, res); ord_id := StrToInt(res.Strings[10]);
-		order := TOrder(self.find_by_Id(ord_id));
+		ord_id := -1;
+		pord := nil;
+
+		string_to_stringlist(s, res);
+
+		// берём номер заказа
+		if length(res.Strings[10]) > 0 then
+		begin
+			try
+				ord_id := StrToInt(res.Strings[10]);
+			except
+				ord_id := -1;
+			end;
+			if ord_id > 0 then
+			begin
+				try
+					pord := self.find_by_Id(ord_id);
+					if pord = nil then
+						continue // иначе пропускаем итерацию
+					else
+						order := TOrder(pord);
+				except
+					continue; // иначе пропускаем итерацию
+				end;
+			end
+			else
+				continue; // иначе пропускаем итерацию
+		end
+		else
+			continue; // иначе пропускаем итерацию
 
 		// заполняем данные заказа
 		if res.Strings[0] <> '' then
