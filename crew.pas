@@ -50,13 +50,10 @@ type
 		// будет удалён через ORDER_DESTROY_TIME
 
 		raw_dist_way : double; // условная "длина" маршрута, определяемая из его цены, км
+		dobavka_v_ocheredi : Integer; // добавка времени при обсчёте заказа "в очереди"
 
-		dobavka_v_ocheredi : Integer;
-
-
-		// form : TFormOrder; // form to show order
-
-		// crews_list : TCrewList;
+		PCrews : TList; // список экипажей для подбора оптимального на заказ
+		// содержит только pointer'ы на экипажи
 
 		constructor Create(OrderId : Integer; var IBQuery : TIBQuery);
 		destructor Destroy(); override;
@@ -68,13 +65,11 @@ type
 		function get_order_data() : string;
 		function time_to_end_as_string() : string; // время до окончания заказа в виде часы-минуты;
 		function time_to_ap_as_string() : string; // время до подъезда к АП в мин/часах;
-		// function color
 		function state_as_string() : string;
 		function status() : string;
 		function source_time_without_date() : string;
 		function is_not_prior() : boolean;
 	private
-		// brow_comp_eve : TBrowserComplete2Event;
 		procedure set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 		procedure set_time_to_end(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 		function time_as_string(time : Integer) : string;
@@ -465,9 +460,6 @@ begin
 	self.way_to_ap.points.Add(Pointer(self.ap));
 
 	// вызываем расчёт
-	if self.way_to_ap.zapros.get_flag_zapros() then
-		// грязнохак :-/
-		self.way_to_ap.zapros.browser.Stop();
 	result := self.way_to_ap.get_way_time_dist_unlim();
 end;
 
@@ -791,8 +783,10 @@ begin
 end;
 
 function TCrew.ret_data_to_ap(source_time : string; half_dist_way : double) : string;
-var s_opozdanie, scolor, prefix, res, rasxod, line_num, pref_r, pref_l : string;
-	dt, ap_dt : TDateTime; opozdanie : Integer;
+var
+	s_opozdanie, scolor, prefix, res, rasxod, line_num, pref_r, pref_l : string;
+	dt, ap_dt : TDateTime;
+	opozdanie : Integer;
 begin
 	{
 	  result := '' //
@@ -803,45 +797,55 @@ begin
 	  + self.state_as_string() + '|||' //
 	  ;
 	  }
-	line_num := self.line_number_color(); rasxod := self.pererasxod_color(half_dist_way);
+	line_num := self.line_number_color();
+	rasxod := self.pererasxod_color(half_dist_way);
 	pref_l := ifthen(line_num[1] = '*', '#', '&');
 	pref_r := ifthen((rasxod[1] in ['*', '!']) and (pos('!!!', rasxod) = 0), '#', '&');
 
 	if self.time < 0 then
 	begin
-		prefix := '___'; res := self.dist_str();
-		s_opozdanie := self.time_as_string(); scolor := '';
+		prefix := '___';
+		res := self.dist_str();
+		s_opozdanie := self.time_as_string();
+		scolor := '';
 	end
 	else
 	begin
-		dt := IncMinute(now(), self.time); ap_dt := source_time_to_datetime(source_time);
-		opozdanie := MinutesBetween(ap_dt, dt); s_opozdanie := self.time_to_str(opozdanie);
+		dt := IncMinute(now(), self.time);
+		ap_dt := source_time_to_datetime(source_time);
+		opozdanie := MinutesBetween(ap_dt, dt);
+		s_opozdanie := self.time_to_str(opozdanie);
 		if dt > ap_dt then
 		begin
 			s_opozdanie := 'опоздает на ' + s_opozdanie;
 			if opozdanie < 10 then
 			begin
-				res := self.dist_way_str(); scolor := '!';
+				res := self.dist_way_str();
+				scolor := '!';
 				prefix := '#' + pref_r + ifthen(pref_r = '#', pref_l, '_'); // вместе с успевающими !
 			end
 			else
 			begin
-				res := self.time_str(); scolor := '!!! '; prefix := '&&&';
+				res := self.time_str();
+				scolor := '!!! ';
+				prefix := '&&&';
 			end;
 		end
 		else
 		begin
 			s_opozdanie := 'успевает с запасом ' + s_opozdanie;
 			// prefix := '#';
-			prefix := '#' + pref_r + ifthen(pref_r = '#', pref_l, '_'); res := self.dist_way_str();
+			prefix := '#' + pref_r + ifthen(pref_r = '#', pref_l, '_');
+			res := self.dist_way_str();
 			scolor := '*';
 		end;
-	end; result := '' //
+	end;
+	result := '' //
 		+ prefix //
 		+ res + '$' //
 	// + IntToStr(self.CrewID) + '|' //
 		+ self.dist_str() + '|' // !!!
-		+ self.name + '||' //
+		+ { self.name } self.Code + '||' // !
 		+ self.state_as_string() + '|||' //
 		+ scolor + s_opozdanie + '||||' //
 		+ rasxod + self.dist_way_as_string() + '|||||' //

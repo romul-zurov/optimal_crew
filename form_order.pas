@@ -212,8 +212,8 @@ begin
 		ColWidths[4] := 80; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
 		ColWidths[5] := ifthen(self.cb_debug.Checked, 80, 0);
 		ColWidths[6] := 40;
-		ColWidths[1] := Width - 24 - ColWidths[0] - ColWidths[2] //
-			- ColWidths[3] - ColWidths[4] - ColWidths[5] - ColWidths[6];
+		ColWidths[1] := 50;//Width - 24 - ColWidths[0] - ColWidths[2] //
+//			- ColWidths[3] - ColWidths[4] - ColWidths[5] - ColWidths[6];
 
 	end;
 

@@ -132,13 +132,15 @@ type
 		dist_way : double;
 		points : TList;
 		zapros : TZapros;
+
 		constructor Create();
 		destructor Destroy; override;
 		function get_way_time_dist() : integer;
 		function get_way_time_dist_unlim() : integer;
 		procedure set_way_time_dist(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 	private
-		function def_way_time_dist(count_flag : boolean) : integer;
+		count_flag : boolean;
+		function def_way_time_dist() : integer;
 	end;
 
 	TBrowserComplete2Event = procedure(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
@@ -176,7 +178,7 @@ var
 	// browser_form : Tform;
 	browser_panel : TPanel;
 	GetZaprosCounter : Int64;
-//	CoordsInterval : Int64;
+	// CoordsInterval : Int64;
 
 
 	// main_db : TIBDatabase;
@@ -767,7 +769,7 @@ begin
 	CoInitialize(nil);
 	try
 		self.browser := TWebBrowser.Create(nil);
-//		TWinControl(self.browser).Parent := browser_panel; // global panel
+		// TWinControl(self.browser).Parent := browser_panel; // global panel
 
 		self.browser.Silent := true;
 		self.browser.Width := 10;
@@ -895,7 +897,7 @@ begin
 	self.zapros.browser.OnNavigateComplete2 := self.set_way_time_dist;
 end;
 
-function TWay.def_way_time_dist(count_flag : boolean) : integer;
+function TWay.def_way_time_dist() : integer;
 	procedure add_s(var s : string; s1, s2, s3, s4 : string; num : integer);
 	var ss : string;
 	begin
@@ -936,8 +938,10 @@ begin
 	surl := '"' + surl + '"' + ' "DayVremyaPuti" "foo"';
 	surl := param64(surl);
 	surl := PHP_Url + '?param=' + surl;
-	result := ifthen(count_flag, self.zapros.get_zapros(surl), // if true
-		self.zapros.get_zapros_unlim(surl)); // else
+	if self.count_flag then
+		result := self.zapros.get_zapros(surl) // if true
+	else
+		result := self.zapros.get_zapros_unlim(surl); // else
 end;
 
 destructor TWay.Destroy;
@@ -950,12 +954,14 @@ end;
 
 function TWay.get_way_time_dist() : integer;
 begin
-	result := self.def_way_time_dist(true);
+	self.count_flag := true;
+	result := self.def_way_time_dist();
 end;
 
 function TWay.get_way_time_dist_unlim : integer;
 begin
-	result := self.def_way_time_dist(false);
+	self.count_flag := false;
+	result := self.def_way_time_dist();
 end;
 
 procedure TWay.set_way_time_dist(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
