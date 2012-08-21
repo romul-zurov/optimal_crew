@@ -6,8 +6,9 @@ uses crew_utils, // utils from robocap and mine
 	crew_globals, // my global var and function
 	Generics.Collections, // for forward class definition
 	Controls, Forms, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX, //
-	IBQuery, DB, WinInet, StrUtils, DateUtils;
+	IBQuery, DB, WinInet, StrUtils, DateUtils, ExtCtrls;
 
+function sort_cars_by_dist(p1, p2 : Pointer) : Integer;
 function sort_crews_by_state_dist(p1, p2 : Pointer) : Integer;
 function sort_crews_by_time(p1, p2 : Pointer) : Integer;
 function sort_crews_by_crewid(p1, p2 : Pointer) : Integer;
@@ -15,6 +16,18 @@ function sort_orders_by_source_time(p1, p2 : Pointer) : Integer;
 
 type
 	TCrewList = class;
+
+	TCar = class(TObject)
+		// вспомогательный класс для побора экипажа на заказ
+		PCrew : Pointer; // указатель на crew:TCrew
+		dist_way_to_ap : double; // длина маршрута до АП, км;
+		time_to_ap : Integer; // время подъезда к АП в минутах;
+		crew_state : Integer; // при несовпадении с crew.state вызывается
+		// перерасчёт, либо удаление экипажа из списка
+		res_data : string; // резултирующая строка с преферансом и профурсетками
+		constructor Create();
+		procedure Clear();
+	end;
 
 	TOrder = class(TObject)
 		ID : Integer; // order main ID in ORDERS table, -1 if not defined
@@ -30,8 +43,8 @@ type
 		dest_raw : string; // address to raw-format
 		source_time : string; // время подачи экипажа
 		time_to_end : Integer; // время до окончания заказа в минутах
-		datetime_of_time_to_end : TDateTime; // момент, когда считалось время до окончания
-		// нужно для отладки
+		datetime_of_time_to_end : TDateTime; // момент, когда считалось время
+		// до окончания, нужно для отладки
 		time_to_ap : Integer; // время до подъезда к адресу подачи в минутах
 		datetime_of_time_to_ap : TDateTime; // момент, когда считалось время до ап
 		deleted : boolean; // признак удалённого или отменённого заказа
@@ -40,7 +53,7 @@ type
 		way_to_end : TWay;
 		stops_time : Integer; // время на остановки экипажа на заказе в минутах
 		na_bortu : boolean; // признак, что клиент на борту при исполнении заказа
-		pcrew : Pointer; // указатель на экипаж, нужен в def_time_to_end и set_time_to_end
+		PCrew : Pointer; // указатель на экипаж, нужен в def_time_to_end и set_time_to_end
 
 		count_int_stops : Integer; // количество промежуточных остановок в заказе
 		raw_int_stops : string; // адреса пром. остановок "как есть", из базы
@@ -52,14 +65,18 @@ type
 		raw_dist_way : double; // условная "длина" маршрута, определяемая из его цены, км
 		dobavka_v_ocheredi : Integer; // добавка времени при обсчёте заказа "в очереди"
 
-		PCrews : TList; // список экипажей для подбора оптимального на заказ
-		// содержит только pointer'ы на экипажи
+		Cars : TList; // список экипажей для подбора оптимального на заказ
+		// содержит только pointer'ы на Tcar-ы
+		PCrews_tmp : TList;
+		Cars_StringList : TstringList;
+		timer_cars : TTimer; // таймер подбора экипажа для заказа
+		// если enabled - идёт просчёт  - ПОКА НЕ НУЖЕН
 
 		constructor Create(OrderId : Integer; var IBQuery : TIBQuery);
 		destructor Destroy(); override;
 		procedure del_order(); // просто очищает заказ без удаления из памяти
-		procedure def_time_to_end(var pcrew : Pointer);
-		procedure def_time_to_ap(var pcrew : Pointer);
+		procedure def_time_to_end(var PCrew : Pointer);
+		procedure def_time_to_ap(var PCrew : Pointer);
 		// function get_time_to_end(var PCrew : Pointer) : Integer;
 		// function get_time_to_ap(var PCrew : Pointer) : Integer;
 		function get_order_data() : string;
@@ -69,10 +86,16 @@ type
 		function status() : string;
 		function source_time_without_date() : string;
 		function is_not_prior() : boolean;
+		function get_cars_times_for_ap() : Integer;
+		function crew_in_cars(PCrew : Pointer) : boolean;
+		function car_for_crew(PCrew : Pointer) : Pointer;
+		procedure refresh_cars_stringlist();
 	private
 		procedure set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 		procedure set_time_to_end(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 		function time_as_string(time : Integer) : string;
+		function get_cars_for_ap() : Integer;
+		function add_cars_and_sort() : Integer;
 	end;
 
 	TOrderList = class(TObject)
@@ -88,10 +111,10 @@ type
 		function is_defined(OrderId : Integer) : boolean;
 		function ret_free_order() : Pointer;
 		function Append(OrderId : Integer) : Pointer;
-		function get_current_orders(var res : TStringList) : Integer;
+		function get_current_orders(var res : TstringList) : Integer;
 		function get_crews_id_as_string() : string;
 		function del_bad_orders() : Integer;
-		function get_orders_data(var res : TStringList) : Integer;
+		function get_orders_data(var res : TstringList) : Integer;
 		function get_current_orders_with_data() : Integer;
 		function orders_time_to_end_count() : Integer;
 	private
@@ -113,7 +136,7 @@ type
 		time : Integer; // время подъезда к АП в минутах;
 		// coords : TStringList; // gps-трек за выбранный промежуток времени;
 		// coords_times : TStringList; // gps-трек за выбранный промежуток времени;
-		coords_full : TStringList; // поллный трек: координаты + время
+		coords_full : TstringList; // поллный трек: координаты + время
 		// coord_list : TStringList;
 		OrderId : Integer; // ID заказа занятого экипажа
 		order_way : string; // маршрут занятого экипажа
@@ -126,6 +149,9 @@ type
 		// points : TList;
 		POrder : Pointer; // указатель на заказ
 		POrder_vocheredi : Pointer; // указатель на заказ "в очереди", следующий. т.е.
+		POrder_time_to_ap : Pointer; // указатель на заказ, в котором экипаж
+		// просчитывался при подборе. используется в set_time_to_ap для фиксации
+		// результата
 
 		constructor Create(GpsId : Integer);
 		destructor Destroy(); override;
@@ -185,8 +211,8 @@ type
 		function get_crewid_list_as_string() : string;
 		function get_nonfree_crewid_list_as_string() : string;
 		function del_all_none_crewId() : Integer;
-		function set_crewId_by_gpsId(var List : TStringList) : Integer;
-		function set_crews_state_by_crewId(var List : TStringList) : Integer;
+		function set_crewId_by_gpsId(var List : TstringList) : Integer;
+		function set_crews_state_by_crewId(var List : TstringList) : Integer;
 		function set_current_crews_coord() : Integer;
 		function set_crews_dist(coord : string) : Integer;
 		function set_ap(street, house, korpus, gps : string) : Integer;
@@ -194,16 +220,17 @@ type
 		function clear_crew_list() : Integer;
 		function get_crew_list_by_crewid_string(screws_id : string) : Integer;
 		function get_crew_list_by_order_list(var List : TOrderList) : Integer;
-		function get_crew_list_for_ap(new_ap : TAdres; Order_ID : Integer; var res_slist : TStringList)
+		function get_crew_list_for_ap(new_ap : TAdres; Order_ID : Integer; var res_slist : TstringList)
 			: Integer;
+		function get_pcrews_for_ap(new_ap : TAdres; var res_pcrews : TList) : Integer;
 		function get_crew_list() : Integer;
 		function get_crews_coords() : Integer;
-		function ret_crews_stringlist() : TStringList;
+		function ret_crews_stringlist() : TstringList;
 		function free_crews_count() : Integer;
 		function not_free_crews_count() : Integer;
 	private
-		sql_crews_stringlist : TStringList;
-		tmp_slist : TStringList;
+		sql_crews_stringlist : TstringList;
+		tmp_slist : TstringList;
 		coords_last_id : int64;
 		function findById(ID : Integer; gps : boolean) : Pointer;
 		function get_id_list_as_string(gps : boolean) : string;
@@ -300,6 +327,24 @@ begin
 			exit(0);
 end;
 
+function sort_cars_by_dist(p1, p2 : Pointer) : Integer;
+var s1, s2 : Integer;
+	d1, d2 : double;
+	c1, c2 : TCrew;
+begin
+	c1 := TCrew(TCar(p1).PCrew);
+	c2 := TCrew(TCar(p2).PCrew);
+	d1 := c1.dist;
+	d2 := c2.dist;
+	if (d1 < d2) then
+		exit(-1)
+	else
+		if (d1 > d2) then
+			exit(1)
+		else
+			exit(0);
+end;
+
 { TCrew }
 
 procedure TCrew.calc_dist(coord : string);
@@ -370,7 +415,7 @@ begin
 	inherited Create;
 	self.GpsId := GpsId;
 
-	self.coords_full := TStringList.Create;
+	self.coords_full := TstringList.Create;
 	self.coords_full.Duplicates := dupIgnore; // не допускаем дубликатов
 	self.coords_full.Sorted := true;
 
@@ -395,6 +440,7 @@ begin
 	self.cur_pos := TAdres.Create('', '', '', '');
 	self.POrder := nil;
 	self.POrder_vocheredi := nil;
+	self.POrder_time_to_ap := nil;
 end;
 
 // function TCrew.def_time_to_ap(var polist : Pointer) : Integer;
@@ -855,12 +901,32 @@ begin
 end;
 
 procedure TCrew.set_time(m : Integer; d : double);
+var order : TOrder;
+	pcar : Pointer;
+	car : TCar;
 begin
 	self.time := m;
 	if m < 0 then
 		self.dist_way := -1
 	else
 		self.dist_way := d;
+	if self.POrder_time_to_ap <> nil then
+	begin
+		try
+			order := TOrder(self.POrder_time_to_ap);
+			pcar := order.car_for_crew(Pointer(self));
+			if pcar <> nil then
+			begin
+				car := TCar(pcar);
+				car.dist_way_to_ap := self.dist_way;
+				car.time_to_ap := self.time;
+				car.res_data := self.ret_data_to_ap(order.source_time, order.raw_dist_way);
+			end;
+		except
+			self.POrder_time_to_ap := nil;
+		end;
+		self.POrder_time_to_ap := nil;
+	end;
 end;
 
 procedure TCrew.set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
@@ -980,8 +1046,8 @@ begin
 	self.Crews := TList.Create();
 	self.query := TIBQuery(Pointer(IBQuery));
 	// время выборки координат из базы
-	self.sql_crews_stringlist := TStringList.Create();
-	self.tmp_slist := TStringList.Create();
+	self.sql_crews_stringlist := TstringList.Create();
+	self.tmp_slist := TstringList.Create();
 	self.coords_last_id := -1;
 end;
 
@@ -1064,15 +1130,15 @@ end;
 
 function TCrewList.findById(ID : Integer; gps : boolean) : Pointer;
 var crew : TCrew;
-	pcrew : ^TCrew;
+	PCrew : ^TCrew;
 begin
 	result := nil;
-	for pcrew in self.Crews do
+	for PCrew in self.Crews do
 	begin
-		crew := TCrew(pcrew);
+		crew := TCrew(PCrew);
 		if ((not gps) and (crew.CrewID = ID)) or (gps and (crew.GpsId = ID)) then
 		begin
-			result := pcrew;
+			result := PCrew;
 			exit();
 		end;
 	end;
@@ -1216,7 +1282,7 @@ begin
 end;
 
 function TCrewList.get_crew_list_for_ap( //
-	new_ap : TAdres; Order_ID : Integer; var res_slist : TStringList //
+	new_ap : TAdres; Order_ID : Integer; var res_slist : TstringList //
 	) : Integer;
 var crew : TCrew;
 	i : Integer;
@@ -1299,6 +1365,34 @@ begin
 		Delete(result, 1, 1);
 end;
 
+function TCrewList.get_pcrews_for_ap(new_ap : TAdres; var res_pcrews : TList) : Integer;
+var crew : TCrew;
+	i : Integer;
+
+begin
+	with new_ap do
+		self.set_ap(street, house, korpus, gps);
+	self.set_crews_dist(self.ap_gps);
+	// self.Crews.Sort(sort_crews_by_state_dist); // не нужно, пересортируем перед расчётом
+	res_pcrews.Clear();
+
+	for i := 0 to self.Crews.count - 1 do
+	begin
+		crew := self.crew(self.Crews.Items[i]);
+
+		if //
+			(crew.state in [CREW_SVOBODEN, CREW_NAZAKAZE]) //
+			and (crew.coord <> '') //
+			and (crew.dist >= 0) //
+			then
+			res_pcrews.Add(self.Crews.Items[i]);
+	end;
+	if res_pcrews.count = 0 then
+		exit(0)
+	else
+		exit(1);
+end;
+
 function TCrewList.isCrewIdInList(ID : Integer) : boolean;
 begin
 	result := self.isCrewInList(ID, false);
@@ -1318,11 +1412,11 @@ begin
 			result := result + 1;
 end;
 
-function TCrewList.ret_crews_stringlist : TStringList;
+function TCrewList.ret_crews_stringlist : TstringList;
 var pp : Pointer; crew : TCrew;
 	s : string;
 begin
-	result := TStringList.Create();
+	result := TstringList.Create();
 	for pp in self.Crews do
 	begin
 		crew := self.crew(pp);
@@ -1346,11 +1440,11 @@ begin
 	self.ap_gps := gps; exit(0);
 end;
 
-function TCrewList.set_crewId_by_gpsId(var List : TStringList) : Integer;
-var sl : TStringList;
+function TCrewList.set_crewId_by_gpsId(var List : TstringList) : Integer;
+var sl : TstringList;
 	s : string; crew : TCrew;
 begin
-	sl := TStringList.Create();
+	sl := TstringList.Create();
 	// sl.Delimiter := '|';
 	for s in List do
 	begin
@@ -1364,10 +1458,10 @@ begin
 end;
 
 function TCrewList.set_crews_data() : Integer;
-var sl : TStringList; s : string; crew : TCrew;
+var sl : TstringList; s : string; crew : TCrew;
 	ID, GpsId : Integer;
 begin
-	sl := TStringList.Create();
+	sl := TstringList.Create();
 	// sl.Delimiter := '|';
 	for s in self.sql_crews_stringlist do
 	begin
@@ -1456,7 +1550,7 @@ begin
 	end;
 end;
 
-function TCrewList.set_crews_state_by_crewId(var List : TStringList) : Integer;
+function TCrewList.set_crews_state_by_crewId(var List : TstringList) : Integer;
 // уже не нужен;
 var s, sid, sstate : string; crew : TCrew;
 begin
@@ -1494,6 +1588,72 @@ end;
 
 { TOrder }
 
+function TOrder.add_cars_and_sort : Integer;
+var
+	i, j : Integer;
+	car : TCar;
+begin
+	result := self.get_cars_for_ap();
+	if result <= 0 then
+		exit();
+	// сначала удаляем экипажи из текущего списка, которых нет в новом,
+	// ибо они уже не удовл.
+	for i := self.Cars.count - 1 downto 0 do
+	begin
+		if self.PCrews_tmp.IndexOf(TCar(self.Cars.Items[i]).PCrew) < 0 then
+			self.Cars.Delete(i);
+	end;
+	// теперь добавляем новые, да-с :)
+	for i := self.PCrews_tmp.count - 1 downto 0 do
+	begin
+		if self.crew_in_cars(self.PCrews_tmp.Items[i]) then
+			// если уже есть в списке, то ничего
+		else
+		begin
+			// добавляем
+			j := self.Cars.Add(Pointer(TCar.Create()));
+			TCar(self.Cars.Items[j]).PCrew := self.PCrews_tmp.Items[i];
+		end;
+	end;
+	// если список пуст, выходим
+	if self.Cars.count = 0 then
+		exit(0)
+	else
+	begin
+		// иначе сортируем по расстоянию по прямой до ап
+		self.Cars.Sort(sort_cars_by_dist);
+		(*
+		  // заполняем пустые res_data
+		  for i := self.Cars.count - 1 downto 0 do
+		  begin
+		  try
+		  car := TCar(self.Cars.Items[i]);
+		  if car.res_data = '' then
+		  car.res_data := TCrew(car.PCrew).ret_data_to_ap(self.source_time, self.raw_dist_way);
+		  except
+		  continue;
+		  end;
+		  end;
+		  *)
+		exit(1);
+	end;
+end;
+
+function TOrder.car_for_crew(PCrew : Pointer) : Pointer;
+var pc : Pointer;
+begin
+	result := nil;
+	for pc in self.Cars do
+	begin
+		try
+			if TCar(pc).PCrew = PCrew then
+				exit(pc);
+		except
+			continue;
+		end;
+	end;
+end;
+
 constructor TOrder.Create(OrderId : Integer; var IBQuery : TIBQuery);
 begin
 	inherited Create();
@@ -1524,12 +1684,37 @@ begin
 	// self.destroy_time := '';
 	// self.raw_dist_way := -1.0;
 	self.query := IBQuery;
+	self.Cars := TList.Create();
+	self.PCrews_tmp := TList.Create();
+
+	self.Cars_StringList := TstringList.Create();
+	self.Cars_StringList.Sorted := true; // !
+
+	self.timer_cars := TTimer.Create(nil);
+	self.timer_cars.Enabled := false;
+	self.timer_cars.Interval := 100;
+
 	self.del_order();
 	self.ID := OrderId;
 
 end;
 
-procedure TOrder.def_time_to_ap(var pcrew : Pointer);
+function TOrder.crew_in_cars(PCrew : Pointer) : boolean;
+var pc : Pointer;
+begin
+	result := false;
+	for pc in self.Cars do
+	begin
+		try
+			if TCar(pc).PCrew = PCrew then
+				exit(true);
+		except
+			continue;
+		end;
+	end;
+end;
+
+procedure TOrder.def_time_to_ap(var PCrew : Pointer);
 var cur_pos : TAdres;
 	gps : string;
 	d : double;
@@ -1549,7 +1734,7 @@ begin
 	// проверяем состояние заказа, возможен ли вообще расчёт
 	if //
 		(self.destroy_flag) // заказ отмечен на удаление
-		or (pcrew = nil) //
+		or (PCrew = nil) //
 	// or (self.state <> ORDER_VODITEL_PODTVERDIL) //
 		or not(self.state in [ //
 			ORDER_V_OCHEREDI, //
@@ -1570,7 +1755,7 @@ begin
 		// клиент забран, незачем считать его
 		exit();
 
-	crew := TCrew(pcrew);
+	crew := TCrew(PCrew);
 	if crew = nil then
 	begin
 		self.time_to_ap := -1; exit();
@@ -1650,7 +1835,7 @@ begin
 	end;
 end;
 
-procedure TOrder.def_time_to_end(var pcrew : Pointer);
+procedure TOrder.def_time_to_end(var PCrew : Pointer);
 var cur_pos : TAdres; gps : string;
 	// points : TList;
 	// stops_time : Integer;  - сделать self.stops_time
@@ -1704,7 +1889,7 @@ begin
 	// exit();
 	// end;
 
-	crew := TCrew(pcrew);
+	crew := TCrew(PCrew);
 	if crew = nil then
 		exit();
 
@@ -1843,7 +2028,7 @@ begin
 		end;
 	end;
 
-	self.pcrew := pcrew;
+	self.PCrew := PCrew;
 	self.datetime_of_time_to_end := now(); // засекаем момент взятия времени
 	self.way_to_end.get_way_time_dist();
 end;
@@ -1861,7 +2046,7 @@ begin
 	self.time_to_end := -1; // время до окончания заказа в минутах
 	self.time_to_ap := -1; // время до подъезда к адресу подачи в минутах
 	self.deleted := false; self.way_to_ap.points.Clear(); self.way_to_end.points.Clear();
-	self.stops_time := 0; self.na_bortu := false; self.pcrew := nil;
+	self.stops_time := 0; self.na_bortu := false; self.PCrew := nil;
 	self.datetime_of_time_to_ap := IncHour(now(), -1);
 	self.datetime_of_time_to_end := self.datetime_of_time_to_ap; self.count_int_stops := 0;
 	// флаг, что заказ можно удалять из списка
@@ -1869,6 +2054,10 @@ begin
 	self.destroy_time := '';
 	self.raw_dist_way := -1.0;
 	self.dobavka_v_ocheredi := 0;
+	self.timer_cars.Enabled := false;
+	self.Cars.Clear();
+	self.PCrews_tmp.Clear();
+	self.Cars_StringList.Clear();
 end;
 
 destructor TOrder.Destroy;
@@ -1887,13 +2076,62 @@ begin
 	// self.way_to_end.zapros.browser.Stop();
 	self.way_to_end.Free();
 
-	self.pcrew := nil;
+	self.Cars.Free();
+
+	self.PCrew := nil;
 
 	inherited;
 end;
 
+function TOrder.get_cars_for_ap : Integer;
+begin
+	if PMainCrewList = nil then
+		exit(-1);
+	try
+		result := TCrewList(PMainCrewList).get_pcrews_for_ap(self.source, self.PCrews_tmp);
+	except
+		exit(-1);
+	end;
+end;
+
+function TOrder.get_cars_times_for_ap : Integer;
+var pcar : Pointer;
+	car : TCar;
+	crew : TCrew;
+begin
+	result := self.add_cars_and_sort();
+	if result <= 0 then // нет подходящих экипажей либо ошибка при подборе
+		exit();
+	for pcar in self.Cars do
+	begin
+		try
+			car := TCar(pcar);
+			crew := TCrew(car.PCrew);
+			if // условия, при которых вызываем расчёт
+				(car.time_to_ap < 0) // ещё не считалось
+				or (crew.state <> car.crew_state) // экипаж сменил состояние
+				or (crew.is_moved()) // экипаж существенно сместился
+				then
+			begin
+				if crew.ap.zapros.get_flag_zapros() then
+					pass()
+				else
+				begin
+					car.crew_state := crew.state;
+					with self.source do
+						crew.ap.setAdres(street, house, korpus, gps);
+					crew.POrder_time_to_ap := Pointer(self);
+					crew.def_time_to_ap();
+				end;
+			end;
+		except
+			continue; // просто переходим к след. экипажу
+		end;
+	end;
+end;
+
 function TOrder.get_order_data() : string;
-var sel, s, h, k : string; res : TStringList;
+var sel, s, h, k : string; res : TstringList;
 
 	procedure add_coo(var adr : TAdres; coo : string);
 	begin
@@ -1956,7 +2194,7 @@ begin
 		if self.CrewID > -1 then
 		begin
 			// снимаем экипаж с заказа
-			self.time_to_end := -1; self.time_to_ap := -1; self.pcrew := nil;
+			self.time_to_end := -1; self.time_to_ap := -1; self.PCrew := nil;
 		end; self.CrewID := -1; // !!!
 	end;
 	try
@@ -2060,6 +2298,14 @@ begin
 	result := self.source_time < replace_time('{Last_hour_-1}', now());
 end;
 
+procedure TOrder.refresh_cars_stringlist;
+var pcar : Pointer;
+begin
+	self.Cars_StringList.Clear();
+	for pcar in self.Cars do
+		self.Cars_StringList.Append(TCar(pcar).res_data);
+end;
+
 procedure TOrder.set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 begin
 	self.way_to_ap.set_way_time_dist(ASender, pDisp, url);
@@ -2089,7 +2335,7 @@ begin
 	else
 	begin
 		self.time_to_end := self.way_to_end.time + self.stops_time;
-		TCrew(self.pcrew).reset_old_coord();
+		TCrew(self.PCrew).reset_old_coord();
 		// сбрасываем координату
 	end;
 
@@ -2363,7 +2609,7 @@ begin
 end;
 
 procedure TOrderList.get_adres_coords;
-var sel, s, h, k : string; res : TStringList;
+var sel, s, h, k : string; res : TstringList;
 	order : TOrder; ord_id : Integer;
 
 	procedure add_coo(var adr : TAdres; coo : string);
@@ -2402,7 +2648,7 @@ var sel, s, h, k : string; res : TStringList;
 	end;
 
 begin
-	res := TStringList.Create();
+	res := TstringList.Create();
 
 	// координаты адресов:
 	sel := 'select ' //
@@ -2454,7 +2700,7 @@ begin
 	result := s;
 end;
 
-function TOrderList.get_current_orders(var res : TStringList) : Integer;
+function TOrderList.get_current_orders(var res : TstringList) : Integer;
 var sel, s, s1 : string;
 	// res : TStringList;
 	sdate_from, sdate_to : string; cur_time : TDateTime;
@@ -2510,7 +2756,7 @@ begin
 	self.del_bad_orders(); self.Orders.Sort(sort_orders_by_source_time); exit(0);
 end;
 
-function TOrderList.get_orders_data(var res : TStringList) : Integer;
+function TOrderList.get_orders_data(var res : TstringList) : Integer;
 var pp : Pointer;
 begin
 	if self.Orders.count = 0 then
@@ -2525,15 +2771,15 @@ end;
 
 function TOrderList.get_current_orders_with_data : Integer;
 var sel, s, s1 : string;
-	res, sl : TStringList; sdate_from, sdate_to : string; ord_id : Integer; order : TOrder;
+	res, sl : TstringList; sdate_from, sdate_to : string; ord_id : Integer; order : TOrder;
 	cur_time : TDateTime;
 	pord : Pointer;
 begin
 	cur_time := now(); //
 	sdate_from := '''' + replace_time('{Last_day_1}', cur_time) + ''''; //
 	sdate_to := '''' + replace_time('{Last_day_-1}', cur_time) + ''''; //
-	res := TStringList.Create();
-	sl := TStringList.Create();
+	res := TstringList.Create();
+	sl := TstringList.Create();
 
 	// запрашиваем ID новых заказов
 	sel := 'select ' //
@@ -2629,7 +2875,7 @@ begin
 				// снимаем экипаж с заказа
 				order.time_to_end := -1;
 				order.time_to_ap := -1;
-				order.pcrew := nil;
+				order.PCrew := nil;
 			end;
 			order.CrewID := -1; // !!!
 		end;
@@ -2775,5 +3021,22 @@ end;
 // self.OrderId := ordId;
 // self.crew_list.Create(IBQuery);
 // end;
+
+{ TCar }
+
+procedure TCar.Clear;
+begin
+	self.PCrew := nil;
+	self.dist_way_to_ap := -1.0;
+	self.time_to_ap := -1;
+	self.crew_state := -1;
+	self.res_data := '';
+end;
+
+constructor TCar.Create;
+begin
+	inherited Create();
+	self.Clear();
+end;
 
 end.

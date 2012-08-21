@@ -468,6 +468,7 @@ begin
 
 	order_list := TOrderList.Create(self.ibquery_main);
 	crew_list := TCrewList.Create(self.ibquery_coords);
+	PMainCrewList := Pointer(crew_list);
 	form_cur_order.PCrewList := Pointer(crew_list);
 	form_cur_order.POrderList := Pointer(order_list);
 

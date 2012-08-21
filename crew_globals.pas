@@ -178,6 +178,7 @@ var
 	// browser_form : Tform;
 	browser_panel : TPanel;
 	GetZaprosCounter : Int64;
+	PMainCrewList : Pointer;
 	// CoordsInterval : Int64;
 
 

@@ -59,7 +59,7 @@ end;
 procedure TFormCrew.grid_coordsDblClick(Sender : TObject);
 begin
 	with self.grid_coords do
-		clipboard.SetTextBuf(PWideChar(Cells[Col, Row]));
+		clipboard.SetTextBuf(PWideChar(get_substr(Cells[Col, Row], '|', '')));
 end;
 
 procedure TFormCrew.show_crew;

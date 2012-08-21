@@ -21,7 +21,7 @@ type
 		GridPanel_order : TGridPanel;
 		GridPanel_crews_browser : TGridPanel;
 		grid_order : TStringGrid;
-		Button_show_on_map : TButton;
+		Button_get_cars : TButton;
 		GroupBox_order : TGroupBox;
 		Timer_get_gps : TTimer;
 		Timer_get_crews : TTimer;
@@ -29,6 +29,12 @@ type
 		Edit_gps : TEdit;
 		cb_debug : TCheckBox;
 		stbar_crews : TStatusBar;
+		grid_cars : TStringGrid;
+		Timer_show_cars : TTimer;
+		PageControl_cars : TPageControl;
+		TabSheet_current : TTabSheet;
+		TabSheet_prior : TTabSheet;
+		Timer_get_cars : TTimer;
 		procedure FormCreate(Sender : TObject);
 		procedure FormClose(Sender : TObject; var Action : TCloseAction);
 		procedure Button_get_timeClick(Sender : TObject);
@@ -44,6 +50,9 @@ type
 		procedure cb_debugClick(Sender : TObject);
 
 		procedure grid_orderDblClick(Sender : TObject);
+		procedure Button_get_carsClick(Sender : TObject);
+		procedure Timer_show_carsTimer(Sender : TObject);
+		procedure Timer_get_carsTimer(Sender : TObject);
 
 	private
 		{ Private declarations }
@@ -56,6 +65,7 @@ type
 		slist, cr_slist : tstringlist;
 		cr_count : Integer;
 		procedure show_crews();
+		procedure show_cars();
 		procedure show_order(); overload;
 		procedure show_order(POrd : Pointer); overload;
 		procedure start_def_times();
@@ -138,6 +148,12 @@ begin
 	end;
 end;
 
+procedure TFormOrder.Button_get_carsClick(Sender : TObject);
+begin
+	TOrder(self.POrder).get_cars_times_for_ap();
+	// self.Timer_show_cars.Enabled := True;
+end;
+
 procedure TFormOrder.Button_get_crewClick(Sender : TObject);
 begin
 	self.slist.Clear();
@@ -168,18 +184,89 @@ procedure TFormOrder.FormClose(Sender : TObject; var Action : TCloseAction);
 begin
 	self.Timer_get_gps.Enabled := false;
 	self.Timer_get_crews.Enabled := false;
+	self.Timer_get_cars.Enabled := false;
 	self.Timer_show_crews.Enabled := false;
+	self.Timer_show_cars.Enabled := false;
 	// form_main.thread_times.cont();
 	self.Hide();
 end;
 
 procedure TFormOrder.FormCreate(Sender : TObject);
 begin
-	self.Width := 800;
-	self.Height := 400;
+	self.Width := 1000;
+	self.Height := 640;
 	self.slist := tstringlist.Create();
 	self.cr_slist := tstringlist.Create();
 	self.GroupBox_order.Visible := self.cb_debug.Checked;
+end;
+
+procedure TFormOrder.show_cars;
+var r : Integer;
+	order : TOrder;
+	pcar : Pointer;
+	car : Tcar;
+	crew : TCRew;
+	s : string;
+begin
+	order := TOrder(POrder);
+	with self.grid_cars do
+	begin
+		RowCount := 2;
+		ColCount := 7;
+		FixedRows := 1;
+
+		Cells[0, 0] := 'По прямой';
+		Cells[1, 0] := 'Экипаж';
+		Cells[2, 0] := 'Состояние';
+		Cells[3, 0] := 'Время подачи';
+		Cells[4, 0] := 'Расстояние';
+		Cells[5, 0] := 'Расход';
+		Cells[6, 0] := 'Линия';
+
+		ColWidths[0] := ifthen(self.cb_debug.Checked, 128, 64); // 64; // 50; // прячем :)
+		// ColWidths[1] := 200;
+		ColWidths[2] := 70;
+		ColWidths[3] := 200;
+		ColWidths[4] := 80; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
+		ColWidths[5] := ifthen(self.cb_debug.Checked, 80, 0);
+		ColWidths[6] := 40;
+		ColWidths[1] := 50; // Width - 24 - ColWidths[0] - ColWidths[2] //
+		// - ColWidths[3] - ColWidths[4] - ColWidths[5] - ColWidths[6];
+		rows[1].Clear();
+	end;
+	r := 1;
+	order.refresh_cars_stringlist();
+	// for pcar in order.Cars do
+	for s in order.Cars_StringList do
+	begin
+		try
+			// car := Tcar(pcar);
+			// crew := TCRew(car.PCrew);
+			with self.grid_cars do
+			begin
+				{
+				  Cells[1, r] := crew.Code;
+				  Cells[2, r] := crew.state_as_string();
+				  Cells[3, r] := IntToStr(car.time_to_ap);
+				  Cells[4, r] := FloatToStr(car.dist_way_to_ap);
+
+				  s := car.res_data;
+				  }
+				Cells[0, r] := ifthen(self.cb_debug.Checked, get_substr(s, '', '|'), get_substr(s, '$', '|'));
+				Cells[1, r] := get_substr(s, '|', '||');
+				Cells[2, r] := get_substr(s, '||', '|||');
+				Cells[3, r] := get_substr(s, '|||', '||||');
+				Cells[4, r] := get_substr(s, '||||', '|||||'); // + 'км';
+				Cells[5, r] := get_substr(s, '|||||', '||||||');
+				Cells[6, r] := get_substr(s, '||||||', '');
+
+				RowCount := r + 1;
+				inc(r);
+			end;
+		except
+			continue;
+		end;
+	end;
 end;
 
 procedure TFormOrder.show_crews();
@@ -188,8 +275,8 @@ var s : string;
 	order : TOrder;
 begin
 	order := TOrder(POrder);
-	self.Caption := 'Заказ № ' + inttostr(order.ID);
-	self.GroupBox_crews.Caption := 'Подбор экипажа для заказ № ' + inttostr(order.ID) //
+	self.Caption := 'Заказ № ' + IntToStr(order.ID);
+	self.GroupBox_crews.Caption := 'Подбор экипажа для заказ № ' + IntToStr(order.ID) //
 		+ ' ' + order.source.get_as_string() + ' --> ' + order.dest.get_as_string();
 	with self.grid_crews do
 	begin
@@ -212,8 +299,8 @@ begin
 		ColWidths[4] := 80; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
 		ColWidths[5] := ifthen(self.cb_debug.Checked, 80, 0);
 		ColWidths[6] := 40;
-		ColWidths[1] := 50;//Width - 24 - ColWidths[0] - ColWidths[2] //
-//			- ColWidths[3] - ColWidths[4] - ColWidths[5] - ColWidths[6];
+		ColWidths[1] := 50; // Width - 24 - ColWidths[0] - ColWidths[2] //
+		// - ColWidths[3] - ColWidths[4] - ColWidths[5] - ColWidths[6];
 
 	end;
 
@@ -231,7 +318,7 @@ begin
 			Cells[6, r] := get_substr(s, '||||||', '');
 			inc(r);
 		end;
-	self.stbar_crews.Panels[0].Text := inttostr(self.grid_crews.RowCount - 1);
+	self.stbar_crews.Panels[0].Text := IntToStr(self.grid_crews.RowCount - 1);
 end;
 
 procedure TFormOrder.show_order(POrd : Pointer);
@@ -241,11 +328,13 @@ begin
 	self.slist.Clear();
 	self.cr_slist.Clear();
 	self.grid_crews.RowCount := 2;
-	self.grid_crews.Rows[1].Clear();
+	self.grid_crews.rows[1].Clear();
 	self.Edit_gps.Text := '';
 	// выводим пустую шапку
 	self.show_crews();
 	self.show_order();
+	self.Timer_show_cars.Enabled := True;
+	self.Timer_get_cars.Enabled := True;
 end;
 
 procedure TFormOrder.start_def_times;
@@ -302,34 +391,39 @@ begin
 		exit();
 	self.Resizing(wsMaximized);
 	self.Show();
-	self.Caption := 'Заказ № ' + inttostr(order.ID);
+	self.Caption := 'Заказ № ' + IntToStr(order.ID);
 	self.GroupBox_order.Caption := self.Caption;
 	with self.grid_order do
 	begin
 		RowCount := 1;
-		Rows[0].Clear();
+		rows[0].Clear();
 		ColCount := 2;
 		ColWidths[0] := 60;
 		ColWidths[1] := Width - ColWidths[0] - 20;
 	end;
-	add_row(self.grid_order, 'ID', inttostr(order.ID));
-	add_row(self.grid_order, 'CrewID', inttostr(order.CrewID));
-	add_row(self.grid_order, 'prior_crewid', inttostr(order.prior_crewid));
+	add_row(self.grid_order, 'ID', IntToStr(order.ID));
+	add_row(self.grid_order, 'CrewID', IntToStr(order.CrewID));
+	add_row(self.grid_order, 'prior_crewid', IntToStr(order.prior_crewid));
 	add_row(self.grid_order, 'prior', da_net(order.prior));
 	add_row(self.grid_order, 'state', order.state_as_string());
 	add_row(self.grid_order, 'source_time', order.source_time);
 	add_row(self.grid_order, 'source', order.source.get_as_string());
 	add_row(self.grid_order, 'dest', order.dest.get_as_string());
-	add_row(self.grid_order, 'time_to_end', inttostr(order.time_to_end));
+	add_row(self.grid_order, 'time_to_end', IntToStr(order.time_to_end));
 	add_row(self.grid_order, 'time_to_end_str', order.time_to_end_as_string());
-	add_row(self.grid_order, 'time_to_ap', inttostr(order.time_to_ap));
+	add_row(self.grid_order, 'time_to_ap', IntToStr(order.time_to_ap));
 	add_row(self.grid_order, 'time_to_ap_str', order.time_to_ap_as_string());
-	add_row(self.grid_order, 'stops_time', inttostr(order.stops_time));
+	add_row(self.grid_order, 'stops_time', IntToStr(order.stops_time));
 	add_row(self.grid_order, 'source.gps', order.source.gps);
 	add_row(self.grid_order, 'dest.gps', order.dest.gps);
 	add_row(self.grid_order, 'raw_dist_way', FloatToStrF(order.raw_dist_way, ffFixed, 8, 1));
 	add_row(self.grid_order, 'int_stops', order.raw_int_stops);
-	add_row(self.grid_order, 'POrder', inttostr(Integer(Pointer(order))));
+	add_row(self.grid_order, 'POrder', IntToStr(Integer(Pointer(order))));
+end;
+
+procedure TFormOrder.Timer_get_carsTimer(Sender : TObject);
+begin
+	TOrder(self.POrder).get_cars_times_for_ap();
 end;
 
 procedure TFormOrder.Timer_get_crewsTimer(Sender : TObject);
@@ -365,6 +459,11 @@ begin
 		else
 			self.start_def_times();
 	end;
+end;
+
+procedure TFormOrder.Timer_show_carsTimer(Sender : TObject);
+begin
+	self.show_cars();
 end;
 
 procedure TFormOrder.Timer_show_crewsTimer(Sender : TObject);
