@@ -68,7 +68,6 @@ object form_main: Tform_main
         Value = 20.000000000000000000
       end>
     TabOrder = 0
-    ExplicitHeight = 375
     object panel_ap: TPanel
       AlignWithMargins = True
       Left = 5
@@ -234,7 +233,6 @@ object form_main: Tform_main
           Value = 100.000000000000000000
         end>
       TabOrder = 1
-      ExplicitHeight = 318
       object GroupBox_order: TGroupBox
         Left = 1
         Top = 1
@@ -243,7 +241,6 @@ object form_main: Tform_main
         Align = alClient
         Caption = #1047#1072#1082#1072#1079#1099':'
         TabOrder = 0
-        ExplicitHeight = 316
         object PageControl_orders: TPageControl
           Left = 2
           Top = 15
@@ -252,10 +249,8 @@ object form_main: Tform_main
           ActivePage = TabSheet_current
           Align = alClient
           TabOrder = 0
-          ExplicitHeight = 299
           object TabSheet_current: TTabSheet
             Caption = #1058#1077#1082#1091#1097#1080#1077':'
-            ExplicitHeight = 271
             object grid_order_current: TStringGrid
               AlignWithMargins = True
               Left = 3
@@ -279,12 +274,14 @@ object form_main: Tform_main
               TabOrder = 0
               OnDblClick = grid_order_currentDblClick
               OnDrawCell = grid_order_currentDrawCell
-              ExplicitHeight = 265
             end
           end
           object TabSheet_prior: TTabSheet
             Caption = #1055#1088#1077#1076#1074#1072#1088#1080#1090#1077#1083#1100#1085#1099#1077
             ImageIndex = 1
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
             ExplicitHeight = 190
             object grid_order_prior: TStringGrid
               AlignWithMargins = True
@@ -321,7 +318,6 @@ object form_main: Tform_main
         Align = alClient
         Caption = #1044#1086#1089#1090#1091#1087#1085#1099#1077' '#1101#1082#1080#1087#1072#1078#1080':'
         TabOrder = 1
-        ExplicitHeight = 316
         object grid_crews: TStringGrid
           AlignWithMargins = True
           Left = 5
@@ -338,7 +334,6 @@ object form_main: Tform_main
           ParentCtl3D = False
           TabOrder = 0
           OnDblClick = grid_crewsDblClick
-          ExplicitHeight = 293
         end
       end
     end
@@ -367,7 +362,6 @@ object form_main: Tform_main
         item
           Width = 50
         end>
-      ExplicitTop = 350
     end
     object ScrollBox_cars: TScrollBox
       Left = 1
@@ -399,7 +393,6 @@ object form_main: Tform_main
             Value = 100.000000000000000000
           end>
         TabOrder = 0
-        ExplicitHeight = 183
       end
     end
   end

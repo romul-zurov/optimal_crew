@@ -478,6 +478,11 @@ begin
 
 	form_debug := TFormDebug.Create(nil);
 	form_main.Resizing(wsMaximized);
+
+    self.GridPanel_cars.ColumnCollection.Clear();
+                        self.GridPanel_cars.ControlCollection.Clear();
+                        self.GridPanel_cars.Width := 10;
+
 	if open_database() then
 	begin
 		// show_tmp();

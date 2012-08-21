@@ -6,7 +6,7 @@ uses crew_utils, // utils from robocap and mine
 	crew_globals, // my global var and function
 	Generics.Collections, // for forward class definition
 	Controls, Forms, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX, //
-	IBQuery, DB, WinInet, StrUtils, DateUtils, ExtCtrls;
+	IBQuery, DB, WinInet, StrUtils, DateUtils, ExtCtrls, StdCtrls;
 
 function sort_cars_by_dist(p1, p2 : Pointer) : Integer;
 function sort_crews_by_state_dist(p1, p2 : Pointer) : Integer;
@@ -69,7 +69,7 @@ type
 		// содержит только pointer'ы на Tcar-ы
 		PCrews_tmp : TList;
 		Cars_StringList : TstringList;
-		panel : TPanel; // панель для отображения списка cars-ов
+		group_box : TGroupBox; // панель для отображения списка cars-ов
 		timer_cars : TTimer; // таймер подбора экипажа для заказа
 		// если enabled - идёт просчёт  - ПОКА НЕ НУЖЕН
 
@@ -1693,15 +1693,19 @@ begin
 	self.Cars_StringList := TstringList.Create();
 	self.Cars_StringList.Sorted := true; // !
 
-	self.panel := TPanel.Create(form_main);
-	self.panel.Parent := form_main.GridPanel_cars;
-	self.panel.Visible := true;
-	self.panel.Align := alClient;
+	self.group_box := TGroupBox.Create(form_main);
+    self.group_box.Caption := 'ASDFGHJKL'; // !!! временно !!!
+    self.group_box.Width :=         GRID_CARS_COLUMN_WIDTH;
+	self.group_box.Parent := form_main.GridPanel_cars;
 	with form_main.GridPanel_cars do
 		Width := Width + GRID_CARS_COLUMN_WIDTH;
-	form_main.GridPanel_cars.ColumnCollection.Add();
-    with form_main.GridPanel_cars do
-    Controls[ControlCount - 1] := self.panel;
+//	form_main.GridPanel_cars.ColumnCollection.Add();
+	form_main.GridPanel_cars.ControlCollection.AddControl(self.group_box);
+	self.group_box.Align := alLeft;
+	self.group_box.Visible := true;
+
+	// with form_main.GridPanel_cars do
+	// Controls[ControlCount - 1] := self.group_box;
 
 	self.timer_cars := TTimer.Create(nil);
 	self.timer_cars.Enabled := false;
@@ -2091,7 +2095,7 @@ begin
 
 	self.Cars.Free();
 
-	self.panel.Free();
+	self.group_box.Free();
 
 	self.PCrew := nil;
 
@@ -2220,7 +2224,11 @@ begin
 
 	self.source_time := date_to_full(res.Strings[2]);
 
-	self.source.set_raw_adres(res.Strings[3]); self.dest.set_raw_adres(res.Strings[4]);
+	self.source.set_raw_adres(res.Strings[3]);
+	self.dest.set_raw_adres(res.Strings[4]);
+
+	self.group_box.Caption := self.source_raw + ' --> ' + self.dest_raw;
+
 	// return_adres(res.Strings[3], s, h, k);
 	// self.source.setAdres(s, h, k, self.source.gps);
 	// return_adres(res.Strings[4], s, h, k);
