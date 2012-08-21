@@ -2,7 +2,7 @@ object form_main: Tform_main
   Left = 0
   Top = 0
   Caption = #1055#1086#1076#1073#1086#1088' '#1086#1087#1090#1080#1084#1072#1083#1100#1085#1086#1075#1086' '#1101#1082#1080#1087#1072#1078#1072' '#1040#1057'-'#1058#1072#1082#1089#1080
-  ClientHeight = 381
+  ClientHeight = 419
   ClientWidth = 805
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -20,7 +20,7 @@ object form_main: Tform_main
     Left = 3
     Top = 3
     Width = 799
-    Height = 375
+    Height = 413
     Align = alClient
     ColumnCollection = <
       item
@@ -40,6 +40,15 @@ object form_main: Tform_main
       item
         Column = 0
         Control = stbar_main
+        Row = 3
+      end
+      item
+        Column = 0
+        Row = 0
+      end
+      item
+        Column = 0
+        Control = ScrollBox_cars
         Row = 2
       end>
     RowCollection = <
@@ -51,13 +60,15 @@ object form_main: Tform_main
         Value = 100.000000000000000000
       end
       item
-        SizeStyle = ssAuto
-        Value = 30.000000000000000000
+        SizeStyle = ssAbsolute
+        Value = 200.000000000000000000
       end
       item
-        SizeStyle = ssAuto
+        SizeStyle = ssAbsolute
+        Value = 20.000000000000000000
       end>
     TabOrder = 0
+    ExplicitHeight = 375
     object panel_ap: TPanel
       AlignWithMargins = True
       Left = 5
@@ -197,7 +208,7 @@ object form_main: Tform_main
       Left = 1
       Top = 37
       Width = 797
-      Height = 318
+      Height = 155
       Align = alClient
       ColumnCollection = <
         item
@@ -223,30 +234,34 @@ object form_main: Tform_main
           Value = 100.000000000000000000
         end>
       TabOrder = 1
+      ExplicitHeight = 318
       object GroupBox_order: TGroupBox
         Left = 1
         Top = 1
         Width = 545
-        Height = 316
+        Height = 153
         Align = alClient
         Caption = #1047#1072#1082#1072#1079#1099':'
         TabOrder = 0
+        ExplicitHeight = 316
         object PageControl_orders: TPageControl
           Left = 2
           Top = 15
           Width = 541
-          Height = 299
+          Height = 136
           ActivePage = TabSheet_current
           Align = alClient
           TabOrder = 0
+          ExplicitHeight = 299
           object TabSheet_current: TTabSheet
             Caption = #1058#1077#1082#1091#1097#1080#1077':'
+            ExplicitHeight = 271
             object grid_order_current: TStringGrid
               AlignWithMargins = True
               Left = 3
               Top = 3
               Width = 527
-              Height = 265
+              Height = 102
               Align = alClient
               ColCount = 3
               Ctl3D = False
@@ -264,17 +279,19 @@ object form_main: Tform_main
               TabOrder = 0
               OnDblClick = grid_order_currentDblClick
               OnDrawCell = grid_order_currentDrawCell
+              ExplicitHeight = 265
             end
           end
           object TabSheet_prior: TTabSheet
             Caption = #1055#1088#1077#1076#1074#1072#1088#1080#1090#1077#1083#1100#1085#1099#1077
             ImageIndex = 1
+            ExplicitHeight = 190
             object grid_order_prior: TStringGrid
               AlignWithMargins = True
               Left = 3
               Top = 3
               Width = 527
-              Height = 265
+              Height = 102
               Align = alClient
               ColCount = 3
               Ctl3D = False
@@ -291,6 +308,7 @@ object form_main: Tform_main
               ParentFont = False
               TabOrder = 0
               OnDblClick = grid_order_priorDblClick
+              ExplicitHeight = 184
             end
           end
         end
@@ -299,16 +317,17 @@ object form_main: Tform_main
         Left = 546
         Top = 1
         Width = 250
-        Height = 316
+        Height = 153
         Align = alClient
         Caption = #1044#1086#1089#1090#1091#1087#1085#1099#1077' '#1101#1082#1080#1087#1072#1078#1080':'
         TabOrder = 1
+        ExplicitHeight = 316
         object grid_crews: TStringGrid
           AlignWithMargins = True
           Left = 5
           Top = 18
           Width = 240
-          Height = 293
+          Height = 130
           Align = alClient
           ColCount = 4
           Ctl3D = False
@@ -319,14 +338,15 @@ object form_main: Tform_main
           ParentCtl3D = False
           TabOrder = 0
           OnDblClick = grid_crewsDblClick
+          ExplicitHeight = 293
         end
       end
     end
     object stbar_main: TStatusBar
       Left = 1
-      Top = 355
+      Top = 392
       Width = 797
-      Height = 19
+      Height = 20
       Align = alClient
       Panels = <
         item
@@ -347,12 +367,46 @@ object form_main: Tform_main
         item
           Width = 50
         end>
+      ExplicitTop = 350
+    end
+    object ScrollBox_cars: TScrollBox
+      Left = 1
+      Top = 192
+      Width = 797
+      Height = 200
+      Align = alClient
+      TabOrder = 3
+      object GridPanel_cars: TGridPanel
+        Left = 0
+        Top = 0
+        Width = 102
+        Height = 196
+        Align = alLeft
+        Caption = 'GridPanel_cars'
+        ColumnCollection = <
+          item
+            SizeStyle = ssAbsolute
+            Value = 51.000000000000000000
+          end
+          item
+            SizeStyle = ssAbsolute
+            Value = 51.000000000000000000
+          end>
+        ControlCollection = <>
+        ExpandStyle = emAddColumns
+        RowCollection = <
+          item
+            Value = 100.000000000000000000
+          end>
+        TabOrder = 0
+        ExplicitHeight = 183
+      end
     end
   end
   object db_main: TIBDatabase
     LoginPrompt = False
-    Left = 648
-    Top = 72
+    Left = 680
+    Top = 48
   end
   object ta_main: TIBTransaction
     DefaultDatabase = db_main
@@ -361,48 +415,48 @@ object form_main: Tform_main
       'rec_version'
       'nowait'
       'read')
-    Left = 608
-    Top = 136
+    Left = 632
+    Top = 72
   end
   object ibquery_main: TIBQuery
     Database = db_main
     Transaction = ta_main
-    Left = 576
-    Top = 200
+    Left = 624
+    Top = 128
   end
   object Timer_coords: TTimer
     Enabled = False
     Interval = 60000
     OnTimer = Timer_coordsTimer
-    Left = 336
-    Top = 288
+    Left = 144
+    Top = 96
   end
   object Timer_orders: TTimer
     Enabled = False
     Interval = 10000
     OnTimer = Timer_ordersTimer
-    Left = 80
-    Top = 280
+    Left = 32
+    Top = 104
   end
   object Timer_get_time_order: TTimer
     Enabled = False
     Interval = 128
     OnTimer = Timer_get_time_orderTimer
-    Left = 208
-    Top = 288
+    Left = 88
+    Top = 112
   end
   object Timer_show_order_grid: TTimer
     Enabled = False
     Interval = 2000
     OnTimer = Timer_show_order_gridTimer
-    Left = 216
-    Top = 152
+    Left = 400
+    Top = 56
   end
   object ibquery_coords: TIBQuery
     Database = db_main
     Transaction = ta_coords
     Left = 728
-    Top = 200
+    Top = 128
   end
   object ta_coords: TIBTransaction
     DefaultDatabase = db_main
@@ -411,21 +465,21 @@ object form_main: Tform_main
       'rec_version'
       'nowait'
       'read')
-    Left = 704
-    Top = 136
+    Left = 720
+    Top = 72
   end
   object Timer_main: TTimer
     Enabled = False
     Interval = 500
     OnTimer = Timer_mainTimer
-    Left = 272
-    Top = 112
+    Left = 472
+    Top = 56
   end
   object Timer_pass: TTimer
     Enabled = False
     Interval = 500
     OnTimer = Timer_passTimer
-    Left = 448
-    Top = 280
+    Left = 200
+    Top = 88
   end
 end

@@ -10,6 +10,8 @@ uses crew_utils, // utils from robocap and mine
 
 // const FOO_COORD = '-'; // '-' < любой цифры
 
+const GRID_CARS_COLUMN_WIDTH = 51; // 510
+
 const RUB_ZA_KM = 35.0; // рублей за км
 
 const CREW_SVOBODEN = 1;

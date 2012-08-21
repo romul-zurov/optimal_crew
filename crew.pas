@@ -69,6 +69,7 @@ type
 		// содержит только pointer'ы на Tcar-ы
 		PCrews_tmp : TList;
 		Cars_StringList : TstringList;
+		panel : TPanel; // панель для отображения списка cars-ов
 		timer_cars : TTimer; // таймер подбора экипажа для заказа
 		// если enabled - идёт просчёт  - ПОКА НЕ НУЖЕН
 
@@ -239,6 +240,8 @@ type
 	end;
 
 implementation
+
+uses main;
 
 function sort_orders_by_source_time(p1, p2 : Pointer) : Integer;
 var s1, s2 : string;
@@ -1690,6 +1693,16 @@ begin
 	self.Cars_StringList := TstringList.Create();
 	self.Cars_StringList.Sorted := true; // !
 
+	self.panel := TPanel.Create(form_main);
+	self.panel.Parent := form_main.GridPanel_cars;
+	self.panel.Visible := true;
+	self.panel.Align := alClient;
+	with form_main.GridPanel_cars do
+		Width := Width + GRID_CARS_COLUMN_WIDTH;
+	form_main.GridPanel_cars.ColumnCollection.Add();
+    with form_main.GridPanel_cars do
+    Controls[ControlCount - 1] := self.panel;
+
 	self.timer_cars := TTimer.Create(nil);
 	self.timer_cars.Enabled := false;
 	self.timer_cars.Interval := 100;
@@ -2077,6 +2090,8 @@ begin
 	self.way_to_end.Free();
 
 	self.Cars.Free();
+
+	self.panel.Free();
 
 	self.PCrew := nil;
 

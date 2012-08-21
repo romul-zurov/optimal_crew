@@ -48,6 +48,8 @@ type
 		cb_show_orders_id : TCheckBox;
 		Timer_main : TTimer;
 		Timer_pass : TTimer;
+    GridPanel_cars: TGridPanel;
+    ScrollBox_cars: TScrollBox;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
