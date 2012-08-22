@@ -279,10 +279,6 @@ object form_main: Tform_main
           object TabSheet_prior: TTabSheet
             Caption = #1055#1088#1077#1076#1074#1072#1088#1080#1090#1077#1083#1100#1085#1099#1077
             ImageIndex = 1
-            ExplicitLeft = 0
-            ExplicitTop = 0
-            ExplicitWidth = 0
-            ExplicitHeight = 190
             object grid_order_prior: TStringGrid
               AlignWithMargins = True
               Left = 3
@@ -305,7 +301,6 @@ object form_main: Tform_main
               ParentFont = False
               TabOrder = 0
               OnDblClick = grid_order_priorDblClick
-              ExplicitHeight = 184
             end
           end
         end
@@ -442,8 +437,8 @@ object form_main: Tform_main
     Enabled = False
     Interval = 2000
     OnTimer = Timer_show_order_gridTimer
-    Left = 400
-    Top = 56
+    Left = 368
+    Top = 48
   end
   object ibquery_coords: TIBQuery
     Database = db_main

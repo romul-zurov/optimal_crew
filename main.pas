@@ -48,8 +48,8 @@ type
 		cb_show_orders_id : TCheckBox;
 		Timer_main : TTimer;
 		Timer_pass : TTimer;
-    GridPanel_cars: TGridPanel;
-    ScrollBox_cars: TScrollBox;
+		GridPanel_cars : TGridPanel;
+		ScrollBox_cars : TScrollBox;
 		procedure FormCreate(Sender : TObject);
 		procedure Button1Click(Sender : TObject);
 		procedure browserDocumentComplete(ASender : TObject; const pDisp : IDispatch; var URL : OleVariant);
@@ -93,6 +93,7 @@ type
 		thread_times : TThread_get_times;
 		interval_coords_req, interval_orders_req : Cardinal;
 
+		procedure show_orders_cars();
 		procedure show_orders_grid();
 		procedure show_orders(var list : TOrderList; var grid_order : TStringGrid; prior_flag : boolean);
 		procedure show_result_crews_grid(var list : TCrewList);
@@ -479,9 +480,12 @@ begin
 	form_debug := TFormDebug.Create(nil);
 	form_main.Resizing(wsMaximized);
 
-    self.GridPanel_cars.ColumnCollection.Clear();
-                        self.GridPanel_cars.ControlCollection.Clear();
-                        self.GridPanel_cars.Width := 10;
+	with self.GridPanel_cars do
+	begin
+		ColumnCollection.Clear();
+		ControlCollection.Clear();
+		Width := 0;
+	end;
 
 	if open_database() then
 	begin
@@ -726,6 +730,66 @@ begin
 	end;
 end;
 
+procedure Tform_main.show_orders_cars;
+var pp : Pointer;
+	order : TOrder;
+	ii : Integer;
+begin
+
+	for pp in order_list.Orders do
+	begin
+		order := TOrder(pp);
+
+		if //
+			order.destroy_flag // помеченные для удаления заказы
+			or //
+			(order.id < 0) // "стёртые" заказы
+			or //
+			(not order.is_not_prior()) // предварительный
+			then // пропускаем
+			continue;
+
+		if order.State in //
+			[ //
+			ORDER_VODITEL_PODTVERDIL, // для тестовых целей
+		ORDER_PRINYAT, ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, ORDER_VODITEL_PRINYAL] //
+			then
+		begin
+			try
+				ii := form_main.GridPanel_cars.ControlCollection.IndexOf(order.cars_gbox);
+				if ii < 0 then
+				begin
+					order.cars_grid.Parent := order.cars_gbox;
+
+					with form_main.GridPanel_cars do
+						Width := Width + GRID_CARS_COLUMN_WIDTH;
+					order.cars_gbox.Caption := order.source.raw_adres + ' --> ' + order.dest.raw_adres;
+					order.cars_gbox.Parent := form_main.GridPanel_cars;
+					order.cars_gbox.Font := self.grid_order_current.Font;
+					form_main.GridPanel_cars.ControlCollection.AddControl(order.cars_gbox);
+				end;
+				order.show_cars();
+			except
+				pass();
+			end;
+		end
+		else
+		begin
+			try
+				ii := form_main.GridPanel_cars.ControlCollection.IndexOf(order.cars_gbox);
+				if ii >= 0 then
+				begin
+					with self.GridPanel_cars do
+						Width := Width - GRID_CARS_COLUMN_WIDTH;
+					self.GridPanel_cars.ControlCollection.delete(ii);
+				end;
+			except
+				pass();
+			end;
+		end;
+	end;
+end;
+
 procedure Tform_main.show_orders_grid;
 begin
 	self.show_orders(order_list, form_main.grid_order_current, false);
@@ -886,6 +950,7 @@ procedure Tform_main.Timer_show_order_gridTimer(Sender : TObject);
 begin
 	self.show_counts();
 	self.show_orders_grid();
+	self.show_orders_cars();
 	exit(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	self.Timer_show_order_grid.Enabled := false;

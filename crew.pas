@@ -6,7 +6,7 @@ uses crew_utils, // utils from robocap and mine
 	crew_globals, // my global var and function
 	Generics.Collections, // for forward class definition
 	Controls, Forms, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX, //
-	IBQuery, DB, WinInet, StrUtils, DateUtils, ExtCtrls, StdCtrls;
+	IBQuery, DB, WinInet, StrUtils, DateUtils, ExtCtrls, StdCtrls, Grids;
 
 function sort_cars_by_dist(p1, p2 : Pointer) : Integer;
 function sort_crews_by_state_dist(p1, p2 : Pointer) : Integer;
@@ -38,9 +38,7 @@ type
 		state : Integer; // -1 - not defined, 0 - принят, маршрут задан
 		// .                 1 - в работе, 2 - выполнен;
 		source : TAdres; // address from
-		source_raw : string; // address from raw-format
 		dest : TAdres; // address to
-		dest_raw : string; // address to raw-format
 		source_time : string; // время подачи экипажа
 		time_to_end : Integer; // время до окончания заказа в минутах
 		datetime_of_time_to_end : TDateTime; // момент, когда считалось время
@@ -69,7 +67,9 @@ type
 		// содержит только pointer'ы на Tcar-ы
 		PCrews_tmp : TList;
 		Cars_StringList : TstringList;
-		group_box : TGroupBox; // панель для отображения списка cars-ов
+		cars_gbox : TGroupBox; // панель для отображения списка cars-ов
+		cars_grid : TStringGrid;
+
 		timer_cars : TTimer; // таймер подбора экипажа для заказа
 		// если enabled - идёт просчёт  - ПОКА НЕ НУЖЕН
 
@@ -80,7 +80,6 @@ type
 		procedure def_time_to_ap(var PCrew : Pointer);
 		// function get_time_to_end(var PCrew : Pointer) : Integer;
 		// function get_time_to_ap(var PCrew : Pointer) : Integer;
-		function get_order_data() : string;
 		function time_to_end_as_string() : string; // время до окончания заказа в виде часы-минуты;
 		function time_to_ap_as_string() : string; // время до подъезда к АП в мин/часах;
 		function state_as_string() : string;
@@ -91,6 +90,11 @@ type
 		function crew_in_cars(PCrew : Pointer) : boolean;
 		function car_for_crew(PCrew : Pointer) : Pointer;
 		procedure refresh_cars_stringlist();
+		procedure show_cars();
+
+		// УЖЕ НЕ ИСПОЛЬЗУЕТСЯ, см. TOrderList.get_current_orders_with_data() !!!
+		{ old } function get_order_data() : string;
+
 	private
 		procedure set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 		procedure set_time_to_end(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
@@ -112,12 +116,15 @@ type
 		function is_defined(OrderId : Integer) : boolean;
 		function ret_free_order() : Pointer;
 		function Append(OrderId : Integer) : Pointer;
-		function get_current_orders(var res : TstringList) : Integer;
 		function get_crews_id_as_string() : string;
 		function del_bad_orders() : Integer;
-		function get_orders_data(var res : TstringList) : Integer;
 		function get_current_orders_with_data() : Integer;
 		function orders_time_to_end_count() : Integer;
+
+		// УЖЕ НЕ ИСПОЛЬЗУЮТСЯ, см. TOrderList.get_current_orders_with_data() !!!
+		{ old } function get_orders_data(var res : TstringList) : Integer;
+		{ old } function get_current_orders(var res : TstringList) : Integer;
+
 	private
 		procedure get_adres_coords();
 		function orders_id_as_string() : string;
@@ -1661,31 +1668,11 @@ constructor TOrder.Create(OrderId : Integer; var IBQuery : TIBQuery);
 begin
 	inherited Create();
 
-	// self.CrewID := -1;
-	// self.prior_CrewId := -1; // предварительный экипаж на предвар. заказе
-	// self.prior := false; // признак предварительного заказа
-	// self.state := -1; // -1 - not defined, 0 - принят, маршрут задан
-	// .                 1 - в работе, 2 - выполнен, остальное см. crew_globals;
 	self.source := TAdres.Create('', '', '', ''); // address from
-	// self.source_raw := '';
 	self.dest := TAdres.Create('', '', '', ''); // address to
-	// self.dest_raw := '';
-	// self.source_time := ''; // время подачи экипажа
-	// self.time_to_end := -1; // время до окончания заказа в минутах
-	// self.time_to_ap := -1; // время до подъезда к адресу подачи в минутах
-
-	// self.deleted := false;
 	self.way_to_ap := TWay.Create(); self.way_to_end := TWay.Create();
 	self.way_to_ap.zapros.browser.OnNavigateComplete2 := self.set_time_to_ap;
 	self.way_to_end.zapros.browser.OnNavigateComplete2 := self.set_time_to_end;
-	// self.na_bortu := false;
-	// self.pcrew := nil;
-	// self.datetime_of_time_to_ap := IncHour(now(), -1);
-	// self.datetime_of_time_to_end := self.datetime_of_time_to_ap;
-	// self.count_int_stops := 0;
-	// self.destroy_flag := false; // флаг, что заказ можно удалять из списка
-	// self.destroy_time := '';
-	// self.raw_dist_way := -1.0;
 	self.query := IBQuery;
 	self.Cars := TList.Create();
 	self.PCrews_tmp := TList.Create();
@@ -1693,19 +1680,21 @@ begin
 	self.Cars_StringList := TstringList.Create();
 	self.Cars_StringList.Sorted := true; // !
 
-	self.group_box := TGroupBox.Create(form_main);
-    self.group_box.Caption := 'ASDFGHJKL'; // !!! временно !!!
-    self.group_box.Width :=         GRID_CARS_COLUMN_WIDTH;
-	self.group_box.Parent := form_main.GridPanel_cars;
-	with form_main.GridPanel_cars do
-		Width := Width + GRID_CARS_COLUMN_WIDTH;
-//	form_main.GridPanel_cars.ColumnCollection.Add();
-	form_main.GridPanel_cars.ControlCollection.AddControl(self.group_box);
-	self.group_box.Align := alLeft;
-	self.group_box.Visible := true;
+	self.cars_gbox := TGroupBox.Create(form_main);
+	self.cars_gbox.Width := GRID_CARS_COLUMN_WIDTH;
+	self.cars_gbox.Align := alLeft;
+	self.cars_gbox.Visible := true;
 
-	// with form_main.GridPanel_cars do
-	// Controls[ControlCount - 1] := self.group_box;
+	self.cars_grid := TStringGrid.Create(form_main);
+	with self.cars_grid do
+	begin
+		Align := alClient;
+		FixedRows := 1;
+		FixedCols := 0;
+		RowCount := 2;
+		Font := form_main.grid_order_current.Font;
+		DefaultRowHeight := form_main.grid_order_current.DefaultRowHeight;
+	end;
 
 	self.timer_cars := TTimer.Create(nil);
 	self.timer_cars.Enabled := false;
@@ -2058,8 +2047,8 @@ begin
 	self.state := -1; // -1 - not defined, 0 - принят, маршрут задан
 	// .                 1 - в работе, 2 - выполнен, остальное см. crew_globals;
 	self.source.Clear(); // address from
-	self.source_raw := ''; self.dest.Clear(); // address to
-	self.dest_raw := ''; self.source_time := ''; // время подачи экипажа
+	self.dest.Clear(); // address to
+	self.source_time := ''; // время подачи экипажа
 	self.time_to_end := -1; // время до окончания заказа в минутах
 	self.time_to_ap := -1; // время до подъезда к адресу подачи в минутах
 	self.deleted := false; self.way_to_ap.points.Clear(); self.way_to_end.points.Clear();
@@ -2075,6 +2064,7 @@ begin
 	self.Cars.Clear();
 	self.PCrews_tmp.Clear();
 	self.Cars_StringList.Clear();
+	// self.cars_gbox.Visible := false;
 end;
 
 destructor TOrder.Destroy;
@@ -2095,7 +2085,7 @@ begin
 
 	self.Cars.Free();
 
-	self.group_box.Free();
+	// self.cars_gbox.Free();
 
 	self.PCrew := nil;
 
@@ -2180,14 +2170,9 @@ var sel, s, h, k : string; res : TstringList;
 	end;
 
 begin
-	// CrewID : Integer; // crew ID for a order, -1 if not defined
-	// state : Integer; // -1 - not defined, 0 - принят, маршрут задан
-	// // .                 1 - в работе, 2 - выполнен;
-	// source : TAdres; // address from
-	// dest : TAdres; // address to
-	// source_time : string; // время подачи экипажа
-	// time_to_end : Integer; // время до окончания заказа в минутах
-	// time_as_string : string; // оно же в виде часы-минуты;
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// УЖЕ НЕ ИСПОЛЬЗУЕТСЯ, см. TOrderList.get_current_orders_with_data() !!!
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	sel := 'select ' //
 		+ ' ORDERS.CREWID, ORDERS.STATE, ORDERS.SOURCE_TIME, ' //
@@ -2226,8 +2211,6 @@ begin
 
 	self.source.set_raw_adres(res.Strings[3]);
 	self.dest.set_raw_adres(res.Strings[4]);
-
-	self.group_box.Caption := self.source_raw + ' --> ' + self.dest_raw;
 
 	// return_adres(res.Strings[3], s, h, k);
 	// self.source.setAdres(s, h, k, self.source.gps);
@@ -2368,6 +2351,73 @@ begin
 	// result := ifthen(result > -1, result + stops_time, -1); self.time_to_end := result;
 	// if result = -1 then
 	// self.time_to_end := ORDER_WAY_ERROR;
+end;
+
+procedure TOrder.show_cars;
+var r : Integer;
+	pcar : Pointer;
+	car : TCar;
+	crew : TCrew;
+	s : string;
+begin
+	with self.cars_grid do
+	begin
+		RowCount := 2;
+		ColCount := 7;
+		FixedRows := 1;
+
+		Cells[0, 0] := 'По прямой';
+		Cells[1, 0] := 'Экипаж';
+		Cells[2, 0] := 'Состояние';
+		Cells[3, 0] := 'Время подачи';
+		Cells[4, 0] := 'Расстояние';
+		Cells[5, 0] := 'Расход';
+		Cells[6, 0] := 'Линия';
+
+		ColWidths[0] := 64; // ifthen(self.cb_debug.Checked, 128, 64); // 64; // 50; // прячем :)
+		// ColWidths[1] := 200;
+		ColWidths[2] := 70;
+		ColWidths[3] := 200;
+		ColWidths[4] := 80; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
+		ColWidths[5] := 0; // ifthen(self.cb_debug.Checked, 80, 0);
+		ColWidths[6] := 40;
+		ColWidths[1] := 50; // Width - 24 - ColWidths[0] - ColWidths[2] //
+		// - ColWidths[3] - ColWidths[4] - ColWidths[5] - ColWidths[6];
+		rows[1].Clear();
+	end;
+	r := 1;
+	self.refresh_cars_stringlist();
+	// for pcar in order.Cars do
+	for s in self.Cars_StringList do
+	begin
+		try
+			// car := Tcar(pcar);
+			// crew := TCRew(car.PCrew);
+			with self.cars_grid do
+			begin
+				{
+				  Cells[1, r] := crew.Code;
+				  Cells[2, r] := crew.state_as_string();
+				  Cells[3, r] := IntToStr(car.time_to_ap);
+				  Cells[4, r] := FloatToStr(car.dist_way_to_ap);
+
+				  s := car.res_data;
+				  }
+				Cells[0, r] := get_substr(s, '$', '|'); // ifthen(self.cb_debug.Checked, get_substr(s, '', '|'), get_substr(s, '$', '|'));
+				Cells[1, r] := get_substr(s, '|', '||');
+				Cells[2, r] := get_substr(s, '||', '|||');
+				Cells[3, r] := get_substr(s, '|||', '||||');
+				Cells[4, r] := get_substr(s, '||||', '|||||'); // + 'км';
+				Cells[5, r] := get_substr(s, '|||||', '||||||');
+				Cells[6, r] := get_substr(s, '||||||', '');
+
+				RowCount := r + 1;
+				inc(r);
+			end;
+		except
+			continue;
+		end;
+	end;
 end;
 
 function TOrder.source_time_without_date : string;
@@ -2728,6 +2778,11 @@ var sel, s, s1 : string;
 	// res : TStringList;
 	sdate_from, sdate_to : string; cur_time : TDateTime;
 begin
+
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// УЖЕ НЕ ИСПОЛЬЗУЕТСЯ, см. TOrderList.get_current_orders_with_data() !!!
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 	cur_time := now();
 	if DEBUG then
 	begin
@@ -2782,6 +2837,10 @@ end;
 function TOrderList.get_orders_data(var res : TstringList) : Integer;
 var pp : Pointer;
 begin
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// УЖЕ НЕ ИСПОЛЬЗУЕТСЯ, см. TOrderList.get_current_orders_with_data() !!!
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 	if self.Orders.count = 0 then
 		exit(-1);
 	// result := TStringList.Create();
