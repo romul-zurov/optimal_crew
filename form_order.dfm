@@ -46,8 +46,6 @@ object FormOrder: TFormOrder
         Value = 100.000000000000000000
       end>
     TabOrder = 0
-    ExplicitWidth = 795
-    ExplicitHeight = 294
     object GridPanel_order: TGridPanel
       Left = 1
       Top = 1
@@ -79,7 +77,6 @@ object FormOrder: TFormOrder
           Value = 100.000000000000000000
         end>
       TabOrder = 0
-      ExplicitHeight = 292
       object GroupBox_controls: TGroupBox
         Left = 1
         Top = 1
@@ -131,7 +128,6 @@ object FormOrder: TFormOrder
         Align = alClient
         Caption = 'GroupBox_order'
         TabOrder = 1
-        ExplicitHeight = 170
         object grid_order: TStringGrid
           Left = 2
           Top = 15
@@ -143,7 +139,6 @@ object FormOrder: TFormOrder
           FixedCols = 0
           TabOrder = 0
           OnDblClick = grid_orderDblClick
-          ExplicitHeight = 153
         end
       end
     end
@@ -178,8 +173,6 @@ object FormOrder: TFormOrder
           Value = 100.000000000000000000
         end>
       TabOrder = 1
-      ExplicitWidth = 593
-      ExplicitHeight = 292
       object GroupBox_crews: TGroupBox
         Left = 1
         Top = 1
@@ -194,8 +187,6 @@ object FormOrder: TFormOrder
         Font.Style = [fsBold]
         ParentFont = False
         TabOrder = 0
-        ExplicitWidth = 583
-        ExplicitHeight = 290
         object stbar_crews: TStatusBar
           Left = 2
           Top = 391
@@ -217,8 +208,6 @@ object FormOrder: TFormOrder
           ActivePage = TabSheet_current
           Align = alClient
           TabOrder = 1
-          ExplicitWidth = 541
-          ExplicitHeight = 299
           object TabSheet_current: TTabSheet
             Caption = #1072#1074#1090#1086#1087#1086#1076#1073#1086#1088
             object grid_cars: TStringGrid
@@ -237,17 +226,11 @@ object FormOrder: TFormOrder
               ParentFont = False
               TabOrder = 0
               OnDrawCell = grid_crewsDrawCell
-              ExplicitLeft = 310
-              ExplicitTop = 96
-              ExplicitWidth = 223
-              ExplicitHeight = 175
             end
           end
           object TabSheet_prior: TTabSheet
             Caption = #1074#1088#1091#1095#1085#1091#1102
             ImageIndex = 1
-            ExplicitWidth = 533
-            ExplicitHeight = 271
             object grid_crews: TStringGrid
               Left = 0
               Top = 0
@@ -264,10 +247,6 @@ object FormOrder: TFormOrder
               ParentFont = False
               TabOrder = 0
               OnDrawCell = grid_crewsDrawCell
-              ExplicitLeft = 82
-              ExplicitTop = -27
-              ExplicitWidth = 183
-              ExplicitHeight = 298
             end
           end
         end
@@ -280,8 +259,6 @@ object FormOrder: TFormOrder
         Align = alClient
         Caption = #1052#1072#1088#1096#1088#1091#1090' '#1085#1072' '#1082#1072#1088#1090#1077':'
         TabOrder = 1
-        ExplicitLeft = 584
-        ExplicitHeight = 290
         object WebBrowser1: TWebBrowser
           Left = 2
           Top = 15

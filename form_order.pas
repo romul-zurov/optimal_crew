@@ -150,8 +150,8 @@ end;
 
 procedure TFormOrder.Button_get_carsClick(Sender : TObject);
 begin
-	TOrder(self.POrder).get_cars_times_for_ap();
-	// self.Timer_show_cars.Enabled := True;
+	self.Timer_show_cars.Enabled := True;
+	self.Timer_get_cars.Enabled := True;
 end;
 
 procedure TFormOrder.Button_get_crewClick(Sender : TObject);
@@ -194,7 +194,7 @@ end;
 procedure TFormOrder.FormCreate(Sender : TObject);
 begin
 	self.Width := 1000;
-	self.Height := 640;
+	self.Height := 400;
 	self.slist := tstringlist.Create();
 	self.cr_slist := tstringlist.Create();
 	self.GroupBox_order.Visible := self.cb_debug.Checked;
@@ -333,8 +333,8 @@ begin
 	// выводим пустую шапку
 	self.show_crews();
 	self.show_order();
-	self.Timer_show_cars.Enabled := True;
-	self.Timer_get_cars.Enabled := True;
+	// self.Timer_show_cars.Enabled := True;
+	// self.Timer_get_cars.Enabled := True;
 end;
 
 procedure TFormOrder.start_def_times;

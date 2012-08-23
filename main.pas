@@ -246,6 +246,24 @@ begin
 							(order.source.gps = '') //
 							then
 							order.source.get_gps();
+
+						// автоподбор экипажа...
+						if order.hand_get_cars_flag or //
+							(order.State in //
+								[ //
+							// ORDER_VODITEL_PODTVERDIL, // для тестовых целей
+								ORDER_PRINYAT, //
+							ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
+							ORDER_VODITEL_PRINYAL] //
+							) //
+							then
+						begin
+							try
+								order.get_cars_times_for_ap();
+							except
+								pass();
+							end;
+						end;
 					end;
 					// и выходим
 					goto quit;
@@ -285,6 +303,11 @@ begin
 	pp := order_list.find_by_Id(ordId);
 	if pp = nil then
 		exit();
+
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	TOrder(pp).hand_get_cars_flag := true;
+	exit();
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	with form_cur_order do
 	begin
@@ -529,7 +552,6 @@ end;
 
 procedure Tform_main.grid_order_currentDblClick(Sender : TObject);
 begin
-	// show_order_time(grid_order_current);
 	show_order(grid_order_current);
 end;
 
@@ -659,6 +681,8 @@ begin
 		for pp in list.Orders do
 		begin
 			order := list.order(pp);
+			// отображаем подобранные экипажи
+			order.show_cars();
 
 			if //
 				order.destroy_flag // помеченные для удаления заказы
@@ -735,7 +759,6 @@ var pp : Pointer;
 	order : TOrder;
 	ii : Integer;
 begin
-
 	for pp in order_list.Orders do
 	begin
 		order := TOrder(pp);
@@ -751,8 +774,10 @@ begin
 
 		if order.State in //
 			[ //
-			ORDER_VODITEL_PODTVERDIL, // для тестовых целей
-		ORDER_PRINYAT, ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, ORDER_VODITEL_PRINYAL] //
+		// ORDER_VODITEL_PODTVERDIL, // для тестовых целей
+			ORDER_PRINYAT, //
+			ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
+			ORDER_VODITEL_PRINYAL] //
 			then
 		begin
 			try
@@ -791,10 +816,19 @@ begin
 end;
 
 procedure Tform_main.show_orders_grid;
+var j, w : Integer;
 begin
 	self.show_orders(order_list, form_main.grid_order_current, false);
 	self.show_orders(order_list, form_main.grid_order_prior, true);
 	self.show_counts();
+	with form_main.GridPanel_cars do
+	begin
+		w := 0;
+		for j := 0 to ColumnCollection.Count - 1 do
+			w := w + Round(ColumnCollection.Items[j].value);
+		if w <> Width then
+			Width := w;
+	end;
 end;
 
 procedure Tform_main.Timer_coordsTimer(Sender : TObject);
@@ -950,7 +984,7 @@ procedure Tform_main.Timer_show_order_gridTimer(Sender : TObject);
 begin
 	self.show_counts();
 	self.show_orders_grid();
-	self.show_orders_cars();
+	// self.show_orders_cars();
 	exit(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	self.Timer_show_order_grid.Enabled := false;

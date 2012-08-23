@@ -6,7 +6,8 @@ uses crew_utils, // utils from robocap and mine
 	crew_globals, // my global var and function
 	Generics.Collections, // for forward class definition
 	Controls, Forms, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX, //
-	IBQuery, DB, WinInet, StrUtils, DateUtils, ExtCtrls, StdCtrls, Grids;
+	IBQuery, DB, WinInet, StrUtils, DateUtils, ExtCtrls, StdCtrls, Grids, //
+	Types, Graphics;
 
 function sort_cars_by_dist(p1, p2 : Pointer) : Integer;
 function sort_crews_by_state_dist(p1, p2 : Pointer) : Integer;
@@ -69,6 +70,7 @@ type
 		Cars_StringList : TstringList;
 		cars_gbox : TGroupBox; // панель для отображения списка cars-ов
 		cars_grid : TStringGrid;
+		hand_get_cars_flag : boolean; // принудительный подбор экипажа для заказа
 
 		timer_cars : TTimer; // таймер подбора экипажа для заказа
 		// если enabled - идёт просчёт  - ПОКА НЕ НУЖЕН
@@ -101,6 +103,9 @@ type
 		function time_as_string(time : Integer) : string;
 		function get_cars_for_ap() : Integer;
 		function add_cars_and_sort() : Integer;
+		procedure cars_grid_DrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
+			state : TGridDrawState);
+		procedure hide_cars_by_hand(Sender : TObject);
 	end;
 
 	TOrderList = class(TObject)
@@ -1649,6 +1654,56 @@ begin
 	end;
 end;
 
+procedure TOrder.cars_grid_DrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
+	state : TGridDrawState);
+var sub : string;
+begin
+	if (ACol in [3, 4, 5, 6]) and (ARow > 0) then // только для колонок расчёта/статуса и для не-заглавных строк
+	begin
+		with TStringGrid(Sender) do
+		begin
+			sub := '';
+			if pos('!!!', Cells[ACol, ARow]) = 1 then
+			begin
+				Canvas.Brush.color := clRed;
+				sub := '!!!';
+			end
+			else
+				if pos('!', Cells[ACol, ARow]) = 1 then
+				begin
+					Canvas.Brush.color := clYellow;
+					sub := '!';
+				end
+				else
+					if pos('#', Cells[ACol, ARow]) = 1 then
+					begin
+						Canvas.Brush.color := $CCCCCC;
+						sub := '#';
+					end
+					else
+						if pos('*', Cells[ACol, ARow]) = 1 then
+						begin
+							Canvas.Brush.color := $00FF00;
+							sub := '*';
+						end
+						else
+							if pos('%', Cells[ACol, ARow]) = 1 then
+							begin
+								Canvas.Brush.color := $6D6D6D;
+								sub := '%';
+							end
+							else
+								Canvas.Brush.color := $FFFFFF;
+
+			if self.state <> ORDER_PRINYAT then
+				Canvas.Brush.color := $CCCCCC;
+
+			Canvas.FillRect(Rect);
+			Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], sub, ''));
+		end;
+	end;
+end;
+
 function TOrder.car_for_crew(PCrew : Pointer) : Pointer;
 var pc : Pointer;
 begin
@@ -1681,9 +1736,13 @@ begin
 	self.Cars_StringList.Sorted := true; // !
 
 	self.cars_gbox := TGroupBox.Create(form_main);
-	self.cars_gbox.Width := GRID_CARS_COLUMN_WIDTH;
-	self.cars_gbox.Align := alLeft;
-	self.cars_gbox.Visible := true;
+	with self.cars_gbox do
+	begin
+		Width := GRID_CARS_COLUMN_WIDTH;
+		Align := alLeft;
+		Visible := true;
+		OnDblClick := self.hide_cars_by_hand;
+	end;
 
 	self.cars_grid := TStringGrid.Create(form_main);
 	with self.cars_grid do
@@ -1694,6 +1753,7 @@ begin
 		RowCount := 2;
 		Font := form_main.grid_order_current.Font;
 		DefaultRowHeight := form_main.grid_order_current.DefaultRowHeight;
+		OnDrawCell := self.cars_grid_DrawCell;
 	end;
 
 	self.timer_cars := TTimer.Create(nil);
@@ -1761,15 +1821,23 @@ begin
 		// клиент забран, незачем считать его
 		exit();
 
-	crew := TCrew(PCrew);
+	try
+		crew := TCrew(PCrew);
+	except
+		self.time_to_ap := -1;
+		exit();
+	end;
+
 	if crew = nil then
 	begin
-		self.time_to_ap := -1; exit();
+		self.time_to_ap := -1;
+		exit();
 	end;
 
 	if (crew.coord = '') then
 	begin
-		self.time_to_ap := ORDER_CREW_NO_COORD; exit();
+		self.time_to_ap := ORDER_CREW_NO_COORD;
+		exit();
 	end;
 
 	if (self.time_to_ap < 0) // ещё не считалось
@@ -1796,25 +1864,37 @@ begin
 	end;
 	if (self.state = ORDER_V_OCHEREDI) then
 	begin
-		try
-			self.dobavka_v_ocheredi := TOrder(crew.POrder).time_to_end;
-			if (self.dobavka_v_ocheredi = ORDER_AN_OK) or (self.dobavka_v_ocheredi >= 0) then
-			begin
-				if self.dobavka_v_ocheredi = ORDER_AN_OK then
-				begin
-					self.dobavka_v_ocheredi := 0;
-					cur_pos := TAdres.Create('', '', '', crew.coord) // тек. коорд. экипажа
-				end
-				else
-					cur_pos := TOrder(crew.POrder).dest;
-				do_def();
-			end
-			else
-			begin
+		if crew.POrder <> nil then
+			try
+				self.dobavka_v_ocheredi := TOrder(crew.POrder).time_to_end;
+			except
 				self.time_to_ap := -1;
 				exit();
-			end;
-		except
+			end
+		else
+		begin
+			self.time_to_ap := -1;
+			exit();
+		end;
+		if (self.dobavka_v_ocheredi = ORDER_AN_OK) or (self.dobavka_v_ocheredi >= 0) then
+		begin
+			if self.dobavka_v_ocheredi = ORDER_AN_OK then
+			begin
+				self.dobavka_v_ocheredi := 0;
+				cur_pos := TAdres.Create('', '', '', crew.coord) // тек. коорд. экипажа
+			end
+			else
+				try
+					cur_pos := TOrder(crew.POrder).dest;
+				except
+					self.time_to_ap := -1;
+					exit();
+				end;
+
+			do_def();
+		end
+		else
+		begin
 			self.time_to_ap := -1;
 			exit();
 		end;
@@ -2064,6 +2144,7 @@ begin
 	self.Cars.Clear();
 	self.PCrews_tmp.Clear();
 	self.Cars_StringList.Clear();
+	self.hand_get_cars_flag := false;
 	// self.cars_gbox.Visible := false;
 end;
 
@@ -2299,6 +2380,11 @@ begin
 	exit(result);
 end;
 
+procedure TOrder.hide_cars_by_hand(Sender : TObject);
+begin
+	self.hand_get_cars_flag := false;
+end;
+
 function TOrder.is_not_prior : boolean;
 begin
 	result := self.source_time < replace_time('{Last_hour_-1}', now());
@@ -2354,12 +2440,91 @@ begin
 end;
 
 procedure TOrder.show_cars;
-var r : Integer;
+var r, ii, j : Integer;
 	pcar : Pointer;
 	car : TCar;
 	crew : TCrew;
 	s : string;
 begin
+
+	(*
+	  if //
+	  self.destroy_flag // помеченные для удаления заказы
+	  or //
+	  (self.ID < 0) // "стёртые" заказы
+	  or //
+	  (not self.is_not_prior()) // предварительный
+	  then // пропускаем
+	  exit();
+	  *)
+
+	try
+		ii := form_main.GridPanel_cars.ControlCollection.IndexOf(self.cars_gbox);
+	except
+		exit();
+	end;
+
+	if //
+		( //
+		self.hand_get_cars_flag // назначен побор вручную
+			or //
+			( // либо заказ в подходящем состоянии
+			self.state in //
+				[ //
+			// ORDER_VODITEL_PODTVERDIL, // для тестовых целей
+				ORDER_PRINYAT, //
+			ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
+			ORDER_VODITEL_PRINYAL] //
+			) //
+		) //
+		and not // и не явлется при этом удалённым
+		( //
+		self.destroy_flag // помеченные для удаления заказы
+			or //
+			(self.ID < 0) // "стёртые" заказы
+			or //
+			(not self.is_not_prior()) // предварительные
+		) //
+		then
+	begin // отображаем
+		try
+			if ii < 0 then
+			begin
+				self.cars_grid.Parent := self.cars_gbox;
+				self.cars_gbox.Caption := //
+					ifthen(form_main.cb_show_orders_id.Checked, IntToStr(self.ID) + ' ', '') //
+					+ self.source.raw_adres + ' --> ' + self.dest.raw_adres;
+				self.cars_gbox.Parent := form_main.GridPanel_cars;
+				self.cars_gbox.Font := form_main.grid_order_current.Font;
+				form_main.GridPanel_cars.ControlCollection.AddControl(self.cars_gbox);
+				form_main.GridPanel_cars.ColumnCollection.Items //
+					[form_main.GridPanel_cars.ControlCollection.IndexOf(self.cars_gbox)] //
+					.Value := GRID_CARS_COLUMN_WIDTH;
+			end
+			else
+			begin
+				if form_main.GridPanel_cars.ColumnCollection.Items[ii].Value = 0 then
+				begin
+					form_main.GridPanel_cars.ColumnCollection.Items[ii].Value := GRID_CARS_COLUMN_WIDTH;
+				end;
+			end;
+		except
+			exit();
+		end;
+	end
+	else // иначе удаляем из видимости
+	begin
+		try
+			if ii >= 0 then
+			begin
+				form_main.GridPanel_cars.ColumnCollection.Items[ii].Value := 0;
+				exit();
+			end;
+		except
+			exit();
+		end;
+	end;
+
 	with self.cars_grid do
 	begin
 		RowCount := 2;
@@ -2374,7 +2539,7 @@ begin
 		Cells[5, 0] := 'Расход';
 		Cells[6, 0] := 'Линия';
 
-		ColWidths[0] := 64; // ifthen(self.cb_debug.Checked, 128, 64); // 64; // 50; // прячем :)
+		ColWidths[0] := 0; // 64; // ifthen(self.cb_debug.Checked, 128, 64); // 64; // 50; // прячем :)
 		// ColWidths[1] := 200;
 		ColWidths[2] := 70;
 		ColWidths[3] := 200;
@@ -2395,14 +2560,6 @@ begin
 			// crew := TCRew(car.PCrew);
 			with self.cars_grid do
 			begin
-				{
-				  Cells[1, r] := crew.Code;
-				  Cells[2, r] := crew.state_as_string();
-				  Cells[3, r] := IntToStr(car.time_to_ap);
-				  Cells[4, r] := FloatToStr(car.dist_way_to_ap);
-
-				  s := car.res_data;
-				  }
 				Cells[0, r] := get_substr(s, '$', '|'); // ifthen(self.cb_debug.Checked, get_substr(s, '', '|'), get_substr(s, '$', '|'));
 				Cells[1, r] := get_substr(s, '|', '||');
 				Cells[2, r] := get_substr(s, '||', '|||');
@@ -2418,6 +2575,10 @@ begin
 			continue;
 		end;
 	end;
+	// убираем пустую строку в конце
+	with self.cars_grid do
+		if RowCount > 2 then
+			RowCount := RowCount - 1;
 end;
 
 function TOrder.source_time_without_date : string;
