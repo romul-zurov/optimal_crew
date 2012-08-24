@@ -69,7 +69,7 @@ type
 		PCrews_tmp : TList;
 		Cars_StringList : TstringList;
 		cars_gbox : TGroupBox; // панель для отображения списка cars-ов
-		cars_gbox_column : Integer; // номер столбца в панели подбора
+		cars_gbox_visible : boolean; // номер столбца в панели подбора
 		cars_grid : TStringGrid;
 		hand_get_cars_flag : boolean; // принудительный подбор экипажа для заказа
 
@@ -1660,19 +1660,24 @@ end;
 procedure TOrder.add_cars_grid_to_panel;
 var i_ctrl, i_col : Integer;
 begin
-	if self.cars_gbox_column >= 0 then
+	if self.cars_gbox_visible then
 		exit();
 	self.cars_grid.Parent := self.cars_gbox;
-	self.cars_gbox.Parent := form_main.GridPanel_cars;
+	self.cars_gbox.Parent := form_main.ScrollBox_cars; // form_main.GridPanel_cars;
 	self.cars_gbox.Font := form_main.grid_order_current.Font;
-	with form_main.GridPanel_cars do
-	begin
-		ControlCollection.AddControl(self.cars_gbox);
-		i_ctrl := ControlCollection.IndexOf(self.cars_gbox);
-		i_col := ControlCollection.Items[i_ctrl].Column;
-		self.cars_gbox_column := i_col;
-		ColumnCollection.Items[i_col].Value := GRID_CARS_COLUMN_WIDTH;
-	end;
+	self.cars_gbox.Width := GRID_CARS_COLUMN_WIDTH;
+	self.cars_gbox_visible := true;
+
+	(*
+	  with form_main.GridPanel_cars do
+	  begin
+	  ControlCollection.AddControl(self.cars_gbox);
+	  i_ctrl := ControlCollection.IndexOf(self.cars_gbox);
+	  i_col := ControlCollection.Items[i_ctrl].Column;
+	  self.cars_gbox_visible := i_col;
+	  ColumnCollection.Items[i_col].Value := GRID_CARS_COLUMN_WIDTH;
+	  end;
+	  *)
 end;
 
 procedure TOrder.cars_grid_DrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
@@ -1716,7 +1721,11 @@ begin
 							else
 								Canvas.Brush.color := $FFFFFF;
 
-			if not self.state in [ORDER_PRINYAT, ORDER_VODITEL_OTKAZALSYA] then
+			if self.hand_get_cars_flag // при принудительном подборе всегда цветным
+				or (self.state in [ORDER_PRINYAT, ORDER_VODITEL_OTKAZALSYA]) //
+				then
+				pass()
+			else
 				Canvas.Brush.color := $CCCCCC;
 
 			Canvas.FillRect(Rect);
@@ -1756,11 +1765,11 @@ begin
 	self.Cars_StringList := TstringList.Create();
 	self.Cars_StringList.Sorted := true; // !
 
-	self.cars_gbox_column := -1;
+	self.cars_gbox_visible := false;
 	self.cars_gbox := TGroupBox.Create(form_main);
 	with self.cars_gbox do
 	begin
-		Width := GRID_CARS_COLUMN_WIDTH;
+		Width := 0; // GRID_CARS_COLUMN_WIDTH;
 		Align := alLeft;
 		Visible := true;
 		OnDblClick := self.hide_cars_by_hand;
@@ -1775,6 +1784,7 @@ begin
 		RowCount := 2;
 		Font := form_main.grid_order_current.Font;
 		DefaultRowHeight := form_main.grid_order_current.DefaultRowHeight;
+		ScrollBars := ssVertical;
 		OnDrawCell := self.cars_grid_DrawCell;
 	end;
 
@@ -2500,20 +2510,15 @@ begin
 	if //
 		self.need_get_cars() then
 	begin // отображаем
-		if self.cars_gbox_column < 0 then
+		if not self.cars_gbox_visible then
 			self.add_cars_grid_to_panel();
-		i_col := self.cars_gbox_column;
-		with form_main.GridPanel_cars do
-		begin
-			if ColumnCollection.Items[i_col].Value = 0 then
-				ColumnCollection.Items[i_col].Value := GRID_CARS_COLUMN_WIDTH;
-		end;
+		if self.cars_gbox.Width = 0 then
+			self.cars_gbox.Width := GRID_CARS_COLUMN_WIDTH;
 	end
 	else // иначе удаляем из видимости
 	begin
-		i_col := self.cars_gbox_column;
-		if i_col >= 0 then
-			form_main.GridPanel_cars.ColumnCollection.Items[i_col].Value := 0;
+		if self.cars_gbox_visible then
+			self.cars_gbox.Width := 0;
 		exit();
 	end;
 

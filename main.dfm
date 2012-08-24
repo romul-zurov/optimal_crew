@@ -367,22 +367,6 @@ object form_main: Tform_main
       Height = 200
       Align = alClient
       TabOrder = 3
-      object GridPanel_cars: TGridPanel
-        Left = 0
-        Top = 0
-        Width = 400
-        Height = 196
-        Align = alLeft
-        Caption = 'GridPanel_cars'
-        ColumnCollection = <>
-        ControlCollection = <>
-        ExpandStyle = emAddColumns
-        RowCollection = <
-          item
-            Value = 100.000000000000000000
-          end>
-        TabOrder = 0
-      end
     end
   end
   object db_main: TIBDatabase
