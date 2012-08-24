@@ -209,6 +209,20 @@ procedure Tform_main.get_orders_times();
 var order : TOrder;
 	pc, pp : Pointer;
 label quit;
+
+	procedure get_cars();
+	begin
+		// автоподбор экипажа, если нужно
+		if order.need_get_cars() then
+		begin
+			try
+				order.get_cars_times_for_ap();
+			except
+				pass();
+			end;
+		end;
+	end;
+
 begin
 	if self.flag_order_get_time_process or (order_list.Orders.Count = 0) then
 		exit();
@@ -254,17 +268,15 @@ begin
 					end;
 
 					// автоподбор экипажа, если нужно
-					if order.need_get_cars() then
-					begin
-						try
-							order.get_cars_times_for_ap();
-						except
-							pass();
-						end;
-					end;
+					get_cars();
 
 					// и выходим
 					goto quit;
+				end
+				else
+				begin
+					// автоподбор экипажа, если нужно
+					get_cars();
 				end;
 			end;
 		end;
@@ -304,6 +316,7 @@ begin
 
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	TOrder(pp).hand_get_cars_flag := not TOrder(pp).hand_get_cars_flag;
+	TOrder(pp).show_cars();
 	exit();
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 end;
