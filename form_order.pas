@@ -398,7 +398,7 @@ begin
 		RowCount := 1;
 		rows[0].Clear();
 		ColCount := 2;
-		ColWidths[0] := 60;
+		ColWidths[0] := 120;
 		ColWidths[1] := Width - ColWidths[0] - 20;
 	end;
 	add_row(self.grid_order, 'ID', IntToStr(order.ID));
@@ -419,6 +419,26 @@ begin
 	add_row(self.grid_order, 'raw_dist_way', FloatToStrF(order.raw_dist_way, ffFixed, 8, 1));
 	add_row(self.grid_order, 'int_stops', order.raw_int_stops);
 	add_row(self.grid_order, 'POrder', IntToStr(Integer(Pointer(order))));
+	add_row(self.grid_order, 'cars_gbox_column', IntToStr(order.cars_gbox_column));
+	if order.cars_gbox_column >= 0 then
+	begin
+		add_row(self.grid_order, 'cars_gbox in grid_panel', //
+			IntToStr( //
+				form_main.GridPanel_cars.ControlCollection.Items[ //
+					form_main.GridPanel_cars.ControlCollection.IndexOf(order.cars_gbox) //
+					].Column //
+				) //
+			);
+
+		add_row(self.grid_order, 'column value', //
+			IntToStr( //
+				round(form_main.GridPanel_cars.ColumnCollection.Items[ //
+						order.cars_gbox_column //
+						].Value //
+					) //
+				) //
+			);
+	end;
 end;
 
 procedure TFormOrder.Timer_get_carsTimer(Sender : TObject);

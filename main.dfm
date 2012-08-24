@@ -241,6 +241,7 @@ object form_main: Tform_main
         Align = alClient
         Caption = #1047#1072#1082#1072#1079#1099':'
         TabOrder = 0
+        OnDblClick = GroupBox_orderDblClick
         object PageControl_orders: TPageControl
           Left = 2
           Top = 15
@@ -274,6 +275,7 @@ object form_main: Tform_main
               TabOrder = 0
               OnDblClick = grid_order_currentDblClick
               OnDrawCell = grid_order_currentDrawCell
+              OnMouseDown = grid_order_currentMouseDown
             end
           end
           object TabSheet_prior: TTabSheet
@@ -368,19 +370,11 @@ object form_main: Tform_main
       object GridPanel_cars: TGridPanel
         Left = 0
         Top = 0
-        Width = 102
+        Width = 400
         Height = 196
         Align = alLeft
         Caption = 'GridPanel_cars'
-        ColumnCollection = <
-          item
-            SizeStyle = ssAbsolute
-            Value = 51.000000000000000000
-          end
-          item
-            SizeStyle = ssAbsolute
-            Value = 51.000000000000000000
-          end>
+        ColumnCollection = <>
         ControlCollection = <>
         ExpandStyle = emAddColumns
         RowCollection = <

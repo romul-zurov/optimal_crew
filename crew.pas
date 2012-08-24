@@ -69,6 +69,7 @@ type
 		PCrews_tmp : TList;
 		Cars_StringList : TstringList;
 		cars_gbox : TGroupBox; // панель дл€ отображени€ списка cars-ов
+		cars_gbox_column : Integer; // номер столбца в панели подбора
 		cars_grid : TStringGrid;
 		hand_get_cars_flag : boolean; // принудительный подбор экипажа дл€ заказа
 
@@ -93,6 +94,7 @@ type
 		function car_for_crew(PCrew : Pointer) : Pointer;
 		procedure refresh_cars_stringlist();
 		procedure show_cars();
+		function need_get_cars() : boolean;
 
 		// ”∆≈ Ќ≈ »—ѕќЋ№«”≈“—я, см. TOrderList.get_current_orders_with_data() !!!
 		{ old } function get_order_data() : string;
@@ -103,6 +105,7 @@ type
 		function time_as_string(time : Integer) : string;
 		function get_cars_for_ap() : Integer;
 		function add_cars_and_sort() : Integer;
+		procedure add_cars_grid_to_panel();
 		procedure cars_grid_DrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
 			state : TGridDrawState);
 		procedure hide_cars_by_hand(Sender : TObject);
@@ -1654,6 +1657,24 @@ begin
 	end;
 end;
 
+procedure TOrder.add_cars_grid_to_panel;
+var i_ctrl, i_col : Integer;
+begin
+	if self.cars_gbox_column >= 0 then
+		exit();
+	self.cars_grid.Parent := self.cars_gbox;
+	self.cars_gbox.Parent := form_main.GridPanel_cars;
+	self.cars_gbox.Font := form_main.grid_order_current.Font;
+	with form_main.GridPanel_cars do
+	begin
+		ControlCollection.AddControl(self.cars_gbox);
+		i_ctrl := ControlCollection.IndexOf(self.cars_gbox);
+		i_col := ControlCollection.Items[i_ctrl].Column;
+		self.cars_gbox_column := i_col;
+		ColumnCollection.Items[i_col].Value := GRID_CARS_COLUMN_WIDTH;
+	end;
+end;
+
 procedure TOrder.cars_grid_DrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
 	state : TGridDrawState);
 var sub : string;
@@ -1695,7 +1716,7 @@ begin
 							else
 								Canvas.Brush.color := $FFFFFF;
 
-			if self.state <> ORDER_PRINYAT then
+			if not self.state in [ORDER_PRINYAT, ORDER_VODITEL_OTKAZALSYA] then
 				Canvas.Brush.color := $CCCCCC;
 
 			Canvas.FillRect(Rect);
@@ -1735,6 +1756,7 @@ begin
 	self.Cars_StringList := TstringList.Create();
 	self.Cars_StringList.Sorted := true; // !
 
+	self.cars_gbox_column := -1;
 	self.cars_gbox := TGroupBox.Create(form_main);
 	with self.cars_gbox do
 	begin
@@ -2145,7 +2167,7 @@ begin
 	self.PCrews_tmp.Clear();
 	self.Cars_StringList.Clear();
 	self.hand_get_cars_flag := false;
-	// self.cars_gbox.Visible := false;
+	self.cars_gbox.Caption := '';
 end;
 
 destructor TOrder.Destroy;
@@ -2390,6 +2412,35 @@ begin
 	result := self.source_time < replace_time('{Last_hour_-1}', now());
 end;
 
+function TOrder.need_get_cars : boolean;
+begin
+	if self.destroy_flag // помеченные дл€ удалени€ заказы
+		or //
+		(self.ID < 0) // "стЄртые" заказы
+		then
+		exit(false);
+
+	if self.hand_get_cars_flag then
+		exit(true)
+	else
+	begin
+		if (self.state in //
+				[ //
+			// ORDER_VODITEL_PODTVERDIL, // дл€ тестовых целей
+				ORDER_PRINYAT, //
+			ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
+			ORDER_VODITEL_OTKAZALSYA //
+			// , ORDER_VODITEL_PRINYAL // не нужно, считаем что "потвердил"
+				]) //
+			and //
+			self.is_not_prior() // и заказ не предварительный
+			then
+			exit(true)
+		else
+			exit(false);
+	end;
+end;
+
 procedure TOrder.refresh_cars_stringlist;
 var pcar : Pointer;
 begin
@@ -2440,90 +2491,36 @@ begin
 end;
 
 procedure TOrder.show_cars;
-var r, ii, j : Integer;
+var r, i_ctrl, i_col, j : Integer;
 	pcar : Pointer;
 	car : TCar;
 	crew : TCrew;
 	s : string;
 begin
-
-	(*
-	  if //
-	  self.destroy_flag // помеченные дл€ удалени€ заказы
-	  or //
-	  (self.ID < 0) // "стЄртые" заказы
-	  or //
-	  (not self.is_not_prior()) // предварительный
-	  then // пропускаем
-	  exit();
-	  *)
-
-	try
-		ii := form_main.GridPanel_cars.ControlCollection.IndexOf(self.cars_gbox);
-	except
-		exit();
-	end;
-
 	if //
-		( //
-		self.hand_get_cars_flag // назначен побор вручную
-			or //
-			( // либо заказ в подход€щем состо€нии
-			self.state in //
-				[ //
-			// ORDER_VODITEL_PODTVERDIL, // дл€ тестовых целей
-				ORDER_PRINYAT, //
-			ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
-			ORDER_VODITEL_PRINYAL] //
-			) //
-		) //
-		and not // и не €влетс€ при этом удалЄнным
-		( //
-		self.destroy_flag // помеченные дл€ удалени€ заказы
-			or //
-			(self.ID < 0) // "стЄртые" заказы
-			or //
-			(not self.is_not_prior()) // предварительные
-		) //
-		then
+		self.need_get_cars() then
 	begin // отображаем
-		try
-			if ii < 0 then
-			begin
-				self.cars_grid.Parent := self.cars_gbox;
-				self.cars_gbox.Caption := //
-					ifthen(form_main.cb_show_orders_id.Checked, IntToStr(self.ID) + ' ', '') //
-					+ self.source.raw_adres + ' --> ' + self.dest.raw_adres;
-				self.cars_gbox.Parent := form_main.GridPanel_cars;
-				self.cars_gbox.Font := form_main.grid_order_current.Font;
-				form_main.GridPanel_cars.ControlCollection.AddControl(self.cars_gbox);
-				form_main.GridPanel_cars.ColumnCollection.Items //
-					[form_main.GridPanel_cars.ControlCollection.IndexOf(self.cars_gbox)] //
-					.Value := GRID_CARS_COLUMN_WIDTH;
-			end
-			else
-			begin
-				if form_main.GridPanel_cars.ColumnCollection.Items[ii].Value = 0 then
-				begin
-					form_main.GridPanel_cars.ColumnCollection.Items[ii].Value := GRID_CARS_COLUMN_WIDTH;
-				end;
-			end;
-		except
-			exit();
+		if self.cars_gbox_column < 0 then
+			self.add_cars_grid_to_panel();
+		i_col := self.cars_gbox_column;
+		with form_main.GridPanel_cars do
+		begin
+			if ColumnCollection.Items[i_col].Value = 0 then
+				ColumnCollection.Items[i_col].Value := GRID_CARS_COLUMN_WIDTH;
 		end;
 	end
 	else // иначе удал€ем из видимости
 	begin
-		try
-			if ii >= 0 then
-			begin
-				form_main.GridPanel_cars.ColumnCollection.Items[ii].Value := 0;
-				exit();
-			end;
-		except
-			exit();
-		end;
+		i_col := self.cars_gbox_column;
+		if i_col >= 0 then
+			form_main.GridPanel_cars.ColumnCollection.Items[i_col].Value := 0;
+		exit();
 	end;
+
+	// выводим заголовок
+	self.cars_gbox.Caption := //
+		ifthen(form_main.cb_show_orders_id.Checked, IntToStr(self.ID) + ' ', '') //
+		+ self.source.raw_adres + ' --> ' + self.dest.raw_adres;
 
 	with self.cars_grid do
 	begin

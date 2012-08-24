@@ -74,6 +74,9 @@ type
 			State : TGridDrawState);
 		procedure Timer_mainTimer(Sender : TObject);
 		procedure Timer_passTimer(Sender : TObject);
+		procedure GroupBox_orderDblClick(Sender : TObject);
+		procedure grid_order_currentMouseDown(Sender : TObject; Button : TMouseButton; Shift : TShiftState;
+			X, Y : Integer);
 	private
 		{ Private declarations }
 		flag_get_coords : boolean;
@@ -232,10 +235,13 @@ begin
 					if order.CrewId > -1 then
 					begin
 						// считаем ...
-						pc := crew_list.findByCrewId(order.CrewId);
-						// if order.State = ORDER_VODITEL_PODTVERDIL then
-						order.def_time_to_ap(pc);
-						order.def_time_to_end(pc);
+						try
+							pc := crew_list.findByCrewId(order.CrewId);
+							order.def_time_to_ap(pc);
+							order.def_time_to_end(pc);
+						except
+							pass();
+						end;
 					end
 					else
 					begin
@@ -246,25 +252,18 @@ begin
 							(order.source.gps = '') //
 							then
 							order.source.get_gps();
+					end;
 
-						// автоподбор экипажа...
-						if order.hand_get_cars_flag or //
-							(order.State in //
-								[ //
-							// ORDER_VODITEL_PODTVERDIL, // для тестовых целей
-								ORDER_PRINYAT, //
-							ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
-							ORDER_VODITEL_PRINYAL] //
-							) //
-							then
-						begin
-							try
-								order.get_cars_times_for_ap();
-							except
-								pass();
-							end;
+					// автоподбор экипажа, если нужно
+					if order.need_get_cars() then
+					begin
+						try
+							order.get_cars_times_for_ap();
+						except
+							pass();
 						end;
 					end;
+
 					// и выходим
 					goto quit;
 				end;
@@ -277,6 +276,37 @@ begin
 quit :
 	inc(index_current_order);
 	self.flag_order_get_time_process := false;
+end;
+
+procedure get_show_order_cars(var grid : TStringGrid);
+var order : TOrder;
+	sid : string;
+	ordId : Integer;
+	pp : Pointer;
+	crew : TCrew;
+	slist : TSTringList;
+	clist : TCrewList;
+
+begin
+	// sid := form_main.grid_order_current.Cells[0, form_main.grid_order_current.row];
+	sid := grid.Cells[0, grid.row];
+	if sid = '' then
+		exit();
+
+	try
+		ordId := StrToInt(sid);
+	except
+		exit();
+	end;
+
+	pp := order_list.find_by_Id(ordId);
+	if pp = nil then
+		exit();
+
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	TOrder(pp).hand_get_cars_flag := not TOrder(pp).hand_get_cars_flag;
+	exit();
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 end;
 
 procedure show_order(var grid : TStringGrid);
@@ -303,11 +333,6 @@ begin
 	pp := order_list.find_by_Id(ordId);
 	if pp = nil then
 		exit();
-
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	TOrder(pp).hand_get_cars_flag := true;
-	exit();
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	with form_cur_order do
 	begin
@@ -552,7 +577,7 @@ end;
 
 procedure Tform_main.grid_order_currentDblClick(Sender : TObject);
 begin
-	show_order(grid_order_current);
+	get_show_order_cars(grid_order_current);
 end;
 
 procedure Tform_main.grid_order_currentDrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
@@ -596,9 +621,22 @@ begin
 		end;
 end;
 
+procedure Tform_main.grid_order_currentMouseDown(Sender : TObject; Button : TMouseButton;
+	Shift : TShiftState; X, Y : Integer);
+begin
+	if Button = mbRight then
+		show_order(grid_order_current);
+end;
+
 procedure Tform_main.grid_order_priorDblClick(Sender : TObject);
 begin
-	show_order(grid_order_prior);
+	// show_order(grid_order_prior);
+	get_show_order_cars(grid_order_prior);
+end;
+
+procedure Tform_main.GroupBox_orderDblClick(Sender : TObject);
+begin
+	ShowMessage('QuQu!');
 end;
 
 procedure Tform_main.show_counts;
@@ -759,6 +797,8 @@ var pp : Pointer;
 	order : TOrder;
 	ii : Integer;
 begin
+	exit();
+	// не используется !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	for pp in order_list.Orders do
 	begin
 		order := TOrder(pp);

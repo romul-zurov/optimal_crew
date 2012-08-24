@@ -10,7 +10,7 @@ uses crew_utils, // utils from robocap and mine
 
 // const FOO_COORD = '-'; // '-' < любой цифры
 
-const GRID_CARS_COLUMN_WIDTH = 476; //540;
+const GRID_CARS_COLUMN_WIDTH = 476; // 540;
 
 const RUB_ZA_KM = 35.0; // рублей за км
 
@@ -49,6 +49,8 @@ const ORDER_PRIGLASITE_KLIENTA = 31; // согласно ORDER_STATES
 const ORDER_KLIENT_NE_VYSHEL = 32; // согласно ORDER_STATES
 
 const ORDER_ZAKAZ_POLUCHEN = 33; // согласно ORDER_STATES
+
+const ORDER_VODITEL_OTKAZALSYA = 34; // согласно ORDER_STATES
 
 const ORDER_VODITEL_PRINYAL = 35; // согласно ORDER_STATES
 
