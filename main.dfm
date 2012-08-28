@@ -303,6 +303,7 @@ object form_main: Tform_main
               ParentFont = False
               TabOrder = 0
               OnDblClick = grid_order_priorDblClick
+              OnMouseDown = grid_order_currentMouseDown
             end
           end
         end

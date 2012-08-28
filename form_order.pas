@@ -385,6 +385,7 @@ procedure TFormOrder.show_order;
 	end;
 
 var order : TOrder;
+	i : Integer;
 begin
 	order := TOrder(POrder);
 	if order = nil then
@@ -418,6 +419,14 @@ begin
 	add_row(self.grid_order, 'dest.gps', order.dest.gps);
 	add_row(self.grid_order, 'raw_dist_way', FloatToStrF(order.raw_dist_way, ffFixed, 8, 1));
 	add_row(self.grid_order, 'int_stops', order.raw_int_stops);
+	// координаты пром. остановок
+	for i := 0 to order.int_stops.Count - 1 do
+		try
+			add_row(self.grid_order, 'int_stop[' + IntToStr(i) + '] = ', //
+				TAdres(order.int_stops.Items[i]).gps);
+		except
+			continue;
+		end;
 	add_row(self.grid_order, 'POrder', IntToStr(Integer(Pointer(order))));
 	add_row(self.grid_order, 'cars_gbox_column', BoolToStr(order.cars_gbox_visible));
 end;

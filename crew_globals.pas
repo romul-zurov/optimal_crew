@@ -75,8 +75,13 @@ const ORDER_AP_OK = -128; // экипаж был в АП и уехал (забрал клиента)
 
 const ORDER_AN_OK = -192; // экипаж был в адресе назначения и уехал (высадил клиента)
 
-	// const COORDS_BUF_SIZE = '{Last_hour_2}'; // размер буфера координат экипажа, в часах
-const COORDS_BUF_SIZE = '{Last_minute_20}'; // больше не надо, во избежание ошибок туда-сюда
+	// размер буфера координат экипажа
+const COORDS_BUF_SIZE = '{Last_hour_2}';// '{Last_minute_20}';//
+
+const COORDS_NO_INT_BUF_SIZE = '{Last_minute_20}'; // для заказов без пром. ост.
+ // берём меньше, чтобы не было туда-сюда
+
+const INT_STOP_TIME = 10; // кол-во минут, затрачиваемых экипажем на промеж. остановку
 
 const DEBUG_MEASURE_TIME = '''2011-10-03 13:57:50'''; // for back-up base
 
@@ -124,7 +129,11 @@ type
 		procedure get_gps();
 		procedure get_gps_unlim();
 		function gps_ok() : boolean;
+		function was_visited() : boolean;
+		function was_not_visited() : boolean;
+		procedure set_visited();
 	private
+		visited : boolean; // флаг был ли адрес "посещён" экипажем
 		function s_color() : string; // цвет для некорректных адресов
 		procedure def_gps(count_flag : boolean);
 		procedure gps_complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
@@ -578,6 +587,7 @@ begin
 	self.korpus := '';
 	self.gps := '';
 	self.raw_adres := '';
+	self.visited := false;
 end;
 
 constructor TAdres.Create(street, house, korpus, gps : string);
@@ -591,6 +601,7 @@ begin
 	// self.s_color := '';
 	self.zapros := TZapros.Create();
 	self.zapros.browser.OnNavigateComplete2 := self.gps_complete;
+	self.visited := false;
 end;
 
 procedure TAdres.def_gps(count_flag : boolean);
@@ -726,9 +737,24 @@ begin
 	self.setAdres(s, h, k, '');
 end;
 
+procedure TAdres.set_visited();
+begin
+	self.visited := true;
+end;
+
 function TAdres.s_color : string;
 begin
 	result := ifthen((pos('Error', self.gps) > 0) or (length(self.gps) = 0), '!!!', '');
+end;
+
+function TAdres.was_not_visited : boolean;
+begin
+	result := not self.visited;
+end;
+
+function TAdres.was_visited : boolean;
+begin
+	result := self.visited;
 end;
 
 procedure show_status(status : string);
