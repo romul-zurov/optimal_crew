@@ -395,9 +395,9 @@ begin
 		if order <> nil then
 		begin
 			try
-				// временно отбрасыываем заказы с пром. остановками
-				if order.count_int_stops > 0 then
-					exit();
+				// уже НЕ отбрасыываем заказы с пром. остановками :)
+				{ if order.count_int_stops > 0 then
+				  exit(); }
 
 				if (order.time_to_end = ORDER_AN_OK) then
 					// заказ РЕАЛЬНО завершён, но водитель ещё не мяфкнул
@@ -1984,15 +1984,21 @@ begin
 end;
 
 procedure TOrder.def_time_to_end(var PCrew : Pointer);
-var cur_pos : TAdres;
+var
+	cur_pos, adr : TAdres;
 	gps : string;
 	// points : TList;
 	// stops_time : Integer;  - сделать self.stops_time
 	// время на остановки для экипажа на заказе
-	crew : TCrew; dobavka : Integer; // разность между текущим временем и временем подачи в минутах
+	crew : TCrew; //
+	dobavka : Integer; // разность между текущим временем и временем подачи в минутах
 	cur_dt, ap_dt : TDateTime;
 	ppi : Pointer;
+	i, j : Integer;
+	int_ok_flag : boolean;
 	// na_bortu : boolean; - сделать self.na_bortu
+
+label ras4et;
 
 	procedure add_all_int();
 	var ii : Integer;
@@ -2062,6 +2068,13 @@ begin
 		then // то не пересчитываем, просто ждём, когда экипаж переедет
 		exit();
 
+	if pos('Error', self.dest.gps) > 0 then
+	begin
+		self.dest.gps := '';
+		self.time_to_end := ORDER_BAD_ADRES;
+		exit();
+	end;
+
 	if self.dest.gps = '' then
 	begin
 		self.dest.get_gps();
@@ -2079,7 +2092,7 @@ begin
 					exit();
 				end;
 			except
-				continue;
+				exit();
 			end;
 
 	cur_dt := now();
@@ -2091,9 +2104,8 @@ begin
 
 	self.stops_time := 0; // + self.count_int_stops * INT_STOP_TIME; // !!!!!!!!!!!!
 	self.way_to_end.points.Clear(); // список точек маршрута
-	cur_pos := TAdres.Create('', '', '', crew.coord);
 	// начало маршрута - текущая координата машины (обычно, но не всегда)
-	self.way_to_end.points.Add(Pointer(cur_pos));
+	cur_pos := TAdres.Create('', '', '', crew.coord);
 
 	// если экипаж на заказе, то проверяем, был ли он в точках source и dest
 	// если нет - добавляем их в маршрут и прибавляем время на остановки
@@ -2108,8 +2120,10 @@ begin
 			self.way_to_end.points.Add(Pointer(self.source));
 			add_all_int(); // ! добавляем пром. точки, если есть
 			self.way_to_end.points.Add(Pointer(self.dest));
-			self.stops_time := ifthen(dobavka > self.time_to_ap, dobavka, self.time_to_ap);
-			self.stops_time := (self.count_int_stops * INT_STOP_TIME) + 10 + 3;
+			self.stops_time := //
+				ifthen(dobavka > self.time_to_ap, dobavka, self.time_to_ap) //
+				+ (self.count_int_stops * INT_STOP_TIME) + 10 + 3;
+			goto ras4et; // !!! выходим на расчёт!
 		end
 		else
 		begin
@@ -2118,10 +2132,6 @@ begin
 	end
 	else
 	begin
-
-А ВОТ ОТ СИХ ПЕРЕПИСАТЬ С УЧЁТОМ ПРОМ. ОСТАНОВОК!
-И! НАПИСАТЬ ПРИСВОЕНИЕ АДРЕСОВ ПРОМ. ОСТАНОВКАМ ДЛЯ ЯНДЕКСА, НА СЛУЧАЙ ФЭЙЛА ИНГИСА!
-
 		if ( //
 			self.state in [ //
 				ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, ORDER_VODITEL_PRINYAL, //
@@ -2131,17 +2141,22 @@ begin
 			then // клиент НЕ на борту
 		begin
 			if self.time_to_ap = ORDER_AP_OK then
-				self.na_bortu := true
 				// клиент на борту и водятел УЕХАЛ уже с АП, не сменив статус!
+				self.na_bortu := true
 			else
 				if self.time_to_ap < 0 then
 					exit() // ошибка либо не считалось
 				else
 					if self.time_to_ap = 0 then // водитель на месте и ждёт
 					begin
-						self.na_bortu := true;
+						// self.na_bortu := true;
+						self.way_to_end.points.Clear();
+						self.way_to_end.points.Add(Pointer(cur_pos));
+						add_all_int(); // ! добавляем пром. точки, если есть
+						self.way_to_end.points.Add(Pointer(self.dest));
 						self.stops_time := dobavka //
-							+ (self.count_int_stops * INT_STOP_TIME) + 10;
+							+ (self.count_int_stops * INT_STOP_TIME) + 10 + 3;
+						goto ras4et; // !!! выходим на расчёт!
 					end
 					else
 					// определяем точки и паузу
@@ -2150,9 +2165,10 @@ begin
 						self.way_to_end.points.Add(Pointer(self.source));
 						add_all_int(); // ! добавляем пром. точки, если есть
 						self.way_to_end.points.Add(Pointer(self.dest));
-						self.stops_time := ifthen(dobavka > self.time_to_ap, dobavka, self.time_to_ap);
-						self.stops_time := self.stops_time //
+						self.stops_time := //
+							ifthen(dobavka > self.time_to_ap, dobavka, self.time_to_ap) //
 							+ (self.count_int_stops * INT_STOP_TIME) + 10 + 3;
+						goto ras4et; // !!! выходим на расчёт!
 					end;
 		end
 		else
@@ -2163,52 +2179,90 @@ begin
 					]) //
 				then
 			begin
-				// если водитель ожидает клиента, накидываем время на ожидание
-				self.na_bortu := true;
-				self.stops_time := dobavka + (self.count_int_stops * INT_STOP_TIME) + 10;
+				if self.time_to_ap = ORDER_AP_OK then
+					// клиент на борту и водятел УЕХАЛ уже с АП, не сменив статус!
+					self.na_bortu := true
+				else
+				begin
+					// если водитель ожидает клиента, накидываем время на ожидание
+					// self.na_bortu := true;
+					self.way_to_end.points.Clear();
+					self.way_to_end.points.Add(Pointer(cur_pos));
+					add_all_int(); // ! добавляем пром. точки, если есть
+					self.way_to_end.points.Add(Pointer(self.dest));
+					self.stops_time := dobavka //
+						+ (self.count_int_stops * INT_STOP_TIME) + 10 + 3;
+					goto ras4et; // !!! выходим на расчёт!
+				end;
 			end;
 		end;
 	end;
 
-	// если уже забрал, но не высадил
+	// если уже забрал, уехал с АП, но не высадил в АН
 	if (self.na_bortu) or (self.state = ORDER_KLIENT_NA_BORTU) then
 	begin
-		gps := self.dest.gps;
-		if pos('Error', gps) > 0 then
-		begin
-			self.dest.gps := '';
-			self.time_to_end := ORDER_BAD_ADRES;
-			exit();
-		end;
-		if gps = '' then // нет координаты у адреса высадки
-		begin
-			self.dest.get_gps();
-			exit();
-		end;
+		self.stops_time := 0;
+		self.way_to_end.points.Clear();
+		self.way_to_end.points.Add(Pointer(cur_pos));
 
-		if not crew.was_in_coord(gps) then // ещё не высадил
+		// проверяем пром. точки
+		if self.int_stops.count > 0 then
 		begin
-			self.way_to_end.points.Add(Pointer(self.dest)); //
-			self.stops_time := self.stops_time + 3; //
+			int_ok_flag := true;
+			for i := 0 to self.int_stops.count - 1 do { цикл обхода пром. остановок }
+			begin
+				try
+					adr := TAdres(self.int_stops.Items[i]);
+				except
+					continue;
+				end;
+				if adr.was_visited() then
+					continue
+				else
+				begin
+					if crew.was_in_coord(adr.gps) then
+						adr.set_visited()
+					else
+					begin // экипаж в точке не был, добавляем от нёё до конца
+						int_ok_flag := false;
+						for j := i to self.int_stops.count - 1 do
+							self.way_to_end.points.Add(self.int_stops.Items[j]);
+						self.way_to_end.points.Add(Pointer(self.dest)); //
+						self.stops_time := //
+							(self.int_stops.count - i) * INT_STOP_TIME + 3; //
+						goto ras4et; // !!! выходим на расчёт!
+					end;
+				end;
+			end;
 		end
 		else
-		begin
-			if crew.now_in_coord(gps) then
-				// высаживает
-				self.time_to_end := 0
-			else
-				// забрал-высадил, то делаем заказ завёршенным и экипаж свободным
-				self.time_to_end := ORDER_AN_OK;
+			int_ok_flag := true;
 
-			// self.state := ORDER_DONE;
-			// self.CrewID := -1; // сбрасываем экипаж в заказе
-			self.stops_time := 0;
-			// crew.OrderId := -1;
-			// crew.state := CREW_SVOBODEN;
-			exit();
+		if int_ok_flag then
+		begin
+			gps := self.dest.gps;
+			if not crew.was_in_coord(gps) then // ещё не высадил
+			begin
+				self.way_to_end.points.Add(Pointer(self.dest)); //
+				self.stops_time := 3; //
+				goto ras4et; // !!! выходим на расчёт!
+			end
+			else
+			begin
+				if crew.now_in_coord(gps) then
+					// высаживает
+					self.time_to_end := 0
+				else
+					// забрал-высадил
+					self.time_to_end := ORDER_AN_OK;
+
+				self.stops_time := 0;
+				exit();
+			end;
 		end;
 	end;
 
+ras4et :
 	self.PCrew := PCrew;
 	self.datetime_of_time_to_end := now(); // засекаем момент взятия времени
 	self.way_to_end.get_way_time_dist();
@@ -2385,11 +2439,7 @@ begin
 	end;
 end;
 
-procedure TOrder.set_time_to_end(ASender : TObject;
-
-	const pDisp : IDispatch;
-
-	var url : OleVariant);
+procedure TOrder.set_time_to_end(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 begin
 	self.way_to_end.set_way_time_dist(ASender, pDisp, url);
 	if self.way_to_end.time < 0 then
@@ -2397,16 +2447,10 @@ begin
 	else
 	begin
 		self.time_to_end := self.way_to_end.time + self.stops_time;
-		TCrew(self.PCrew).reset_old_coord();
+
 		// сбрасываем координату
+		TCrew(self.PCrew).reset_old_coord();
 	end;
-
-
-	// if self.time_to_end > -1  then self.dfgh;
-
-	// result := ifthen(result > -1, result + stops_time, -1); self.time_to_end := result;
-	// if result = -1 then
-	// self.time_to_end := ORDER_WAY_ERROR;
 end;
 
 procedure TOrder.show_cars;
@@ -2754,7 +2798,7 @@ begin
 end;
 
 procedure TOrderList.get_adres_coords;
-var sel, s, h, k : string;
+var sel, s, h, k, ss, sraw : string;
 	res : TstringList;
 	order : TOrder;
 	ord_id, jj, tt : Integer;
@@ -2843,11 +2887,16 @@ begin
 				if order.int_stops.count <> (res.count - 2) then
 				// если не соотв., то заполняем
 				begin
+					ss := order.raw_int_stops;
 					order.int_stops.Clear();
 					for jj := 1 to res.count - 2 do
 					begin
 						tt := order.int_stops.Add(Pointer(TAdres.Create('', '', '', '')));
+						sraw := get_substr(ss, '', ';'); //
+						TAdres(order.int_stops.Items[tt]).set_raw_adres(sraw);
 						add_coo_p(order.int_stops.Items[tt], res[jj]); //
+
+						ss := StringReplace(ss, sraw + ';', '', []); // только первое совпадение!
 					end;
 				end;
 			end

@@ -385,7 +385,9 @@ procedure TFormOrder.show_order;
 	end;
 
 var order : TOrder;
+	crew : TCRew;
 	i : Integer;
+	cr_coo : string;
 begin
 	order := TOrder(POrder);
 	if order = nil then
@@ -399,7 +401,7 @@ begin
 		RowCount := 1;
 		rows[0].Clear();
 		ColCount := 2;
-		ColWidths[0] := 120;
+		ColWidths[0] := 300;
 		ColWidths[1] := Width - ColWidths[0] - 20;
 	end;
 	add_row(self.grid_order, 'ID', IntToStr(order.ID));
@@ -408,25 +410,46 @@ begin
 	add_row(self.grid_order, 'prior', da_net(order.prior));
 	add_row(self.grid_order, 'state', order.state_as_string());
 	add_row(self.grid_order, 'source_time', order.source_time);
+
+	add_row(self.grid_order, 'count_int_stops', IntToStr(order.count_int_stops));
 	add_row(self.grid_order, 'source', order.source.get_as_string());
+	add_row(self.grid_order, 'int_stops', order.raw_int_stops);
 	add_row(self.grid_order, 'dest', order.dest.get_as_string());
+
+	if order.PCrew <> nil then
+	begin
+		try
+			crew := TCRew(order.PCrew);
+			cr_coo := crew.coord;
+		except
+			cr_coo := '';
+		end;
+	end
+	else
+		cr_coo := '';
+	add_row(self.grid_order, 'order.crew.coord', cr_coo);
+	add_row(self.grid_order, 'source.gps', order.source.gps);
+	// координаты пром. остановок
+	for i := 0 to order.int_stops.Count - 1 do
+		try
+			add_row( //
+				self.grid_order, //
+				'int_stop[' + IntToStr(i) + '] (' //
+					+ TAdres(order.int_stops.Items[i]).raw_adres + ')', //
+				TAdres(order.int_stops.Items[i]).gps //
+				);
+		except
+			continue;
+		end;
+	add_row(self.grid_order, 'dest.gps', order.dest.gps);
+
+	add_row(self.grid_order, 'stops_time', IntToStr(order.stops_time));
 	add_row(self.grid_order, 'time_to_end', IntToStr(order.time_to_end));
 	add_row(self.grid_order, 'time_to_end_str', order.time_to_end_as_string());
 	add_row(self.grid_order, 'time_to_ap', IntToStr(order.time_to_ap));
 	add_row(self.grid_order, 'time_to_ap_str', order.time_to_ap_as_string());
-	add_row(self.grid_order, 'stops_time', IntToStr(order.stops_time));
-	add_row(self.grid_order, 'source.gps', order.source.gps);
-	add_row(self.grid_order, 'dest.gps', order.dest.gps);
+
 	add_row(self.grid_order, 'raw_dist_way', FloatToStrF(order.raw_dist_way, ffFixed, 8, 1));
-	add_row(self.grid_order, 'int_stops', order.raw_int_stops);
-	// координаты пром. остановок
-	for i := 0 to order.int_stops.Count - 1 do
-		try
-			add_row(self.grid_order, 'int_stop[' + IntToStr(i) + '] = ', //
-				TAdres(order.int_stops.Items[i]).gps);
-		except
-			continue;
-		end;
 	add_row(self.grid_order, 'POrder', IntToStr(Integer(Pointer(order))));
 	add_row(self.grid_order, 'cars_gbox_column', BoolToStr(order.cars_gbox_visible));
 end;

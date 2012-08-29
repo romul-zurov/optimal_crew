@@ -25,7 +25,7 @@ object FormOrder: TFormOrder
     ColumnCollection = <
       item
         SizeStyle = ssAbsolute
-        Value = 400.000000000000000000
+        Value = 600.000000000000000000
       end
       item
         Value = 100.000000000000000000
@@ -49,7 +49,7 @@ object FormOrder: TFormOrder
     object GridPanel_order: TGridPanel
       Left = 1
       Top = 1
-      Width = 400
+      Width = 600
       Height = 414
       Align = alClient
       Caption = 'GridPanel_order'
@@ -80,7 +80,7 @@ object FormOrder: TFormOrder
       object GroupBox_controls: TGroupBox
         Left = 1
         Top = 1
-        Width = 398
+        Width = 598
         Height = 120
         Align = alClient
         Caption = 'GroupBox_controls'
@@ -123,7 +123,7 @@ object FormOrder: TFormOrder
       object GroupBox_order: TGroupBox
         Left = 1
         Top = 121
-        Width = 398
+        Width = 598
         Height = 292
         Align = alClient
         Caption = 'GroupBox_order'
@@ -131,7 +131,7 @@ object FormOrder: TFormOrder
         object grid_order: TStringGrid
           Left = 2
           Top = 15
-          Width = 394
+          Width = 594
           Height = 275
           Align = alClient
           ColCount = 2
@@ -143,9 +143,9 @@ object FormOrder: TFormOrder
       end
     end
     object GridPanel_crews_browser: TGridPanel
-      Left = 401
+      Left = 601
       Top = 1
-      Width = 483
+      Width = 283
       Height = 414
       Align = alClient
       Caption = 'GridPanel_crews_browser'
@@ -176,7 +176,7 @@ object FormOrder: TFormOrder
       object GroupBox_crews: TGroupBox
         Left = 1
         Top = 1
-        Width = 473
+        Width = 273
         Height = 412
         Align = alClient
         Caption = #1055#1086#1076#1073#1086#1088' '#1101#1082#1080#1087#1072#1078#1072' '#1076#1083#1103' '#1079#1072#1082#1072#1079#1072
@@ -190,7 +190,7 @@ object FormOrder: TFormOrder
         object stbar_crews: TStatusBar
           Left = 2
           Top = 391
-          Width = 469
+          Width = 269
           Height = 19
           Panels = <
             item
@@ -203,7 +203,7 @@ object FormOrder: TFormOrder
         object PageControl_cars: TPageControl
           Left = 2
           Top = 15
-          Width = 469
+          Width = 269
           Height = 376
           ActivePage = TabSheet_current
           Align = alClient
@@ -213,7 +213,7 @@ object FormOrder: TFormOrder
             object grid_cars: TStringGrid
               Left = 0
               Top = 0
-              Width = 461
+              Width = 261
               Height = 348
               Align = alClient
               DefaultRowHeight = 16
@@ -256,7 +256,7 @@ object FormOrder: TFormOrder
         end
       end
       object GroupBox1: TGroupBox
-        Left = 474
+        Left = 274
         Top = 1
         Width = 8
         Height = 412

@@ -79,7 +79,7 @@ const ORDER_AN_OK = -192; // экипаж был в адресе назначения и уехал (высадил кли
 const COORDS_BUF_SIZE = '{Last_hour_2}';// '{Last_minute_20}';//
 
 const COORDS_NO_INT_BUF_SIZE = '{Last_minute_20}'; // для заказов без пром. ост.
- // берём меньше, чтобы не было туда-сюда
+	// берём меньше, чтобы не было туда-сюда
 
 const INT_STOP_TIME = 10; // кол-во минут, затрачиваемых экипажем на промеж. остановку
 
@@ -732,6 +732,9 @@ begin
 		exit(); // если адрес тот же, что и раньше, то ничего
 
 	// иначе определяем новый и сбрасываем кооординату
+	while (length(adres) > 0) and (pos(' ', adres) = 1) do
+		// отбрасываем начальные пробелы
+		adres := StringReplace(adres, ' ', '', []); //
 	self.raw_adres := adres;
 	ret_adr(adres, s, h, k);
 	self.setAdres(s, h, k, '');
