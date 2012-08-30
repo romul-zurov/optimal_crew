@@ -76,7 +76,7 @@ const ORDER_AP_OK = -128; // экипаж был в АП и уехал (забрал клиента)
 const ORDER_AN_OK = -192; // экипаж был в адресе назначения и уехал (высадил клиента)
 
 	// размер буфера координат экипажа
-const COORDS_BUF_SIZE = '{Last_hour_2}';// '{Last_minute_20}';//
+const COORDS_BUF_SIZE = '{Last_minute_20}';//'{Last_hour_2}';// '{Last_minute_20}';//
 
 const COORDS_NO_INT_BUF_SIZE = '{Last_minute_20}'; // для заказов без пром. ост.
 	// берём меньше, чтобы не было туда-сюда

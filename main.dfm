@@ -13,6 +13,7 @@ object form_main: Tform_main
   OldCreateOrder = False
   OnClose = FormClose
   OnCreate = FormCreate
+  OnResize = FormResize
   PixelsPerInch = 96
   TextHeight = 13
   object GridPanel_main: TGridPanel
@@ -239,7 +240,7 @@ object form_main: Tform_main
         Width = 545
         Height = 153
         Align = alClient
-        Caption = #1047#1072#1082#1072#1079#1099':'
+        Caption = #1047#1072#1082#1072#1079#1099': '#1041#1059#1060#1045#1056' '#1080' Timer_Orders!!!'
         TabOrder = 0
         OnDblClick = GroupBox_orderDblClick
         object PageControl_orders: TPageControl
@@ -276,6 +277,7 @@ object form_main: Tform_main
               OnDblClick = grid_order_currentDblClick
               OnDrawCell = grid_order_currentDrawCell
               OnMouseDown = grid_order_currentMouseDown
+              ExplicitTop = 7
             end
           end
           object TabSheet_prior: TTabSheet
@@ -414,7 +416,6 @@ object form_main: Tform_main
   end
   object Timer_show_order_grid: TTimer
     Enabled = False
-    Interval = 2000
     OnTimer = Timer_show_order_gridTimer
     Left = 368
     Top = 48

@@ -35,7 +35,7 @@ type
 		CrewID : Integer; // crew ID for a order, -1 if not defined
 		// want_CrewId : Integer; // желаемый экипаж на заказе - НЕ НУЖЕН!
 		prior_CrewId : Integer; // предварительный экипаж на предвар. заказе
-		prior : boolean; // признак предварительного заказа
+		// prior : boolean; // признак предварительного заказа
 		state : Integer; // -1 - not defined, 0 - принят, маршрут задан
 		// .                 1 - в работе, 2 - выполнен;
 		source : TAdres; // address from
@@ -77,6 +77,8 @@ type
 		timer_cars : TTimer; // таймер подбора экипажа для заказа
 		// если enabled - идёт просчёт  - ПОКА НЕ НУЖЕН
 
+		button_send_to_robocab : TButton;
+
 		constructor Create(OrderId : Integer; var IBQuery : TIBQuery);
 		destructor Destroy(); override;
 		procedure del_order(); // просто очищает заказ без удаления из памяти
@@ -88,6 +90,8 @@ type
 		function status() : string;
 		function source_time_without_date() : string;
 		function is_not_prior() : boolean;
+		function is_prior() : boolean;
+		function is_bad() : boolean;
 		function get_cars_times_for_ap() : Integer;
 		function crew_in_cars(PCrew : Pointer) : boolean;
 		function car_for_crew(PCrew : Pointer) : Pointer;
@@ -124,8 +128,11 @@ type
 		function del_bad_orders() : Integer;
 		function get_current_orders_with_data() : Integer;
 		function orders_time_to_end_count() : Integer;
+		function ret_orders_as_grid(prior_flag : boolean; var slist : TstringList) : Integer;
+		procedure set_sort_col(col : Integer);
 
 	private
+		sort_col : Integer;
 		procedure get_adres_coords();
 		function orders_id_as_string() : string;
 	end;
@@ -1822,6 +1829,14 @@ begin
 	self.timer_cars.Enabled := false;
 	self.timer_cars.Interval := 100;
 
+	self.button_send_to_robocab := TButton.Create(form_main);
+	with self.button_send_to_robocab do
+	begin
+		Parent := form_main.grid_order_current;
+		Left := -500;
+		Caption := 'Передать';
+	end;
+
 	self.del_order();
 	self.ID := OrderId;
 
@@ -2273,7 +2288,7 @@ begin
 	self.ID := -1; //
 	self.CrewID := -1; //
 	self.prior_CrewId := -1; // предварительный экипаж на предвар. заказе
-	self.prior := false; // признак предварительного заказа
+	// self.prior := false; // признак предварительного заказа
 	self.state := -1; // -1 - not defined, 0 - принят, маршрут задан
 	// .                 1 - в работе, 2 - выполнен, остальное см. crew_globals;
 	self.source.Clear(); // address from
@@ -2380,9 +2395,21 @@ begin
 	self.hand_get_cars_flag := false;
 end;
 
+function TOrder.is_bad : boolean;
+begin
+	result := self.destroy_flag // помеченные для удаления заказы
+		or (self.ID < 0) // стёртый заказ
+		;
+end;
+
 function TOrder.is_not_prior : boolean;
 begin
 	result := self.source_time < replace_time('{Last_hour_-1}', now());
+end;
+
+function TOrder.is_prior : boolean;
+begin
+	result := not self.is_not_prior();
 end;
 
 function TOrder.need_get_cars : boolean;
@@ -2714,13 +2741,16 @@ end;
 
 function TOrderList.clear_order_list : Integer;
 begin
-	self.Orders.Clear(); exit(0);
+	self.Orders.Clear();
+	exit(0);
 end;
 
 constructor TOrderList.Create(var IBQuery : TIBQuery);
 begin
 	inherited Create;
-	self.Orders := TList.Create(); self.query := IBQuery;
+	self.Orders := TList.Create();
+	self.query := IBQuery;
+	self.sort_col := 7; // по умолчанию сортировка по дате
 end;
 
 function TOrderList.del_bad_orders : Integer;
@@ -3164,6 +3194,67 @@ begin
 		if TOrder(pp).ID = -1 then
 			exit(pp);
 	exit(nil);
+end;
+
+function TOrderList.ret_orders_as_grid(prior_flag : boolean; var slist : TstringList) : Integer;
+var sort_str, s, s_crew : string;
+	pp : Pointer;
+	order : TOrder;
+begin
+	slist.Clear();
+	slist.Sorted := true; // !!!
+
+	for pp in self.Orders do
+	begin
+		try
+			order := TOrder(pp);
+		except
+			continue;
+		end;
+		if order.is_bad() //
+			or prior_flag <> order.is_prior() //
+			then
+			continue;
+		case self.sort_col of
+			0 :
+				sort_str := IntToStr(order.ID);
+		else
+			sort_str := order.source_time;
+		end;
+		s := sort_str + '|||'; // строка сортировки, отбрасывается при выводе
+		s := s + IntToStr(order.ID); // 0
+		s := s + '|' + order.status(); // 1
+		s := s + '|' + order.time_to_end_as_string() // 2
+			+ ' (' + time_without_date(order.datetime_of_time_to_ap) //
+			+ '/' + time_without_date(order.datetime_of_time_to_end) + ')';
+		s := s + '|' + order.state_as_string() // 3
+		// отмечаем заказы с пром. остановками
+			+ ifthen(order.count_int_stops > 0, '~', '');
+
+		if order.CrewID > 0 then
+		begin
+			try
+				s_crew := TCrewList(PMainCrewList).crewByCrewId(order.CrewID).name;
+			except
+				s_crew := '!!!CREW ERROR';
+			end;
+		end
+		else
+			s_crew := '!!!';
+		s := s + '|' + s_crew; // 4
+		s := s + '|' + order.source.get_as_color_string(); // 5
+		s := s + '|' + order.dest.get_as_color_string(); // 6
+		s := s + '|' + order.source_time_without_date(); // 7
+
+		slist.Append(s); // !
+	end;
+
+	result := slist.count;
+end;
+
+procedure TOrderList.set_sort_col(col : Integer);
+begin
+	self.sort_col := col;
 end;
 
 { TOrderCrews }

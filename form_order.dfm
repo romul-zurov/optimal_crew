@@ -210,6 +210,10 @@ object FormOrder: TFormOrder
           TabOrder = 1
           object TabSheet_current: TTabSheet
             Caption = #1072#1074#1090#1086#1087#1086#1076#1073#1086#1088
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object grid_cars: TStringGrid
               Left = 0
               Top = 0

@@ -76,6 +76,8 @@ type
 		procedure GroupBox_orderDblClick(Sender : TObject);
 		procedure grid_order_currentMouseDown(Sender : TObject; Button : TMouseButton; Shift : TShiftState;
 			X, Y : Integer);
+
+		procedure FormResize(Sender : TObject);
 	private
 		{ Private declarations }
 		flag_get_coords : boolean;
@@ -85,10 +87,13 @@ type
 		deb_list : TSTringList;
 		Interval : int64;
 		ord_req_count, coo_req_count : int64;
+		debug_show_count : int64;
+		grid_list : TSTringList;
 
 		procedure show_request(txt : string);
 		procedure show_counts();
 		procedure show_OrderID(id : Integer);
+		procedure redraw_grid_shapka();
 	public
 		{ Public declarations }
 		flag_order_get_time_process : boolean;
@@ -98,6 +103,7 @@ type
 		procedure show_orders_cars();
 		procedure show_orders_grid();
 		procedure show_orders(var list : TOrderList; var grid_order : TStringGrid; prior_flag : boolean);
+		procedure show_sorted_orders(prior_flag : boolean);
 		procedure show_result_crews_grid(var list : TCrewList);
 		procedure crews_request();
 		procedure orders_request();
@@ -176,6 +182,136 @@ begin
 	// show_status(list.meausure_time);
 end;
 
+procedure Tform_main.show_sorted_orders(prior_flag : boolean);
+var res : TSTringList;
+	grid : TStringGrid;
+	redraw_flag : boolean;
+	rcou, r, i, ord_id : Integer;
+	s, sid : string;
+	order : TOrder;
+	pp : Pointer;
+
+	procedure shapka();
+	begin
+		self.redraw_grid_shapka();
+	end;
+
+	procedure sg_clear();
+	begin
+		grid.RowCount := 2;
+		grid.Rows[1].Clear();
+		inc(self.debug_show_count);
+	end;
+
+	procedure get_Kursor();
+	begin
+		// запоминаем, где был "курсор"
+		ord_id := -1;
+		if grid.Cells[0, grid.row] = '' then
+		else
+			ord_id := StrToInt(grid.Cells[0, grid.row]);
+	end;
+
+	procedure put_Kursor();
+	var rr : Integer;
+	begin
+		// вертаем взад "курсор" сетки
+		rr := grid.Cols[0].IndexOf(IntToStr(ord_id));
+		if rr < 0 then
+			rr := 1;
+		grid.row := rr;
+	end;
+
+begin
+	res := TSTringList.Create();
+	if prior_flag then
+		grid := self.grid_order_prior
+	else
+		grid := self.grid_order_current;
+
+	// shapka();
+	get_Kursor();
+
+	rcou := order_list.ret_orders_as_grid(prior_flag, self.grid_list);
+	if rcou = 0 then
+	begin
+		sg_clear();
+		exit();
+	end;
+	redraw_flag := grid.RowCount <> (rcou + 1); //
+	if redraw_flag then
+		pass()
+	else
+	begin
+		for r := 0 to self.grid_list.Count - 1 do
+		begin
+			sid := get_substr(self.grid_list.Strings[r], '|||', '|');
+			if sid <> grid.Cells[0, r + 1] then
+			begin
+				redraw_flag := true;
+				break;
+			end;
+		end;
+	end;
+	if redraw_flag then
+	begin
+		sg_clear();
+		shapka();
+		grid.RowCount := self.grid_list.Count + 1;
+	end;
+	// выводим
+	for r := 0 to self.grid_list.Count - 1 do
+	begin
+		s := self.grid_list.Strings[r];
+		s := get_substr(s, '|||', ''); // отбросим сорт-элемент
+		string_to_stringlist(s, res);
+		// grid.Rows[r+1].Assign(res);
+		for i := 0 to res.Count - 1 do
+			grid.Cells[i, r + 1] := res.Strings[i];
+		if redraw_flag then
+		begin
+			// if grid = self.grid_order_current then
+			// begin
+			try
+				order := TOrder( //
+					order_list.find_by_Id(StrToInt(res.Strings[0])) //
+					);
+
+				if order.is_not_prior() and (not prior_flag) then
+				begin
+					grid.objects[8, r + 1] := order.button_send_to_robocab;
+					with order.button_send_to_robocab do
+					begin
+						BoundsRect := grid.CellRect(8, r + 1);
+						Caption := IntToStr(order.id);
+						Enabled := true;
+						Visible := true;
+					end;
+				end
+				else
+					with order.button_send_to_robocab do
+					begin
+						Visible := false;
+						Enabled := false;
+						Left := -500;
+					end;
+			except
+				// end;
+			end;
+		end;
+	end;
+	put_Kursor();
+
+	for pp in order_list.Orders do
+	begin
+		order := TOrder(pp);
+		// отображаем подобранные экипажи
+		order.show_cars();
+	end;
+
+	FreeAndNil(res);
+end;
+
 procedure show_grid(var list : TSTringList; var grid : TStringGrid);
 begin
 	grid.ColCount := 1;
@@ -203,6 +339,47 @@ begin
 	// order_list.get_current_orders(deb_list);
 	order_list.get_current_orders_with_data();
 	crew_list.get_crew_list_by_order_list(order_list);
+end;
+
+procedure Tform_main.redraw_grid_shapka;
+	procedure shapka(var grid : TStringGrid);
+	var w : Integer;
+	begin
+		with grid do
+		begin
+			FixedRows := 1;
+			ColCount := 9;
+			Cells[0, 0] := '№'; // не отображается по умолчанию
+			Cells[1, 0] := 'Реальный статус';
+			Cells[2, 0] := 'До окончания'; // не отображается по умолчанию
+			Cells[3, 0] := 'Состояние';
+			Cells[4, 0] := 'Экипаж';
+			Cells[5, 0] := 'Адрес подачи';
+			Cells[6, 0] := 'Адрес назначения';
+			Cells[7, 0] := 'Время подачи';
+			Cells[8, 0] := 'Robocab';
+
+			ColWidths[0] := ifthen(self.cb_show_orders_id.Checked, 50, 0);
+			ColWidths[1] := 240; // 160;
+			ColWidths[2] := ifthen(self.cb_show_times_to_end.Checked, 300, 0);
+			ColWidths[3] := 180; // 260; // 80;
+			ColWidths[4] := 260; // 128; // 80;
+			ColWidths[7] := 88;
+			ColWidths[8] := 64;
+
+			w := ( //
+				Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] //
+					- ColWidths[4] - ColWidths[7] - ColWidths[8] - 32 //
+				) //
+				div 2; // 210
+			ColWidths[5] := ifthen(w > 160, w, 160);
+			ColWidths[6] := ColWidths[5];
+		end;
+	end;
+
+begin
+	shapka(self.grid_order_current);
+	shapka(self.grid_order_prior);
 end;
 
 procedure Tform_main.get_orders_times();
@@ -463,6 +640,7 @@ begin
 	else
 		w := 0;
 	self.GridPanel_grids.ColumnCollection.Items[1].value := w;
+	self.redraw_grid_shapka();
 end;
 
 procedure Tform_main.cb_timers_orders_coordsClick(Sender : TObject);
@@ -505,7 +683,9 @@ begin
 	self.flag_show_orders := false;
 	self.flag_req_or_show := false;
 	self.deb_list := TSTringList.Create();
+	self.grid_list := TSTringList.Create();
 	self.flag_order_get_time_process := false;
+	self.debug_show_count := 0;
 	flag_coords_request := false;
 	index_current_order := 0;
 	GetZaprosCounter := 0;
@@ -567,6 +747,11 @@ begin
 	// show_orders_grid(order_list);
 end;
 
+procedure Tform_main.FormResize(Sender : TObject);
+begin
+	self.redraw_grid_shapka();
+end;
+
 procedure Tform_main.grid_crewsDblClick(Sender : TObject);
 var pp : Pointer;
 	id, r : Integer;
@@ -589,7 +774,9 @@ procedure Tform_main.grid_order_currentDrawCell(Sender : TObject; ACol, ARow : I
 	State : TGridDrawState);
 var sub : string;
 begin
-	if (ACol in [1, 2, 4, 5, 6]) and (ARow > 0) then // только для колонок расчёта/статуса
+	// только для колонок расчёта/статуса
+	if (ACol in [1, 2, 4, 5, 6]) and (ARow > 0) then
+	begin
 		with TStringGrid(Sender) do
 		begin
 			if Cells[ACol, ARow] = '' then
@@ -624,13 +811,27 @@ begin
 			Canvas.FillRect(Rect);
 			Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], sub, ''));
 		end;
+	end
+	else
+		// колонка кнопок
+		if (ACol = 8) and (ARow > 0) then
+		begin
+			try
+				TButton(grid_order_current.objects[ACol, ARow]).BoundsRect := Rect;
+			except
+				exit();
+			end;
+		end;
 end;
 
 procedure Tform_main.grid_order_currentMouseDown(Sender : TObject; Button : TMouseButton;
 	Shift : TShiftState; X, Y : Integer);
 begin
 	if Button = mbRight then
-		show_order(grid_order_current);
+		if Sender = grid_order_current then
+			show_order(grid_order_current)
+		else
+			show_order(grid_order_prior);
 end;
 
 procedure Tform_main.grid_order_priorDblClick(Sender : TObject);
@@ -650,6 +851,8 @@ begin
 		IntToStr(self.ord_req_count) //
 		+ '/' //
 		+ IntToStr(self.coo_req_count) //
+		+ ' ' //
+		+ IntToStr(self.debug_show_count) //
 		;
 
 	self.stbar_main.Panels[3].Text := //
@@ -674,6 +877,7 @@ var pp : Pointer;
 	row, ord_id, cur_col, cur_row, adr_w : Integer;
 	order : TOrder;
 	sord_id, prior_stime, s_crew : string;
+
 begin
 	with form_main do
 	begin
@@ -683,7 +887,7 @@ begin
 			// !!!
 			// RowCount := 2;
 			FixedRows := 1;
-			ColCount := 8;
+			ColCount := 9;
 			Cells[0, 0] := '№'; // не отображается по умолчанию
 			Cells[1, 0] := 'Реальный статус';
 			Cells[2, 0] := 'До окончания'; // не отображается по умолчанию
@@ -692,6 +896,7 @@ begin
 			Cells[5, 0] := 'Адрес подачи';
 			Cells[6, 0] := 'Адрес назначения';
 			Cells[7, 0] := 'Время подачи';
+			Cells[8, 0] := 'Robocab';
 
 			ColWidths[0] := ifthen(self.cb_show_orders_id.Checked, 50, 0);
 			ColWidths[1] := 240; // 160;
@@ -699,13 +904,14 @@ begin
 			ColWidths[3] := 180; // 260; // 80;
 			ColWidths[4] := 260; // 128; // 80;
 			ColWidths[7] := 88;
+			ColWidths[8] := 64;
 
 			adr_w := ( //
 				Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] //
-					- ColWidths[4] - ColWidths[7] - 24 //
+					- ColWidths[4] - ColWidths[7] - ColWidths[8] - 32 //
 				) //
 				div 2; // 210
-			ColWidths[5] := ifthen(adr_w > 192, adr_w, 192);
+			ColWidths[5] := ifthen(adr_w > 160, adr_w, 160);
 			ColWidths[6] := ColWidths[5];
 		end;
 
@@ -727,23 +933,22 @@ begin
 			// отображаем подобранные экипажи
 			order.show_cars();
 
-			if //
-				order.destroy_flag // помеченные для удаления заказы
-				or //
-				(order.id < 0) // "стёртые" заказы
-				then // не отображаем!
+			if order.is_bad()
+			// "стёртые" заказы // не отображаем!
+				then
 				continue;
 
-			if ( //
-				prior_flag //
-					and (order.source_time < prior_stime) //
-				) //
-				or //
-				( //
-				not prior_flag //
-					and (order.source_time >= prior_stime) //
-				) //
-				then
+			if prior_flag <> order.is_prior()
+			{ ( //
+			  prior_flag //
+			  and (order.source_time < prior_stime) //
+			  ) //
+			  or //
+			  ( //
+			  not prior_flag //
+			  and (order.source_time >= prior_stime) //
+			  ) // }
+			then
 				continue;
 
 			// не отображается по умолчанию
@@ -779,6 +984,23 @@ begin
 			grid_order.Cells[6, row] := order.dest.get_as_color_string();
 			grid_order.Cells[7, row] := order.source_time_without_date();
 
+			if order.is_not_prior() and (grid_order = self.grid_order_current) then
+			begin
+				grid_order.objects[8, row] := order.button_send_to_robocab;
+				with order.button_send_to_robocab do
+				begin
+					BoundsRect := grid_order.CellRect(8, row);
+					Caption := IntToStr(order.id);
+					Enabled := true;
+					Visible := true;
+				end;
+			end
+			else
+			begin
+				order.button_send_to_robocab.Visible := false;
+				order.button_send_to_robocab.Enabled := false;
+			end;
+
 			row := row + 1;
 			with grid_order do
 				RowCount := RowCount + 1;
@@ -809,8 +1031,10 @@ end;
 procedure Tform_main.show_orders_grid;
 var j, w : Integer;
 begin
-	self.show_orders(order_list, form_main.grid_order_current, false);
-	self.show_orders(order_list, form_main.grid_order_prior, true);
+	// self.show_orders(order_list, form_main.grid_order_current, false);
+	// self.show_orders(order_list, form_main.grid_order_prior, true);
+	self.show_sorted_orders(false);
+	self.show_sorted_orders(true);
 	self.show_counts();
 end;
 

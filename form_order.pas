@@ -407,7 +407,7 @@ begin
 	add_row(self.grid_order, 'ID', IntToStr(order.ID));
 	add_row(self.grid_order, 'CrewID', IntToStr(order.CrewID));
 	add_row(self.grid_order, 'prior_crewid', IntToStr(order.prior_crewid));
-	add_row(self.grid_order, 'prior', da_net(order.prior));
+	add_row(self.grid_order, 'is_not_prior', da_net(order.is_not_prior()));
 	add_row(self.grid_order, 'state', order.state_as_string());
 	add_row(self.grid_order, 'source_time', order.source_time);
 

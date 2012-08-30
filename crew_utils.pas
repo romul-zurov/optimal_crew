@@ -209,7 +209,7 @@ begin
 	if sub2 = '' then
 		p2 := length(res) + 1
 	else
-		p2 := posex(sub2, res, p1);
+		p2 := posex(sub2, res, p1 + length(sub1));
 
 	if (p1 > 0) and (p2 > 0) then
 	begin
