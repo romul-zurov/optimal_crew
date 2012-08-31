@@ -130,6 +130,7 @@ type
 		function orders_time_to_end_count() : Integer;
 		function ret_orders_as_grid(prior_flag : boolean; var slist : TstringList) : Integer;
 		procedure set_sort_col(col : Integer);
+		function get_sort_col() : Integer;
 
 	private
 		sort_col : Integer;
@@ -175,6 +176,7 @@ type
 		function dist_way_as_string() : string;
 		function set_current_coord() : Integer;
 		function del_old_coords() : Integer;
+		function when_was_in_coord(coord : string) : string;
 		function was_in_coord(coord : string) : boolean;
 		function now_in_coord(coord : string) : boolean;
 		function is_moved() : boolean; // сместился более чем на...
@@ -740,6 +742,11 @@ var cc, s, sdt : string; //
 	int_flag : boolean;
 	order : TOrder;
 begin
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	result := length(self.when_was_in_coord(coord)) > 0;
+	exit();
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 	result := false;
 	int_flag := false;
 	sdt := replace_time(COORDS_NO_INT_BUF_SIZE, now());
@@ -780,6 +787,45 @@ begin
 		end;
 	end;
 	exit(false);
+end;
+
+function TCrew.when_was_in_coord(coord : string) : string;
+var cc, s, sdt : string; //
+	d : double;
+	i : Integer;
+	int_flag : boolean;
+	order : TOrder;
+begin
+	result := '';
+	int_flag := false;
+	sdt := replace_time(COORDS_NO_INT_BUF_SIZE, now());
+	if self.POrder <> nil then
+	begin
+		try
+			order := TOrder(self.POrder);
+		except
+			int_flag := false;
+		end;
+		if order <> nil then
+			try
+				int_flag := (order.int_stops.count > 0);
+			except
+				int_flag := false;
+			end;
+	end;
+
+	for i := 0 to (self.coords_full.count - 1) do
+	begin
+		s := get_substr(self.coords_full.Strings[i], '', '|');
+		if int_flag or (s < sdt) then
+		begin
+			cc := get_substr(self.coords_full.Strings[i], '|', '');
+			d := get_dist_from_coord(coord, cc);
+			if (d >= 0) and (d < CREW_RADIUS) then
+				exit(s);
+		end;
+	end;
+	exit('');
 end;
 
 function TCrew.is_moved : boolean;
@@ -2235,8 +2281,12 @@ begin
 					continue
 				else
 				begin
-					if crew.was_in_coord(adr.gps) then
-						adr.set_visited()
+					{
+					  if crew.was_in_coord(adr.gps) then
+					  adr.set_visited()
+					  }
+					if adr.is_visited(PCrew) then
+						pass()
 					else
 					begin // экипаж в точке не был, добавляем от нёё до конца
 						int_ok_flag := false;
@@ -2255,8 +2305,7 @@ begin
 
 		if int_ok_flag then
 		begin
-			gps := self.dest.gps;
-			if not crew.was_in_coord(gps) then // ещё не высадил
+			if not self.dest.is_visited(PCrew) then // ещё не высадил
 			begin
 				self.way_to_end.points.Add(Pointer(self.dest)); //
 				self.stops_time := 3; //
@@ -2264,7 +2313,29 @@ begin
 			end
 			else
 			begin
-				if crew.now_in_coord(gps) then
+				if self.count_int_stops > 0 then
+				begin
+					try
+						adr := TAdres(self.int_stops.Items[self.int_stops.count - 1]);
+					except
+						self.time_to_end := -1;
+						exit();
+					end;
+
+					if self.dest.when_visited() <= adr.when_visited() then
+					begin
+						// если АН посещён РАНЬШЕ последней пром. точки
+						// то это коллизия кольцевого маршрута
+						// где АН совпадает  АП или одной из пром. точек
+						// потому продолжаем просчёт
+						self.way_to_end.points.Add(Pointer(self.dest)); //
+						self.stops_time := 3; //
+						goto ras4et; // !!! выходим на расчёт!
+					end;
+					// иначе считаем заказ оконченным
+				end;
+
+				if crew.now_in_coord(self.dest.gps) then
 					// высаживает
 					self.time_to_end := 0
 				else
@@ -2275,6 +2346,31 @@ begin
 				exit();
 			end;
 		end;
+
+		{
+		  if int_ok_flag then
+		  begin
+		  gps := self.dest.gps;
+		  if not crew.was_in_coord(gps) then // ещё не высадил
+		  begin
+		  self.way_to_end.points.Add(Pointer(self.dest)); //
+		  self.stops_time := 3; //
+		  goto ras4et; // !!! выходим на расчёт!
+		  end
+		  else
+		  begin
+		  if crew.now_in_coord(gps) then
+		  // высаживает
+		  self.time_to_end := 0
+		  else
+		  // забрал-высадил
+		  self.time_to_end := ORDER_AN_OK;
+
+		  self.stops_time := 0;
+		  exit();
+		  end;
+		  end;
+		  }
 	end;
 
 ras4et :
@@ -2428,7 +2524,7 @@ begin
 				[ //
 			// ORDER_VODITEL_PODTVERDIL, // для тестовых целей
 				ORDER_PRINYAT, //
-			ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
+			// ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //не нужно, считаем что "потвердил"
 			ORDER_VODITEL_OTKAZALSYA //
 			// , ORDER_VODITEL_PRINYAL // не нужно, считаем что "потвердил"
 				]) //
@@ -3126,11 +3222,17 @@ begin
 	self.del_bad_orders();
 
 	// сортируем по времени подачи:
-	self.Orders.Sort(sort_orders_by_source_time);
+	// не нужно - есть сортировка по колонкам уже!!!!!!!!!!!!!!!!
+	// self.Orders.Sort(sort_orders_by_source_time);
 
 	FreeAndNil(sl);
 	FreeAndNil(res);
 	exit(0);
+end;
+
+function TOrderList.get_sort_col : Integer;
+begin
+	result := self.sort_col;
 end;
 
 function TOrderList.is_defined(OrderId : Integer) : boolean;
@@ -3215,14 +3317,8 @@ begin
 			or prior_flag <> order.is_prior() //
 			then
 			continue;
-		case self.sort_col of
-			0 :
-				sort_str := IntToStr(order.ID);
-		else
-			sort_str := order.source_time;
-		end;
-		s := sort_str + '|||'; // строка сортировки, отбрасывается при выводе
-		s := s + IntToStr(order.ID); // 0
+
+		s := IntToStr(order.ID); // 0
 		s := s + '|' + order.status(); // 1
 		s := s + '|' + order.time_to_end_as_string() // 2
 			+ ' (' + time_without_date(order.datetime_of_time_to_ap) //
@@ -3246,6 +3342,24 @@ begin
 		s := s + '|' + order.dest.get_as_color_string(); // 6
 		s := s + '|' + order.source_time_without_date(); // 7
 
+		case self.sort_col of
+			0 :
+				sort_str := IntToStr(order.ID);
+			1 :
+				sort_str := order.status();
+			3 :
+				sort_str := order.state_as_string();
+			4 :
+				sort_str := s_crew;
+			5 :
+				sort_str := order.source.get_as_string(); // 5
+			6 :
+				sort_str := order.dest.get_as_string(); // 6
+		else
+			sort_str := order.source_time; // по умолчанию сортируем по времени подачи
+		end;
+
+		s := sort_str + '|||' + s; // строка сортировки, отбрасывается при выводе
 		slist.Append(s); // !
 	end;
 

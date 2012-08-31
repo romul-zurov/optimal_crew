@@ -149,10 +149,11 @@ begin
 		with grid_crews do
 		begin
 			Width := form_main.GroupBox_crew.Width - 10;
-			ColCount := 3; // 4; // 5;
-			ColWidths[0] := 30; // 300;
-			ColWidths[1] := 240; // 60;
-			ColWidths[2] := 90;
+			ColCount := 4; // 5;
+			ColWidths[0] := 0; // 300;
+			ColWidths[1] := 30; // 300;
+			ColWidths[2] := 240; // 60;
+			ColWidths[3] := 90;
 		end;
 
 		grid_crews.RowCount := 0;
@@ -161,25 +162,17 @@ begin
 		for pp in list.Crews do
 		begin
 			crew := list.crew(pp);
-			// if crew.Time < 0 then
-			// Continue;
-
 			grid_crews.RowCount := r + 1;
-			grid_crews.Cells[0, r] := IntToStr(crew.CrewId); // + ' | ' + crew.name;
-			// grid_crews.Cells[0, r] := IntToStr(crew.CrewId);
-			// grid_crews.Cells[1, r] := IntToStr(crew.Time);
-			// grid_crews.Cells[1, r] := crew.Coord;
+			grid_crews.Cells[0, r] := IntToStr(crew.CrewId);
+			grid_crews.Cells[1, r] := crew.Code; // IntToStr(crew.CrewId);
 			if crew.coords_full.Count > 0 then
-				grid_crews.Cells[1, r] := crew.coords_full[crew.coords_full.Count - 1]
+				grid_crews.Cells[2, r] := crew.coords_full[crew.coords_full.Count - 1]
 			else
-				grid_crews.Cells[1, r] := '';
-			grid_crews.Cells[2, r] := crew.state_as_string();
-			// grid_crews.Cells[3, r] := FloatToStrF(crew.dist / 1000.0, ffFixed, 8, 3);
-			// grid_crews.Cells[4, r] := crew.time_as_string;
+				grid_crews.Cells[2, r] := '';
+			grid_crews.Cells[3, r] := crew.state_as_string();
 			inc(r);
 		end;
 	end;
-	// show_status(list.meausure_time);
 end;
 
 procedure Tform_main.show_sorted_orders(prior_flag : boolean);
@@ -266,8 +259,13 @@ begin
 		s := get_substr(s, '|||', ''); // отбросим сорт-элемент
 		string_to_stringlist(s, res);
 		// grid.Rows[r+1].Assign(res);
+
+		// заполняем:
 		for i := 0 to res.Count - 1 do
-			grid.Cells[i, r + 1] := res.Strings[i];
+			// уменьшаем "моргание", т.е. выводим только изменившиеся данные
+			if redraw_flag or (grid.Cells[i, r + 1] <> res.Strings[i]) then
+				grid.Cells[i, r + 1] := res.Strings[i];
+
 		if redraw_flag then
 		begin
 			// if grid = self.grid_order_current then
@@ -283,7 +281,7 @@ begin
 					with order.button_send_to_robocab do
 					begin
 						BoundsRect := grid.CellRect(8, r + 1);
-						Caption := IntToStr(order.id);
+						Caption := 'Передать'; // IntToStr(order.id);
 						Enabled := true;
 						Visible := true;
 					end;
@@ -359,6 +357,8 @@ procedure Tform_main.redraw_grid_shapka;
 			Cells[7, 0] := 'Время подачи';
 			Cells[8, 0] := 'Robocab';
 
+			Cells[order_list.get_sort_col(), 0] := Cells[order_list.get_sort_col(), 0] + '*';
+
 			ColWidths[0] := ifthen(self.cb_show_orders_id.Checked, 50, 0);
 			ColWidths[1] := 240; // 160;
 			ColWidths[2] := ifthen(self.cb_show_times_to_end.Checked, 300, 0);
@@ -369,7 +369,7 @@ procedure Tform_main.redraw_grid_shapka;
 
 			w := ( //
 				Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] //
-					- ColWidths[4] - ColWidths[7] - ColWidths[8] - 32 //
+					- ColWidths[4] - ColWidths[7] - ColWidths[8] - 28 //
 				) //
 				div 2; // 210
 			ColWidths[5] := ifthen(w > 160, w, 160);
@@ -378,6 +378,8 @@ procedure Tform_main.redraw_grid_shapka;
 	end;
 
 begin
+	if order_list = nil then
+		exit(); // на случай, если form.close --> form.resize :-/
 	shapka(self.grid_order_current);
 	shapka(self.grid_order_prior);
 end;
@@ -826,12 +828,33 @@ end;
 
 procedure Tform_main.grid_order_currentMouseDown(Sender : TObject; Button : TMouseButton;
 	Shift : TShiftState; X, Y : Integer);
+var grid : TStringGrid;
+	co, ro : Integer;
 begin
+	if (Sender = grid_order_current) then
+		grid := grid_order_current
+	else
+		grid := grid_order_prior;
+
+	grid.MouseToCell(X, Y, co, ro);
 	if Button = mbRight then
-		if Sender = grid_order_current then
-			show_order(grid_order_current)
-		else
-			show_order(grid_order_prior);
+	begin
+		if ro > 0 then
+		begin
+			grid.Col := co;
+			grid.row := ro;
+			show_order(grid);
+		end;
+	end
+	else
+		if Button = mbLeft then
+		begin
+			if ro = 0 then
+			begin
+				order_list.set_sort_col(co);
+				self.redraw_grid_shapka();
+			end;
+		end;
 end;
 
 procedure Tform_main.grid_order_priorDblClick(Sender : TObject);
@@ -879,6 +902,7 @@ var pp : Pointer;
 	sord_id, prior_stime, s_crew : string;
 
 begin
+	// !!!!!!!!!!!!!!!! не используется. см. form_main.show_sorted_orders(); !!!!!!
 	with form_main do
 	begin
 		with grid_order do

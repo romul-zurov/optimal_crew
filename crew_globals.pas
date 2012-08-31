@@ -76,7 +76,7 @@ const ORDER_AP_OK = -128; // экипаж был в АП и уехал (забрал клиента)
 const ORDER_AN_OK = -192; // экипаж был в адресе назначения и уехал (высадил клиента)
 
 	// размер буфера координат экипажа
-const COORDS_BUF_SIZE = '{Last_minute_20}';//'{Last_hour_2}';// '{Last_minute_20}';//
+const COORDS_BUF_SIZE = '{Last_hour_2}'; // '{Last_minute_20}';//
 
 const COORDS_NO_INT_BUF_SIZE = '{Last_minute_20}'; // для заказов без пром. ост.
 	// берём меньше, чтобы не было туда-сюда
@@ -129,11 +129,14 @@ type
 		procedure get_gps();
 		procedure get_gps_unlim();
 		function gps_ok() : boolean;
+		function is_visited(pcrew : pointer) : boolean;
+		function when_visited() : string; // время посещения
 		function was_visited() : boolean;
 		function was_not_visited() : boolean;
 		procedure set_visited();
 	private
 		visited : boolean; // флаг был ли адрес "посещён" экипажем
+		time_visited : string; // время посещения
 		function s_color() : string; // цвет для некорректных адресов
 		procedure def_gps(count_flag : boolean);
 		procedure gps_complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
@@ -187,11 +190,11 @@ var
 	PHP_Url : string;
 	order_states : Tstringlist;
 	crew_states : Tstringlist;
-	PGlobalStatusBar : Pointer;
+	PGlobalStatusBar : pointer;
 	// browser_form : Tform;
 	browser_panel : TPanel;
 	GetZaprosCounter : Int64;
-	PMainCrewList : Pointer;
+	PMainCrewList : pointer;
 	// CoordsInterval : Int64;
 
 
@@ -201,6 +204,8 @@ var
 	// main_ibquery : TIBQuery;
 
 implementation
+
+uses crew;
 
 type
 	TIEProgressEvent2 = procedure(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
@@ -588,6 +593,7 @@ begin
 	self.gps := '';
 	self.raw_adres := '';
 	self.visited := false;
+	self.time_visited := '';
 end;
 
 constructor TAdres.Create(street, house, korpus, gps : string);
@@ -602,6 +608,7 @@ begin
 	self.zapros := TZapros.Create();
 	self.zapros.browser.OnNavigateComplete2 := self.gps_complete;
 	self.visited := false;
+	self.time_visited := '';
 end;
 
 procedure TAdres.def_gps(count_flag : boolean);
@@ -691,6 +698,21 @@ begin
 		exit(true);
 end;
 
+function TAdres.is_visited(pcrew : pointer) : boolean;
+var when : string;
+begin
+	if (pcrew = nil) or (self.gps = '') then
+		exit(false);
+	try
+		when := TCrew(pcrew).when_was_in_coord(self.gps);
+	except
+		exit(false);
+	end;
+	result := length(when) > 0;
+	self.time_visited := when;
+	self.visited := result;
+end;
+
 procedure TAdres.setAdres(street, house, korpus, gps : string);
 begin
 	self.street := street;
@@ -758,6 +780,11 @@ end;
 function TAdres.was_visited : boolean;
 begin
 	result := self.visited;
+end;
+
+function TAdres.when_visited : string;
+begin
+	result := self.time_visited;
 end;
 
 procedure show_status(status : string);

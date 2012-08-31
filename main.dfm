@@ -240,7 +240,7 @@ object form_main: Tform_main
         Width = 545
         Height = 153
         Align = alClient
-        Caption = #1047#1072#1082#1072#1079#1099': '#1041#1059#1060#1045#1056' '#1080' Timer_Orders!!!'
+        Caption = #1047#1072#1082#1072#1079#1099':'
         TabOrder = 0
         OnDblClick = GroupBox_orderDblClick
         object PageControl_orders: TPageControl
@@ -251,6 +251,7 @@ object form_main: Tform_main
           ActivePage = TabSheet_current
           Align = alClient
           TabOrder = 0
+          OnChange = FormResize
           object TabSheet_current: TTabSheet
             Caption = #1058#1077#1082#1091#1097#1080#1077':'
             object grid_order_current: TStringGrid
@@ -271,13 +272,13 @@ object form_main: Tform_main
               Font.Height = -11
               Font.Name = 'Tahoma'
               Font.Style = [fsBold]
+              Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRowSelect, goFixedColClick, goFixedRowClick]
               ParentCtl3D = False
               ParentFont = False
               TabOrder = 0
               OnDblClick = grid_order_currentDblClick
               OnDrawCell = grid_order_currentDrawCell
               OnMouseDown = grid_order_currentMouseDown
-              ExplicitTop = 7
             end
           end
           object TabSheet_prior: TTabSheet
@@ -438,7 +439,7 @@ object form_main: Tform_main
   end
   object Timer_main: TTimer
     Enabled = False
-    Interval = 500
+    Interval = 333
     OnTimer = Timer_mainTimer
     Left = 472
     Top = 56

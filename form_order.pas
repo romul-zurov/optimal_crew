@@ -401,7 +401,7 @@ begin
 		RowCount := 1;
 		rows[0].Clear();
 		ColCount := 2;
-		ColWidths[0] := 300;
+		ColWidths[0] := 500;
 		ColWidths[1] := Width - ColWidths[0] - 20;
 	end;
 	add_row(self.grid_order, 'ID', IntToStr(order.ID));
@@ -416,10 +416,10 @@ begin
 	add_row(self.grid_order, 'int_stops', order.raw_int_stops);
 	add_row(self.grid_order, 'dest', order.dest.get_as_string());
 
-	if order.PCrew <> nil then
+	if order.CrewID > 0 then
 	begin
 		try
-			crew := TCRew(order.PCrew);
+			crew := TCrewList(PMainCrewList).crewByCrewId(order.CrewID);
 			cr_coo := crew.coord;
 		except
 			cr_coo := '';
@@ -435,13 +435,22 @@ begin
 			add_row( //
 				self.grid_order, //
 				'int_stop[' + IntToStr(i) + '] (' //
-					+ TAdres(order.int_stops.Items[i]).raw_adres + ')', //
+					+ TAdres(order.int_stops.Items[i]).raw_adres //
+					+ ')' //
+					+ '<' + TAdres(order.int_stops.Items[i]).when_visited() + '>' //
+					, //
 				TAdres(order.int_stops.Items[i]).gps //
 				);
 		except
 			continue;
 		end;
-	add_row(self.grid_order, 'dest.gps', order.dest.gps);
+	add_row( //
+		self.grid_order, //
+		'dest.gps' //
+			+ '<' + order.dest.when_visited() + '>' //
+			, //
+		order.dest.gps //
+		);
 
 	add_row(self.grid_order, 'stops_time', IntToStr(order.stops_time));
 	add_row(self.grid_order, 'time_to_end', IntToStr(order.time_to_end));
