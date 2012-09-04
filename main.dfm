@@ -272,7 +272,7 @@ object form_main: Tform_main
               Font.Height = -11
               Font.Name = 'Tahoma'
               Font.Style = [fsBold]
-              Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRowSelect, goFixedColClick, goFixedRowClick]
+              Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goFixedColClick, goFixedRowClick]
               ParentCtl3D = False
               ParentFont = False
               TabOrder = 0
@@ -302,6 +302,7 @@ object form_main: Tform_main
               Font.Height = -11
               Font.Name = 'Tahoma'
               Font.Style = [fsBold]
+              Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goFixedColClick, goFixedRowClick]
               ParentCtl3D = False
               ParentFont = False
               TabOrder = 0

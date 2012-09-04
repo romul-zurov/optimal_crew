@@ -281,7 +281,10 @@ begin
 					with order.button_send_to_robocab do
 					begin
 						BoundsRect := grid.CellRect(8, r + 1);
-						Caption := 'Передать'; // IntToStr(order.id);
+						// Caption := 'Передать'; // IntToStr(order.id);
+						Caption := IfThen( //
+							self.cb_show_orders_id.Checked, IntToStr(order.id), //
+							'Robocab.ru');
 						Enabled := true;
 						Visible := true;
 					end;
@@ -355,24 +358,24 @@ procedure Tform_main.redraw_grid_shapka;
 			Cells[5, 0] := 'Адрес подачи';
 			Cells[6, 0] := 'Адрес назначения';
 			Cells[7, 0] := 'Время подачи';
-			Cells[8, 0] := 'Robocab';
+			Cells[8, 0] := 'Robocab.ru';
 
 			Cells[order_list.get_sort_col(), 0] := Cells[order_list.get_sort_col(), 0] + '*';
 
-			ColWidths[0] := ifthen(self.cb_show_orders_id.Checked, 50, 0);
+			ColWidths[0] := IfThen(self.cb_show_orders_id.Checked, 50, 0);
 			ColWidths[1] := 240; // 160;
-			ColWidths[2] := ifthen(self.cb_show_times_to_end.Checked, 300, 0);
+			ColWidths[2] := IfThen(self.cb_show_times_to_end.Checked, 300, 0);
 			ColWidths[3] := 180; // 260; // 80;
 			ColWidths[4] := 260; // 128; // 80;
 			ColWidths[7] := 88;
-			ColWidths[8] := 64;
+			ColWidths[8] := 72;
 
 			w := ( //
 				Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] //
 					- ColWidths[4] - ColWidths[7] - ColWidths[8] - 28 //
 				) //
 				div 2; // 210
-			ColWidths[5] := ifthen(w > 160, w, 160);
+			ColWidths[5] := IfThen(w > 160, w, 160);
 			ColWidths[6] := ColWidths[5];
 		end;
 	end;
@@ -392,13 +395,11 @@ label quit;
 	procedure get_cars();
 	begin
 		// автоподбор экипажа, если нужно
-		if order.need_get_cars() then
-		begin
-			try
-				order.get_cars_times_for_ap();
-			except
-				pass();
-			end;
+		// if order.need_get_cars() then // - не нужно, проверка унутре
+		try
+			order.get_cars_times_for_ap();
+		except
+			pass();
 		end;
 	end;
 
@@ -808,7 +809,7 @@ begin
 							sub := '%';
 						end
 						else
-							Canvas.Brush.color := ifthen(ACol in [1, 2], $00FF00, $FFFFFF);
+							Canvas.Brush.color := IfThen(ACol in [1, 2], $00FF00, $FFFFFF);
 
 			Canvas.FillRect(Rect);
 			Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], sub, ''));
@@ -922,9 +923,9 @@ begin
 			Cells[7, 0] := 'Время подачи';
 			Cells[8, 0] := 'Robocab';
 
-			ColWidths[0] := ifthen(self.cb_show_orders_id.Checked, 50, 0);
+			ColWidths[0] := IfThen(self.cb_show_orders_id.Checked, 50, 0);
 			ColWidths[1] := 240; // 160;
-			ColWidths[2] := ifthen(self.cb_show_times_to_end.Checked, 300, 0);
+			ColWidths[2] := IfThen(self.cb_show_times_to_end.Checked, 300, 0);
 			ColWidths[3] := 180; // 260; // 80;
 			ColWidths[4] := 260; // 128; // 80;
 			ColWidths[7] := 88;
@@ -935,7 +936,7 @@ begin
 					- ColWidths[4] - ColWidths[7] - ColWidths[8] - 32 //
 				) //
 				div 2; // 210
-			ColWidths[5] := ifthen(adr_w > 160, adr_w, 160);
+			ColWidths[5] := IfThen(adr_w > 160, adr_w, 160);
 			ColWidths[6] := ColWidths[5];
 		end;
 
@@ -987,7 +988,7 @@ begin
 
 			grid_order.Cells[3, row] := order.state_as_string() //
 			// отмечаем заказы с пром. остановками
-				+ ifthen(order.count_int_stops > 0, '~', '');
+				+ IfThen(order.count_int_stops > 0, '~', '');
 
 			if order.CrewId > 0 then
 			begin
