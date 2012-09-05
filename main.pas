@@ -77,8 +77,7 @@ type
 		procedure grid_order_currentMouseDown(Sender : TObject; Button : TMouseButton; Shift : TShiftState;
 			X, Y : Integer);
 
-		procedure FormResize(Sender : TObject);
-	private
+		procedure FormResize(Sender : TObject);	private
 		{ Private declarations }
 		flag_get_coords : boolean;
 		flag_get_orders : boolean;
@@ -831,6 +830,8 @@ procedure Tform_main.grid_order_currentMouseDown(Sender : TObject; Button : TMou
 	Shift : TShiftState; X, Y : Integer);
 var grid : TStringGrid;
 	co, ro : Integer;
+	order : TOrder;
+	pord : Pointer;
 begin
 	if (Sender = grid_order_current) then
 		grid := grid_order_current
@@ -854,7 +855,7 @@ begin
 			begin
 				order_list.set_sort_col(co);
 				self.redraw_grid_shapka();
-			end;
+			end
 		end;
 end;
 

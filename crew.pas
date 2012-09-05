@@ -7,7 +7,7 @@ uses crew_utils, // utils from robocap and mine
 	Generics.Collections, // for forward class definition
 	Controls, Forms, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX, //
 	IBQuery, DB, WinInet, StrUtils, DateUtils, ExtCtrls, StdCtrls, Grids, //
-	Types, Graphics;
+	Types, Graphics, Dialogs;
 
 function sort_cars_by_dist(p1, p2 : Pointer) : Integer;
 function sort_crews_by_state_dist(p1, p2 : Pointer) : Integer;
@@ -109,6 +109,11 @@ type
 		procedure cars_grid_DrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
 			state : TGridDrawState);
 		procedure hide_cars_by_hand(Sender : TObject);
+		procedure clear_cars();
+		procedure click_send_to_robocab(Sender : TObject; Button : TMouseButton; Shift : TShiftState;
+			X, Y : Integer);
+		function send_to_robocab() : Integer;
+
 	end;
 
 	TOrderList = class(TObject)
@@ -286,8 +291,10 @@ function sort_crews_by_crewid(p1, p2 : Pointer) : Integer;
 var id1, id2 : Integer;
 	c1, c2 : TCrew;
 begin
-	c1 := TCrew(p1); c2 := TCrew(p2);
-	id1 := c1.CrewID; id2 := c2.CrewID;
+	c1 := TCrew(p1);
+	c2 := TCrew(p2);
+	id1 := c1.CrewID;
+	id2 := c2.CrewID;
 	if (id1 < id2) then
 		exit(-1)
 	else
@@ -302,9 +309,12 @@ var t1, t2 : Integer;
 	d1, d2 : double;
 	c1, c2 : TCrew;
 begin
-	c1 := TCrew(p1); c2 := TCrew(p2);
-	t1 := c1.time; t2 := c2.time;
-	d1 := c1.dist_way; d2 := c2.dist_way;
+	c1 := TCrew(p1);
+	c2 := TCrew(p2);
+	t1 := c1.time;
+	t2 := c2.time;
+	d1 := c1.dist_way;
+	d2 := c2.dist_way;
 	if (t1 < t2) then
 		exit(-1)
 	else
@@ -325,8 +335,10 @@ var s1, s2 : Integer;
 	d1, d2 : double;
 	c1, c2 : TCrew;
 begin
-	c1 := TCrew(p1); c2 := TCrew(p2);
-	d1 := c1.dist; d2 := c2.dist;
+	c1 := TCrew(p1);
+	c2 := TCrew(p2);
+	d1 := c1.dist;
+	d2 := c2.dist;
 	{
 	  // состояние не учитываем нафиг
 	  s1 := c1.state; s2 := c2.state;
@@ -1134,7 +1146,8 @@ end;
 function TCrewList.Append(GpsId : Integer) : Pointer;
 var i : Integer;
 begin
-	i := self.Crews.Add(TCrew.Create(GpsId)); result := Pointer(self.Crews[i]);
+	i := self.Crews.Add(TCrew.Create(GpsId));
+	result := Pointer(self.Crews[i]);
 end;
 
 function TCrewList.clear_crew_list : Integer;
@@ -1218,7 +1231,9 @@ var i : Integer;
 begin
 	for i := self.Crews.count - 1 downto 0 do
 		TCrew(self.Crews.Items[i]).Free();
-	FreeAndNil(self.sql_crews_stringlist); FreeAndNil(self.tmp_slist); inherited;
+	FreeAndNil(self.sql_crews_stringlist);
+	FreeAndNil(self.tmp_slist);
+	inherited;
 end;
 
 function TCrewList.findByCrewId(ID : Integer) : Pointer;
@@ -1270,15 +1285,21 @@ function TCrewList.get_crews_coords() : Integer;
 		ID := StrToInt(fields[0].AsString);
 		if ID > self.coords_last_id then // !
 			self.coords_last_id := ID;
-		date1 := fields[1].AsDateTime; date2 := fields[2].AsDateTime;
-		field := fields[3]; l := field.DataSize; setlength(b, l); b := field.AsBytes;
+		date1 := fields[1].AsDateTime;
+		date2 := fields[2].AsDateTime;
+		field := fields[3];
+		l := field.DataSize;
+		setlength(b, l);
+		b := field.AsBytes;
 		// создаём условную дельту по времени для координат
 		date0 := (date2 - date1) / (l div 12);
 
 		j := 0;
 		while j < l do
 		begin
-			pint := @b[j]; plat := @b[j + 8]; plong := @b[j + 4];
+			pint := @b[j];
+			plat := @b[j + 8];
+			plong := @b[j + 4];
 			GpsId := pint^;
 			if GpsId > 0 then
 			begin
@@ -1454,7 +1475,8 @@ begin
 			s := s + ',' + IntToStr(self.crew(pp).GpsId)
 		else
 			s := s + ',' + IntToStr(self.crew(pp).CrewID);
-	Delete(s, 1, 1); result := s;
+	Delete(s, 1, 1);
+	result := s;
 end;
 
 function TCrewList.get_nonfree_crewid_list_as_string() : string;
@@ -1531,7 +1553,8 @@ begin
 				+ crew.name + '||' //
 				+ crew.state_as_string + '|||' //
 				+ crew.time_as_string + '||||' //
-				+ crew.dist_way_as_string; result.Append(s);
+				+ crew.dist_way_as_string;
+			result.Append(s);
 		end;
 	end;
 
@@ -1539,8 +1562,11 @@ end;
 
 function TCrewList.set_ap(street, house, korpus, gps : string) : Integer;
 begin
-	self.ap_street := street; self.ap_house := house; self.ap_korpus := korpus;
-	self.ap_gps := gps; exit(0);
+	self.ap_street := street;
+	self.ap_house := house;
+	self.ap_korpus := korpus;
+	self.ap_gps := gps;
+	exit(0);
 end;
 
 function TCrewList.set_crewId_by_gpsId(var List : TstringList) : Integer;
@@ -1551,13 +1577,18 @@ begin
 	// sl.Delimiter := '|';
 	for s in List do
 	begin
-		sl.Clear(); sl.Text := StringReplace(s, '|', #13#10, [rfReplaceAll]);
+		sl.Clear();
+		sl.Text := StringReplace(s, '|', #13#10, [rfReplaceAll]);
 
 		crew := self.crewByGpsId(StrToInt(sl.Strings[0]));
 
-		crew.CrewID := StrToInt(sl.Strings[1]); crew.Code := sl.Strings[2]; crew.name := sl.Strings[3];
+		crew.CrewID := StrToInt(sl.Strings[1]);
+		crew.Code := sl.Strings[2];
+		crew.name := sl.Strings[3];
 		crew.state := StrToInt(sl.Strings[4]);
-	end; FreeAndNil(sl); exit(0);
+	end;
+	FreeAndNil(sl);
+	exit(0);
 end;
 
 function TCrewList.set_crews_data() : Integer;
@@ -1659,7 +1690,8 @@ var s, sid, sstate : string; crew : TCrew;
 begin
 	for s in List do
 	begin
-		sid := get_substr(s, '', '|'); sstate := get_substr(s, '|', '');
+		sid := get_substr(s, '', '|');
+		sstate := get_substr(s, '|', '');
 		crew := self.crewByCrewId(StrToInt(sid));
 		if crew.state = -1 then
 			crew.state := StrToInt(sstate);
@@ -1725,19 +1757,6 @@ begin
 	begin
 		// иначе сортируем по расстоянию по прямой до ап
 		self.Cars.Sort(sort_cars_by_dist);
-		(*
-		  // заполняем пустые res_data
-		  for i := self.Cars.count - 1 downto 0 do
-		  begin
-		  try
-		  car := TCar(self.Cars.Items[i]);
-		  if car.res_data = '' then
-		  car.res_data := TCrew(car.PCrew).ret_data_to_ap(self.source_time, self.raw_dist_way);
-		  except
-		  continue;
-		  end;
-		  end;
-		  *)
 		exit(1);
 	end;
 end;
@@ -1834,6 +1853,29 @@ begin
 	end;
 end;
 
+procedure TOrder.clear_cars;
+var pp : Pointer;
+begin
+	for pp in self.Cars do
+		TCar(pp).res_data := '';
+end;
+
+procedure TOrder.click_send_to_robocab(Sender : TObject; Button : TMouseButton; Shift : TShiftState;
+	X, Y : Integer);
+var but : Integer;
+	mes : string;
+begin
+	if Button <> mbLeft then
+		exit();
+	mes := 'Отправить заказ ' //
+		+ ifthen(form_main.cb_show_orders_id.Checked, IntToStr(self.ID) + ' ', '') //
+		+ self.source.get_as_string() + ' -- > ' + self.dest.get_as_string() //
+		+ ' в Robocab.ru?';
+	but := MessageDlg(mes, mtConfirmation, mbOKCancel, 0);
+	if but = mrOk then
+		self.send_to_robocab();
+end;
+
 constructor TOrder.Create(OrderId : Integer; var IBQuery : TIBQuery);
 begin
 	inherited Create();
@@ -1879,12 +1921,13 @@ begin
 	self.timer_cars.Enabled := false;
 	self.timer_cars.Interval := 100;
 
-	self.button_send_to_robocab := TButton.Create(form_main);
+	self.button_send_to_robocab := TButton.Create(form_main.grid_order_current);
 	with self.button_send_to_robocab do
 	begin
 		Parent := form_main.grid_order_current;
-		Left := -500;
+		// Left := -500;
 		Caption := 'Передать';
+		OnMouseUp := self.click_send_to_robocab;
 	end;
 
 	self.del_order();
@@ -2076,7 +2119,8 @@ begin
 
 	if (self.destroy_flag) then // заказ отмечен на удаление, выходим нафиг
 	begin
-		self.time_to_end := -1; exit();
+		self.time_to_end := -1;
+		exit();
 	end;
 
 	if self.state in [ORDER_DONE, ORDER_VODITEL_VYPOLNIL_ZAKAZ] then
@@ -2445,6 +2489,12 @@ end;
 
 function TOrder.get_cars_for_ap : Integer;
 begin
+	if not self.source.gps_ok() then
+	begin
+		self.source.get_gps_unlim();
+		exit(-1);
+	end;
+
 	if PMainCrewList = nil then
 		exit(-1);
 	try
@@ -2462,10 +2512,9 @@ begin
 	if not self.need_get_cars() then
 	// расчёт непотребен
 	begin
-		if self.Cars_StringList.count > 0 then
-			// стираем результаты на всякий, чтобы потом устаревшие не открылись
-			// при повторном подборе
-			self.Cars_StringList.Clear();
+		// стираем результаты на всякий, чтобы потом устаревшие не открылись
+		// при повторном подборе
+		self.clear_cars();
 		exit(-1);
 	end;
 
@@ -2503,6 +2552,7 @@ end;
 procedure TOrder.hide_cars_by_hand(Sender : TObject);
 begin
 	self.hand_get_cars_flag := false;
+	self.clear_cars();
 end;
 
 function TOrder.is_bad : boolean;
@@ -2578,6 +2628,11 @@ begin
 	end;
 end;
 
+function TOrder.send_to_robocab : Integer;
+begin
+	showmessage('Исполнено!');
+end;
+
 procedure TOrder.set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 begin
 	self.way_to_ap.set_way_time_dist(ASender, pDisp, url);
@@ -2610,8 +2665,11 @@ begin
 end;
 
 procedure TOrder.show_cars;
-var r, i_ctrl, i_col, j, rr : Integer; pcar : Pointer; car : TCar;
-	crew : TCrew; s : string;
+var r, i_ctrl, i_col, j, rr : Integer;
+	pcar : Pointer;
+	car : TCar;
+	crew : TCrew;
+	s : string;
 begin
 	if //
 		self.need_get_cars() then
@@ -2626,35 +2684,50 @@ begin
 	begin
 		if self.cars_gbox_visible then
 			self.cars_gbox.Width := 0;
-		if self.Cars_StringList.count > 0 then
-			// стираем результаты на всякий, чтобы потом устаревшие не открылись
-			// при повторном подборе
-			self.Cars_StringList.Clear();
+		self.clear_cars();
 		exit();
 	end;
 
 	// выводим заголовок
-	self.cars_gbox.Caption := //
-		ifthen(form_main.cb_show_orders_id.Checked, IntToStr(self.ID) + ' ', '') //
-		+ self.source.raw_adres + ' --> ' + self.dest.raw_adres;
+	self.cars_gbox.Caption := self.source.raw_adres + ' --> ' + self.dest.raw_adres;
+
+	if form_main.cb_show_orders_id.Checked then
+		with self.cars_gbox do
+			Caption := IntToStr(self.ID) + ' ' // ID заказа
+				+ ' (' //
+				+ IntToStr(self.Cars.count) // кол-во экипажей в просчёте
+				+ '/' //
+				+ IntToStr(self.Cars_StringList.count) // кол-во просчитанных
+				+ ')' //
+				+ Caption //
+				;
 
 	with self.cars_grid do
 	begin
-		RowCount := 2; ColCount := 7; FixedRows := 1;
+		RowCount := 2;
+		ColCount := 7;
+		FixedRows := 1;
 
-		Cells[0, 0] := 'По прямой'; Cells[1, 0] := 'Экипаж'; Cells[2, 0] := 'Состояние';
-		Cells[3, 0] := 'Время подачи'; Cells[4, 0] := 'Расстояние'; Cells[5, 0] := 'Расход';
+		Cells[0, 0] := 'По прямой';
+		Cells[1, 0] := 'Экипаж';
+		Cells[2, 0] := 'Состояние';
+		Cells[3, 0] := 'Время подачи';
+		Cells[4, 0] := 'Расстояние';
+		Cells[5, 0] := 'Расход';
 		Cells[6, 0] := 'Линия';
 
-		ColWidths[0] := 0; // 64; // ifthen(self.cb_debug.Checked, 128, 64); // 64; // 50; // прячем :)
-		// ColWidths[1] := 200;
-		ColWidths[2] := 70; ColWidths[3] := 200; ColWidths[4] := 80; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
+		ColWidths[0] := 64; // ifthen(self.cb_debug.Checked, 128, 64); // 64; // 50; // прячем :)
+		ColWidths[1] := 50;
+		ColWidths[2] := 70;
+		ColWidths[3] := 200;
+		ColWidths[4] := 80; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
 		ColWidths[5] := 0; // ifthen(self.cb_debug.Checked, 80, 0);
-		ColWidths[6] := 40; ColWidths[1] := 50; // Width - 24 - ColWidths[0] - ColWidths[2] //
-		// - ColWidths[3] - ColWidths[4] - ColWidths[5] - ColWidths[6];
+		ColWidths[6] := 40;
 
-		// rows[1].Clear();
-	end; r := 1; self.refresh_cars_stringlist();
+		rows[1].Clear();
+	end;
+	r := 1;
+	self.refresh_cars_stringlist();
 	// for s in self.Cars_StringList do
 	for rr := 0 to self.Cars_StringList.count - 1 do
 	begin
@@ -2776,7 +2849,8 @@ begin
 							ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
 							then
 						begin
-							cur_dt := now(); prib_dt := IncMinute(cur_dt, self.time_to_ap);
+							cur_dt := now();
+							prib_dt := IncMinute(cur_dt, self.time_to_ap);
 							ap_dt := source_time_to_datetime(self.source_time);
 							// насколько опаздываем/раньше
 							opozdanie := MinutesBetween(prib_dt, ap_dt);
@@ -2851,24 +2925,29 @@ begin
 		result := self.ret_free_order();
 		if result = nil then
 		begin
-			i := self.Orders.Add(TOrder.Create(OrderId, self.query)); result := Pointer(self.Orders[i]);
+			i := self.Orders.Add(TOrder.Create(OrderId, self.query));
+			result := Pointer(self.Orders[i]);
 		end
 		else
 		begin
-			TOrder(result).ID := OrderId; exit(result);
+			TOrder(result).ID := OrderId;
+			exit(result);
 		end;
 	end;
 end;
 
 function TOrderList.clear_order_list : Integer;
 begin
-	self.Orders.Clear(); exit(0);
+	self.Orders.Clear();
+	exit(0);
 end;
 
 constructor TOrderList.Create(var IBQuery : TIBQuery);
 begin
 	inherited Create;
-	self.Orders := TList.Create(); self.query := IBQuery; self.sort_col := 7;
+	self.Orders := TList.Create();
+	self.query := IBQuery;
+	self.sort_col := 7;
 	// по умолчанию сортировка по дате
 end;
 
@@ -2876,7 +2955,8 @@ function TOrderList.del_bad_orders : Integer;
 var pp : Pointer; order : TOrder; i : Integer;
 	s_now, s_past : string; cur_t : TDateTime;
 begin
-	cur_t := now(); s_now := date_to_full(cur_t);
+	cur_t := now();
+	s_now := date_to_full(cur_t);
 	s_past := replace_time(ORDER_DESTROY_TIME, cur_t);
 
 	for i := self.Orders.count - 1 downto 0 do
@@ -2901,14 +2981,17 @@ begin
 			end
 			else
 			begin
-				order.destroy_flag := true; order.destroy_time := s_now;
+				order.destroy_flag := true;
+				order.destroy_time := s_now;
 			end;
 		end
 		else
 		begin
-			order.destroy_flag := false; order.destroy_time := '';
+			order.destroy_flag := false;
+			order.destroy_time := '';
 		end;
-	end; exit(0);
+	end;
+	exit(0);
 end;
 
 function TOrderList.del_order(ListIndex : Integer) : Integer;
@@ -2972,12 +3055,20 @@ var sel, s, h, k, ss, sraw : string; res : TstringList;
 		// cou := fields.Count;
 		// sid := fields[0].AsString;
 		// sordid := fields[1].AsString;
-		field := fields[0]; l := field.DataSize; setlength(b, l); b := field.AsBytes; j := 2;
+		field := fields[0];
+		l := field.DataSize;
+		setlength(b, l);
+		b := field.AsBytes;
+		j := 2;
 		while j < l do
 		begin
-			plat := @b[j]; plong := @b[j + 4]; slat := float_to_dotstr_2_6(plat^);
-			slong := float_to_dotstr_2_6(plong^); scoords := slat + ',' + slong + '|'; //
-			result := result + scoords; j := j + 9;
+			plat := @b[j];
+			plong := @b[j + 4];
+			slat := float_to_dotstr_2_6(plat^);
+			slong := float_to_dotstr_2_6(plong^);
+			scoords := slat + ',' + slong + '|'; //
+			result := result + scoords;
+			j := j + 9;
 		end;
 		if length(result) > 0 then
 			if result[length(result)] = '|' then
@@ -2997,7 +3088,9 @@ begin
 		+ ' ORDER_COORDS.ORDER_ID in ( ' + self.orders_id_as_string() + ' ) ' //
 		;
 
-	self.query.Close(); self.query.SQL.Clear(); self.query.SQL.Add(sel);
+	self.query.Close();
+	self.query.SQL.Clear();
+	self.query.SQL.Add(sel);
 	try
 		self.query.Open();
 	except
@@ -3027,7 +3120,8 @@ begin
 				if order.int_stops.count <> (res.count - 2) then
 				// если не соотв., то заполняем
 				begin
-					ss := order.raw_int_stops; order.int_stops.Clear();
+					ss := order.raw_int_stops;
+					order.int_stops.Clear();
 					for jj := 1 to res.count - 2 do
 					begin
 						tt := order.int_stops.Add(Pointer(TAdres.Create('', '', '', '')));
@@ -3070,7 +3164,8 @@ begin
 	cur_time := now(); //
 	sdate_from := '''' + replace_time('{Last_day_1}', cur_time) + ''''; //
 	sdate_to := '''' + replace_time('{Last_day_-1}', cur_time) + ''''; //
-	res := TstringList.Create(); sl := TstringList.Create();
+	res := TstringList.Create();
+	sl := TstringList.Create();
 
 	// запрашиваем ID новых заказов
 	sel := 'select ' //
@@ -3129,7 +3224,8 @@ begin
 
 	for s in sl do
 	begin
-		ord_id := -1; pord := nil;
+		ord_id := -1;
+		pord := nil;
 
 		string_to_stringlist(s, res);
 
@@ -3167,8 +3263,11 @@ begin
 			if order.CrewID > -1 then
 			begin
 				// снимаем экипаж с заказа
-				order.time_to_end := -1; order.time_to_ap := -1; order.PCrew := nil;
-			end; order.CrewID := -1; // !!!
+				order.time_to_end := -1;
+				order.time_to_ap := -1;
+				order.PCrew := nil;
+			end;
+			order.CrewID := -1; // !!!
 		end;
 
 		try
@@ -3237,7 +3336,9 @@ begin
 	// не нужно - есть сортировка по колонкам уже!!!!!!!!!!!!!!!!
 	// self.Orders.Sort(sort_orders_by_source_time);
 
-	FreeAndNil(sl); FreeAndNil(res); exit(0);
+	FreeAndNil(sl);
+	FreeAndNil(res);
+	exit(0);
 end;
 
 function TOrderList.get_sort_col : Integer;
@@ -3376,7 +3477,7 @@ begin
 			slist.Append(s); // !
 
 		end;
-	end_for : // конец обхода списка
+end_for : // конец обхода списка
 	end;
 
 	result := slist.count;
@@ -3400,13 +3501,17 @@ end;
 
 procedure TCar.Clear;
 begin
-	self.PCrew := nil; self.dist_way_to_ap := -1.0; self.time_to_ap := -1;
-	self.crew_state := -1; self.res_data := '';
+	self.PCrew := nil;
+	self.dist_way_to_ap := -1.0;
+	self.time_to_ap := -1;
+	self.crew_state := -1;
+	self.res_data := '';
 end;
 
 constructor TCar.Create;
 begin
-	inherited Create(); self.Clear();
+	inherited Create();
+	self.Clear();
 end;
 
 end.

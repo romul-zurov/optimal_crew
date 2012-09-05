@@ -10,9 +10,9 @@ uses crew_utils, // utils from robocap and mine
 
 // const FOO_COORD = '-'; // '-' < любой цифры
 
-const GRID_CARS_COLUMN_WIDTH = 470; // 540;
+const GRID_CARS_COLUMN_WIDTH = 470 + 64; // 540;
 
-const RUB_ZA_KM = 35.0; // рублей за км
+const RUB_ZA_KM = 35.0; // рублёв за км
 
 const CREW_SVOBODEN = 1;
 
@@ -724,7 +724,9 @@ end;
 procedure TAdres.set_raw_adres(adres : string);
 	procedure ret_adr(var value : string; var s, h, k : string);
 	begin
-		s := ''; h := ''; k := '';
+		s := '';
+		h := '';
+		k := '';
 		s := get_substr(value, '', ',');
 		if s = '' then
 		begin
