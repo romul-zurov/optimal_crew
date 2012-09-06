@@ -777,7 +777,7 @@ procedure Tform_main.grid_order_currentDrawCell(Sender : TObject; ACol, ARow : I
 var sub : string;
 begin
 	// только для колонок расчёта/статуса
-	if (ACol in [1, 2, 4, 5, 6]) and (ARow > 0) then
+	if (ACol in [1, 2, 4, 5, 6, 7]) and (ARow > 0) then
 	begin
 		with TStringGrid(Sender) do
 		begin

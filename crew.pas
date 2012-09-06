@@ -1925,7 +1925,7 @@ begin
 	with self.button_send_to_robocab do
 	begin
 		Parent := form_main.grid_order_current;
-		// Left := -500;
+		Left := -500;
 		Caption := 'Передать';
 		OnMouseUp := self.click_send_to_robocab;
 	end;
@@ -2566,6 +2566,7 @@ begin
 		or (self.state = ORDER_NO_CREWS) // нет машин
 		or self.source.isEmpty() // нет адреса подачи
 		or self.dest.isEmpty() // нет адреса назначения
+	// or (length(self.source_time) < length('2012-01-01 05:35:48')) //
 		;
 end;
 
@@ -2665,11 +2666,35 @@ begin
 end;
 
 procedure TOrder.show_cars;
-var r, i_ctrl, i_col, j, rr : Integer;
+var i_ctrl, i_col, j, rr : Integer;
 	pcar : Pointer;
 	car : TCar;
 	crew : TCrew;
-	s : string;
+	s, Code : string;
+	clfl : boolean;
+
+	procedure get_Kursor();
+	begin
+		// запоминаем, где был "курсор"
+		// if self.cars_grid.Cells[1, self.cars_grid.row] = '' then
+		// Code := ''
+		// else
+		Code := self.cars_grid.Cells[1, self.cars_grid.row];
+	end;
+
+	procedure put_Kursor();
+	var r : Integer;
+	begin
+		// вертаем взад "курсор" сетки
+		if Code = '' then
+			r := 1
+		else
+			r := self.cars_grid.Cols[1].IndexOf(Code);
+		if r < 0 then
+			r := 1;
+		self.cars_grid.row := r;
+	end;
+
 begin
 	if //
 		self.need_get_cars() then
@@ -2702,11 +2727,15 @@ begin
 				+ Caption //
 				;
 
+	self.refresh_cars_stringlist();
+	get_Kursor();
+
 	with self.cars_grid do
 	begin
 		RowCount := 2;
 		ColCount := 7;
 		FixedRows := 1;
+		rows[1].Clear();
 
 		Cells[0, 0] := 'По прямой';
 		Cells[1, 0] := 'Экипаж';
@@ -2723,11 +2752,8 @@ begin
 		ColWidths[4] := 80; // (Width - ColWidths[0] - ColWidths[1] - ColWidths[2] - ColWidths[3] - 20) div 2;
 		ColWidths[5] := 0; // ifthen(self.cb_debug.Checked, 80, 0);
 		ColWidths[6] := 40;
-
-		rows[1].Clear();
 	end;
-	r := 1;
-	self.refresh_cars_stringlist();
+
 	// for s in self.Cars_StringList do
 	for rr := 0 to self.Cars_StringList.count - 1 do
 	begin
@@ -2756,11 +2782,14 @@ begin
 	with self.cars_grid do
 		if RowCount > 2 then
 			RowCount := RowCount - 1;
+	put_Kursor();
 end;
 
 function TOrder.source_time_without_date : string;
 begin
-	result := '    ' + time_without_date(self.source_time);
+	result := time_without_date(self.source_time);
+	result := ifthen(length(result) < length('01:45:56'), '!!!    ', '    ') //
+		+ result;
 end;
 
 function TOrder.state_as_string : string;
