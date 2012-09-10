@@ -564,6 +564,9 @@ begin
 	// self.source.Free();
 	// self.dest.Free();
 	// self.ap.Free();
+	self.POrder := nil;
+	self.POrder_vocheredi := nil;
+	self.POrder_time_to_ap := nil;
 	FreeAndNil(self.coords_full);
 	inherited;
 end;
@@ -2532,13 +2535,18 @@ begin
 				or (crew.is_moved()) // экипаж существенно сместился
 				then
 			begin
-				if crew.ap.zapros.get_flag_zapros() then
-					pass()
+				if (crew.POrder_time_to_ap <> nil) // у экипажа уже назначен заказ на подбор
+					or //
+					crew.ap.zapros.get_flag_zapros() // у экипажа идёт веб-запрос
+					then
+					pass() // пропускаем данный экипаж до след. раза
 				else
 				begin
 					car.crew_state := crew.state;
 					with self.source do
 						crew.ap.setAdres(street, house, korpus, gps);
+                        // указываем, куда записать данные при срабатывании crew.set_time
+                        // там же crew.POrder_time_to_ap станет Nil
 					crew.POrder_time_to_ap := Pointer(self);
 					crew.def_time_to_ap();
 				end;

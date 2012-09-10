@@ -441,7 +441,7 @@ object form_main: Tform_main
   end
   object Timer_main: TTimer
     Enabled = False
-    Interval = 333
+    Interval = 250
     OnTimer = Timer_mainTimer
     Left = 472
     Top = 56
