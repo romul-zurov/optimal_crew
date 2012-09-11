@@ -4,6 +4,7 @@ interface
 
 uses crew_utils, // utils from robocap and mine
 	crew_globals, // my global var and function
+	idHTTP,
 	Generics.Collections, // for forward class definition
 	Controls, Forms, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX, //
 	IBQuery, DB, WinInet, StrUtils, DateUtils, ExtCtrls, StdCtrls, Grids, //
@@ -40,6 +41,9 @@ type
 		// .                 1 - в работе, 2 - выполнен;
 		source : TAdres; // address from
 		dest : TAdres; // address to
+		customer : string; // заказчик
+		phone : string; // тел. заказчика
+
 		source_time : string; // время подачи экипажа
 		time_to_end : Integer; // время до окончания заказа в минутах
 		datetime_of_time_to_end : TDateTime; // момент, когда считалось время
@@ -62,6 +66,7 @@ type
 		destroy_time : string; // время, когда установлен флаг удаления. заказ
 		// будет удалён через ORDER_DESTROY_TIME
 
+		raw_price : double; // цена маршрута, рубл
 		raw_dist_way : double; // условная "длина" маршрута, определяемая из его цены, км
 		dobavka_v_ocheredi : Integer; // добавка времени при обсчёте заказа "в очереди"
 
@@ -100,6 +105,8 @@ type
 		function need_get_cars() : boolean;
 
 	private
+		robocab_http : TIdHTTP;
+
 		procedure set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 		procedure set_time_to_end(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 		function time_as_string(time : Integer) : string;
@@ -113,6 +120,8 @@ type
 		procedure click_send_to_robocab(Sender : TObject; Button : TMouseButton; Shift : TShiftState;
 			X, Y : Integer);
 		function send_to_robocab() : Integer;
+		function is_in_robocab() : boolean;
+		function add_to_robocab() : boolean;
 
 	end;
 
@@ -1787,6 +1796,100 @@ begin
 	  *)
 end;
 
+function TOrder.add_to_robocab : boolean;
+var
+	HTTP : TIdHTTP;
+	Request : TstringList;
+	Response, s : string;
+	table, data, ID, add_time, go_time : string;
+	dt_now : TDateTime;
+	i : Integer;
+
+	function post() : boolean;
+	begin
+		result := false;
+		Request := TstringList.Create;
+		HTTP := TIdHTTP.Create;
+		// HTTP.ConnectTimeout := MyConnectTimeout;
+		// HTTP.ReadTimeout := MyReadTimeout;
+		try
+			Request.Values['key'] := robocab_api_key;
+			Request.Values['type'] := robocab_api_type;
+
+			// data := StringReplace(data, '|', chr(9), [rfReplaceAll]);
+			Request.Values['separator'] := '|';
+
+			Request.Values['test'] := robocab_api_test;
+			Request.Values['table'] := table;
+			Request.Values['text'] := data;
+			try
+				Response := HTTP.post(robocab_api_url, Request);
+				result := pos('ERROR', Response) = 0;
+				if not result then
+					showmessage(Response);
+				// showmessage(data + chr(10) + chr(13) + Response);
+			except
+				on E : Exception do
+				begin
+					// showmessage(E.message);
+				end;
+			end;
+		finally
+			HTTP.Free;
+			Request.Free;
+		end;
+	end;
+
+begin
+	result := false;
+
+	dt_now := now();
+	add_time := replace_time('{Last_minute_0}', dt_now);
+	go_time := self.source_time;
+
+	ID := IntToStr(self.ID);
+
+	table := 'orders';
+	data := ID //
+		+ '|1' // услуга
+		+ '|' + self.customer //
+		+ '|' + self.phone //
+		+ '|' + float_to_dotstr_8_2(self.raw_dist_way) // длина маршрута в километрах
+		+ '|' // длительность маршрута в секундах
+		+ '|' + float_to_dotstr_8_2(self.raw_price) // стоимость поездки
+		+ '|7' // состояние 4-принят, 7 -торги
+		+ '|0' // экипаж, 0 - не назначен
+		+ '|' + add_time // время добавления заказа
+		+ '|' + go_time // время подачи
+		+ '|' // время окончания
+		+ '|' // комментарий Тест, не выполнять!
+		+ '|' + IntToStr(2 + self.int_stops.count) //
+		;
+	result := post();
+	if not result then
+		exit();
+
+	table := 'order_points';
+	data := ID + '|' + self.source.gps + '|' + self.source.raw_adres;
+	for i := 0 to self.int_stops.count - 1 do
+		try
+			data := data //
+				+ '|' + TAdres(self.int_stops.Items[i]).gps //
+				+ '|' + TAdres(self.int_stops.Items[i]).raw_adres //
+				;
+		except
+			exit(false);
+		end;
+	data := data + '|' + self.dest.gps + '|' + self.dest.raw_adres;
+	for i := 0 to ((7 - self.int_stops.count) - 1) do
+		data := data + '||';
+
+	// +'|30.235819,59.929871|Санкт-Петербург, Большой проспект В.О., 103' //
+	// + '|30.374905,59.902384|Санкт-Петербург, Самойловой, 7' //
+	// + '||||||||||||||';
+	result := post();
+end;
+
 procedure TOrder.cars_grid_DrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
 	state : TGridDrawState);
 var sub : string;
@@ -1932,6 +2035,8 @@ begin
 		Caption := 'Передать';
 		OnMouseUp := self.click_send_to_robocab;
 	end;
+
+	self.robocab_http := TIdHTTP.Create;
 
 	self.del_order();
 	self.ID := OrderId;
@@ -2454,6 +2559,7 @@ begin
 	self.count_int_stops := 0; //
 	self.destroy_flag := false; // флаг, что заказ можно удалять из списка
 	self.destroy_time := ''; //
+	self.raw_price := -1.0;
 	self.raw_dist_way := -1.0; //
 	self.dobavka_v_ocheredi := 0; //
 	self.timer_cars.Enabled := false; //
@@ -2545,8 +2651,8 @@ begin
 					car.crew_state := crew.state;
 					with self.source do
 						crew.ap.setAdres(street, house, korpus, gps);
-                        // указываем, куда записать данные при срабатывании crew.set_time
-                        // там же crew.POrder_time_to_ap станет Nil
+					// указываем, куда записать данные при срабатывании crew.set_time
+					// там же crew.POrder_time_to_ap станет Nil
 					crew.POrder_time_to_ap := Pointer(self);
 					crew.def_time_to_ap();
 				end;
@@ -2576,6 +2682,58 @@ begin
 		or self.dest.isEmpty() // нет адреса назначения
 	// or (length(self.source_time) < length('2012-01-01 05:35:48')) //
 		;
+end;
+
+function TOrder.is_in_robocab : boolean;
+const tables : array [0 .. 4] of string = //
+		('orders_current', 'orders_job', 'orders_complete', //
+		'orders_cancel', 'orders_transferred');
+var
+	HTTP : TIdHTTP;
+	Request : TstringList;
+	Response : string;
+	table, ID : string;
+
+	function get_order() : boolean;
+	begin
+		result := false;
+		Request := TstringList.Create;
+		HTTP := TIdHTTP.Create;
+		// HTTP.ConnectTimeout := MyConnectTimeout;
+		// HTTP.ReadTimeout := MyReadTimeout;
+		try
+			Request.Values['key'] := robocab_api_key;
+			Request.Values['type'] := robocab_api_type;
+
+			// data := StringReplace(data, '|', chr(9), [rfReplaceAll]);
+			Request.Values['separator'] := '|';
+
+			Request.Values['download'] := '1';
+			Request.Values['test'] := robocab_api_test;
+			Request.Values['table'] := table;
+			if ID <> '' then
+				Request.Values['id'] := ID;
+			try
+				Response := HTTP.post(robocab_api_url, Request);
+				result := length(Response) > 0;
+			except
+				on E : Exception do
+				begin
+					// showmessage(E.message);
+				end;
+			end;
+		finally
+			HTTP.Free;
+			Request.Free;
+		end;
+	end;
+
+begin
+	result := false;
+	ID := IntToStr(self.ID);
+	for table in tables do
+		if get_order() then
+			exit(true);
 end;
 
 function TOrder.is_not_prior : boolean;
@@ -2639,7 +2797,21 @@ end;
 
 function TOrder.send_to_robocab : Integer;
 begin
-	showmessage('Исполнено!');
+	if self.is_in_robocab() then
+		result := 0
+	else
+		if self.add_to_robocab() then
+			result := 1
+		else
+			result := -1;
+	case result of
+		0 :
+			showmessage('Заказ уже был передан в Robocab.ru');
+		1 :
+			showmessage('Заказ успешно передан в Robocab.ru!');
+		-1 :
+			showmessage('Ошибка при передаче заказа в Robocab.ru!!!');
+	end;
 end;
 
 procedure TOrder.set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
@@ -3251,6 +3423,8 @@ begin
 		+ ' , ORDERS.STOPS ' // пром. остановки
 
 		+ ' , ORDERS.ID ' //
+		+ ' , ORDERS.CUSTOMER ' // заказчик
+		+ ' , ORDERS.PHONE ' // тел. заказчика
 
 		+ ' from ORDERS ' //
 		+ ' where ' //
@@ -3345,8 +3519,10 @@ begin
 
 		if (length(res.Strings[8]) > 0) then
 			try
-				order.raw_dist_way := dotStrtoFloat(res.Strings[8]) / RUB_ZA_KM;
+				order.raw_price := dotStrtoFloat(res.Strings[8]);
+				order.raw_dist_way := order.raw_price / RUB_ZA_KM;
 			except
+				order.raw_price := -1.0;
 				order.raw_dist_way := -1.0;
 			end
 		else
@@ -3361,6 +3537,9 @@ begin
 			end
 		else
 			order.raw_int_stops := ''; // сбрасываем, если нет
+
+		order.customer := res.Strings[11];
+		order.phone := res.Strings[12];
 	end;
 
 	// читаем координаты адресов

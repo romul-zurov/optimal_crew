@@ -77,7 +77,8 @@ type
 		procedure grid_order_currentMouseDown(Sender : TObject; Button : TMouseButton; Shift : TShiftState;
 			X, Y : Integer);
 
-		procedure FormResize(Sender : TObject);	private
+		procedure FormResize(Sender : TObject);
+	private
 		{ Private declarations }
 		flag_get_coords : boolean;
 		flag_get_orders : boolean;
@@ -550,6 +551,12 @@ begin
 				password := FIniFile.ReadString('Base', 'Password', '');
 				ac_taxi_url := FIniFile.ReadString('Url', 'Main_Url', '');
 				PHP_Url := FIniFile.ReadString('Url', 'PHP_Url', '');
+
+				robocab_api_url := FIniFile.ReadString('Api', 'Url', '');
+				robocab_api_key := FIniFile.ReadString('Api', 'Key', '');
+				robocab_api_type := FIniFile.ReadString('Api', 'Type', '');
+				robocab_api_test := FIniFile.ReadString('Api', 'Test', '');
+
 				self.interval_coords_req := StrToInt(FIniFile.ReadString('Const', 'Timer_Coords', ''));
 				form_main.Timer_coords.Interval := self.interval_coords_req;
 				self.interval_orders_req := StrToInt(FIniFile.ReadString('Const', 'Timer_Orders', ''));

@@ -405,6 +405,8 @@ begin
 		ColWidths[1] := Width - ColWidths[0] - 20;
 	end;
 	add_row(self.grid_order, 'ID', IntToStr(order.ID));
+	add_row(self.grid_order, 'customer', order.customer);
+	add_row(self.grid_order, 'phone', order.phone);
 	add_row(self.grid_order, 'CrewID', IntToStr(order.CrewID));
 	add_row(self.grid_order, 'prior_crewid', IntToStr(order.prior_crewid));
 	add_row(self.grid_order, 'is_not_prior', da_net(order.is_not_prior()));
@@ -459,6 +461,7 @@ begin
 	add_row(self.grid_order, 'time_to_ap_str', order.time_to_ap_as_string());
 
 	add_row(self.grid_order, 'raw_dist_way', FloatToStrF(order.raw_dist_way, ffFixed, 8, 1));
+	add_row(self.grid_order, 'raw_price', FloatToStrF(order.raw_price, ffFixed, 8, 2));
 	add_row(self.grid_order, 'POrder', IntToStr(Integer(Pointer(order))));
 	add_row(self.grid_order, 'cars_gbox_column', BoolToStr(order.cars_gbox_visible));
 end;

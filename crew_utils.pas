@@ -18,6 +18,7 @@ function replace_minute(const value : string; const MyTime : TDateTime) : string
 
 function dotStrtoFloat(s : string) : double;
 function float_to_dotstr_2_6(f : real) : string;
+function float_to_dotstr_8_2(f : double) : string;
 function get_dist_from_coord(scoord1, scoord2 : string) : double;
 
 function reverseStringList(var list : TStringList) : Integer;
@@ -41,6 +42,12 @@ function float_to_dotstr_2_6(f : real) : string;
 begin
 	result := StringReplace(FloatToStrF(f, ffFixed, 8, 6), ',', '.', [rfReplaceAll]);
 end;
+
+function float_to_dotstr_8_2(f : double) : string;
+begin
+	result := StringReplace(FloatToStrF(f, ffFixed, 8, 2), ',', '.', [rfReplaceAll]);
+end;
+
 
 function s_2_6(sc : string) : string;
 begin

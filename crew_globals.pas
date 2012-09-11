@@ -188,6 +188,10 @@ var
 	// cur_time : TDateTime;
 	ac_taxi_url : string;
 	PHP_Url : string;
+	robocab_api_url : string;
+	robocab_api_key : string;
+	robocab_api_type : string;
+	robocab_api_test : string;
 	order_states : Tstringlist;
 	crew_states : Tstringlist;
 	PGlobalStatusBar : pointer;

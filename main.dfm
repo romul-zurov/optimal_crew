@@ -284,6 +284,10 @@ object form_main: Tform_main
           object TabSheet_prior: TTabSheet
             Caption = #1055#1088#1077#1076#1074#1072#1088#1080#1090#1077#1083#1100#1085#1099#1077
             ImageIndex = 1
+            ExplicitLeft = 0
+            ExplicitTop = 0
+            ExplicitWidth = 0
+            ExplicitHeight = 0
             object grid_order_prior: TStringGrid
               AlignWithMargins = True
               Left = 3
