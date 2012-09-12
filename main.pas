@@ -685,6 +685,8 @@ end;
 
 procedure Tform_main.FormCreate(Sender : TObject);
 begin
+	speed_list := TSpeedList.Create();
+	average_speed := 25.0;
 	browser_panel := TPanel(Pointer(self.Panel_browser));
 	self.GridPanel_grids.ColumnCollection.Items[1].value := 0;
 	self.flag_get_coords := false;
@@ -897,6 +899,8 @@ begin
 		+ '|' + IntToStr(crew_list.not_free_crews_count()) //
 		+ '/' + IntToStr(order_list.orders_time_to_end_count()) //
 		;
+
+	self.stbar_main.Panels[5].Text := speed_list.average_speed_as_string();
 end;
 
 procedure Tform_main.show_OrderID(id : Integer);
@@ -1224,7 +1228,6 @@ procedure Tform_main.Timer_show_order_gridTimer(Sender : TObject);
 begin
 	self.show_counts();
 	self.show_orders_grid();
-	// self.show_orders_cars();
 	exit(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	self.Timer_show_order_grid.Enabled := false;

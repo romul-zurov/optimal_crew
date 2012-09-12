@@ -5,7 +5,7 @@ interface
 uses crew_utils, // utils from robocap and mine
 	Generics.Collections, // for forward class definition
 	Controls, Forms, Classes, SysUtils, Math, SHDocVw, MSHTML, ActiveX, //
-	windows, //
+	windows, DateUtils, //
 	IBQuery, IBDataBase, DB, WinInet, StrUtils, ComCtrls, IniFiles, ExtCtrls;
 
 // const FOO_COORD = '-'; // '-' < любой цифры
@@ -159,6 +159,26 @@ type
 		function def_way_time_dist() : integer;
 	end;
 
+	TSpeed = class(TObject)
+		constructor Create(dist : double; time : integer);
+		function speed() : double;
+	private
+		speed_avg : double;
+		dt : TDateTime;
+	end;
+
+	TSpeedList = class(TObject)
+		constructor Create();
+		function average_speed() : double;
+		function average_speed_as_string() : string;
+		procedure append(dist : double; time : integer);
+	private
+		speed_list : TList;
+		timer : TTimer;
+		old_speed : double;
+		procedure del_old_speeds(Sender : TObject);
+	end;
+
 	TBrowserComplete2Event = procedure(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 
 	TBrowserComplete2Provider = class
@@ -199,6 +219,8 @@ var
 	browser_panel : TPanel;
 	GetZaprosCounter : Int64;
 	PMainCrewList : pointer;
+	average_speed : double;
+	speed_list : TSpeedList;
 	// CoordsInterval : Int64;
 
 
@@ -541,7 +563,7 @@ begin
 		if res[length(res)] = '|' then
 			Delete(res, length(res), 1);
 		// list.Append(res);
-		sql_string_list.Append(res);
+		sql_string_list.append(res);
 		query.Next;
 	end;
 	// result := list;
@@ -581,7 +603,7 @@ begin
 		end;
 		if sres[length(sres)] = '|' then
 			Delete(sres, length(sres), 1);
-		res.Append(sres);
+		res.append(sres);
 		query.Next;
 	end;
 	exit(0);
@@ -1075,7 +1097,7 @@ function create_order_and_crew_states(var IBQuery : TIBQuery) : integer;
 			states.Add(s);
 		end;
 		s := '-1=#не_определено';
-		states.Append(s);
+		states.append(s);
 	end;
 
 begin
@@ -1087,10 +1109,10 @@ begin
 
 	with order_states do
 	begin
-		Append(IntToStr(ORDER_CREW_NO_COORD) + '=%нет_координат_экипажа');
-		Append(IntToStr(ORDER_BAD_ADRES) + '=!!!некорректный_адрес');
-		Append(IntToStr(ORDER_WAY_ERROR) + '=%ошибка_расчёта');
-		Append(IntToStr(ORDER_HAS_STOPS) + '=%заказ_с_остановками');
+		append(IntToStr(ORDER_CREW_NO_COORD) + '=%нет_координат_экипажа');
+		append(IntToStr(ORDER_BAD_ADRES) + '=!!!некорректный_адрес');
+		append(IntToStr(ORDER_WAY_ERROR) + '=%ошибка_расчёта');
+		append(IntToStr(ORDER_HAS_STOPS) + '=%заказ_с_остановками');
 	end;
 
 	exit(0);
@@ -1100,6 +1122,84 @@ procedure string_to_stringlist(source : string; var res : Tstringlist);
 begin
 	res.Clear();
 	res.Text := StringReplace(source, '|', #13#10, [rfReplaceAll]);
+end;
+
+{ TSpeed }
+
+constructor TSpeed.Create(dist : double; time : integer);
+begin
+	inherited Create();
+	self.speed_avg := 0;
+	if (dist > 0) and (time > 0) then
+		self.speed_avg := dist / (time / 60);
+	self.speed_avg := ifthen(self.speed_avg > 150, 0, self.speed_avg);
+	self.dt := now();
+end;
+
+function TSpeed.speed : double;
+begin
+	result := self.speed_avg;
+end;
+
+{ TSpeedList }
+
+procedure TSpeedList.append(dist : double; time : integer);
+begin
+	self.speed_list.Add(TSpeed.Create(dist, time));
+end;
+
+function TSpeedList.average_speed : double;
+var pp : pointer;
+begin
+	if self.speed_list.Count = 0 then
+		exit(self.old_speed)
+	else
+	begin
+		result := 0;
+		for pp in self.speed_list do
+			try
+				result := result + TSpeed(pp).speed();
+			except
+				exit(self.old_speed);
+			end;
+		result := result / self.speed_list.Count;
+		self.old_speed := result;
+	end;
+end;
+
+function TSpeedList.average_speed_as_string : string;
+begin
+	result := FloatToStrF(self.average_speed(), ffFixed, 4, 0) //
+		+ 'км/ч' //
+		+ ' (' //
+		+ IntToStr(self.speed_list.Count) //
+		+ ')' //
+		;
+end;
+
+constructor TSpeedList.Create;
+begin
+	inherited Create();
+	self.old_speed := 0;
+	self.speed_list := TList.Create();
+	self.timer := TTimer.Create(nil);
+	self.timer.Interval := 60 * 1000;
+	self.timer.Enabled := true;
+	self.timer.OnTimer := self.del_old_speeds;
+end;
+
+procedure TSpeedList.del_old_speeds(Sender : TObject);
+var i : integer;
+	dt : TDateTime;
+begin
+	dt := now();
+	for i := self.speed_list.Count - 1 downto 0 do
+		try
+			if MinutesBetween(dt, TSpeed(self.speed_list.Items[i]).dt) > 10 then
+				self.speed_list.Delete(i);
+		except
+			exit();
+		end;
 end;
 
 end.

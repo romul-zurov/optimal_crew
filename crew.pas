@@ -2839,6 +2839,8 @@ begin
 	else
 	begin
 		self.time_to_end := self.way_to_end.time + self.stops_time;
+		with self.way_to_end do
+			speed_list.Append(dist_way, time);
 
 		// сбрасываем координату
 		TCrew(self.PCrew).reset_old_coord();
