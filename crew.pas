@@ -957,16 +957,11 @@ var
 	s_opozdanie, scolor, prefix, res, rasxod, line_num, pref_r, pref_l : string;
 	dt, ap_dt : TDateTime;
 	opozdanie : Integer;
+	prev_flag : boolean;
+	buf_time : Integer;
+	buf_dist_way : double;
 begin
-	{
-	  result := '' //
-	  // + self.time_str() + '$' // для сортировки по времени тупым stringlist.sort()
-	  + self.dist_way_str() + '$' // для сортировки по времени тупым stringlist.sort()
-	  + IntToStr(self.CrewID) + '|' //
-	  + self.name + '||' //
-	  + self.state_as_string() + '|||' //
-	  ;
-	  }
+	prev_flag := false;
 	line_num := self.line_number_color();
 	rasxod := self.pererasxod_color(half_dist_way);
 	pref_l := ifthen(line_num[1] = '*', '#', '&');
@@ -974,54 +969,78 @@ begin
 
 	if self.time < 0 then
 	begin
-		prefix := '___';
-		res := self.dist_str();
-		s_opozdanie := self.time_as_string();
-		scolor := '';
+		prev_flag := true;
+		buf_time := self.time;
+		buf_dist_way := self.dist_way;
+		try
+			self.dist_way := 1.3 * self.dist / 1000;
+			self.time := round(60 * self.dist_way / speed_list.average_speed());
+
+			// prefix := '___';
+			// res := self.dist_str();
+			// s_opozdanie := self.time_as_string();
+			// scolor := '';
+		except
+			exit('');
+		end;
 	end
 	else
 	begin
-		dt := IncMinute(now(), self.time);
-		ap_dt := source_time_to_datetime(source_time);
-		opozdanie := MinutesBetween(ap_dt, dt);
-		s_opozdanie := self.time_to_str(opozdanie);
-		if dt > ap_dt then
+		pass();
+	end;
+	dt := IncMinute(now(), self.time);
+	ap_dt := source_time_to_datetime(source_time);
+	opozdanie := MinutesBetween(ap_dt, dt);
+	s_opozdanie := self.time_to_str(opozdanie);
+	if dt > ap_dt then
+	begin
+		s_opozdanie := 'опоздает на ' + s_opozdanie;
+		if opozdanie < 10 then
 		begin
-			s_opozdanie := 'опоздает на ' + s_opozdanie;
-			if opozdanie < 10 then
-			begin
-				res := self.dist_way_str();
-				scolor := '!';
-				prefix := '#' + pref_r + ifthen(pref_r = '#', pref_l, '_'); // вместе с успевающими !
-			end
-			else
-			begin
-				res := self.time_str();
-				scolor := '!!! ';
-				prefix := '&&&';
-			end;
+			res := self.dist_way_str();
+			scolor := '!';
+			prefix := '#' + pref_r + ifthen(pref_r = '#', pref_l, '_'); // вместе с успевающими !
 		end
 		else
 		begin
-			s_opozdanie := 'успевает с запасом ' + s_opozdanie;
-			// prefix := '#';
-			prefix := '#' + pref_r + ifthen(pref_r = '#', pref_l, '_');
-			res := self.dist_way_str();
-			scolor := '*';
+			res := self.time_str();
+			scolor := '!!! ';
+			prefix := '&&&';
 		end;
+	end
+	else
+	begin
+		s_opozdanie := 'успевает с запасом ' + s_opozdanie;
+		// prefix := '#';
+		prefix := '#' + pref_r + ifthen(pref_r = '#', pref_l, '_');
+		res := self.dist_way_str();
+		scolor := '*';
 	end;
+
+	if prev_flag then
+	begin
+		scolor := '^';
+		// rasxod := '^';
+		prefix := '___';
+		res := self.dist_str();
+	end;
+
 	result := '' //
-		+ prefix //
-		+ res + '$' //
-	// + IntToStr(self.CrewID) + '|' //
-		+ self.dist_str() + '|' // !!!
-		+ { self.name } self.Code + '||' // !
-		+ self.state_as_string() + '|||' //
-		+ scolor + s_opozdanie + '||||' //
-		+ rasxod + self.dist_way_as_string() + '|||||' //
-		+ rasxod + '||||||' //
-		+ line_num //
+		+ prefix + res //
+		+ '$' + self.dist_str() //
+		+ '|' + self.Code //
+		+ '||' + self.state_as_string() //
+		+ '|||' + scolor + s_opozdanie //
+		+ '||||' + rasxod + self.dist_way_as_string() //
+		+ '|||||' + rasxod //
+		+ '||||||' + line_num //
 		;
+
+	if prev_flag then
+	begin
+		self.time := buf_time;
+		self.dist_way := buf_dist_way;
+	end;
 end;
 
 procedure TCrew.set_time(m : Integer; d : double);
@@ -1929,7 +1948,13 @@ begin
 								sub := '%';
 							end
 							else
-								Canvas.Brush.color := $FFFFFF;
+								if pos('^', Cells[ACol, ARow]) = 1 then
+								begin
+									Canvas.Brush.color := clBlue;
+									sub := '^';
+								end
+								else
+									Canvas.Brush.color := $FFFFFF;
 
 			if self.hand_get_cars_flag // при принудительном подборе всегда цветным
 				or (self.state in [ORDER_PRINYAT, ORDER_VODITEL_OTKAZALSYA]) //
@@ -2654,6 +2679,14 @@ begin
 					// указываем, куда записать данные при срабатывании crew.set_time
 					// там же crew.POrder_time_to_ap станет Nil
 					crew.POrder_time_to_ap := Pointer(self);
+					// заполняем предварительными данными
+					if car.res_data = '' then
+					begin
+						crew.time := -1;
+						car.res_data := crew.ret_data_to_ap(self.source_time, //
+							self.raw_dist_way);
+					end;
+					// вызываем расчёт:
 					crew.def_time_to_ap();
 				end;
 			end;
@@ -2839,8 +2872,8 @@ begin
 	else
 	begin
 		self.time_to_end := self.way_to_end.time + self.stops_time;
-		with self.way_to_end do
-			speed_list.Append(dist_way, time);
+		// with self.way_to_end do
+		// speed_list.Append(dist_way, time);
 
 		// сбрасываем координату
 		TCrew(self.PCrew).reset_old_coord();

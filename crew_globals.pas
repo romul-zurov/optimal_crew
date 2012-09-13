@@ -1070,6 +1070,8 @@ begin
 		try
 			self.dist_way := dotStrtoFloat(dist_res);
 			self.time := StrToInt(res);
+			speed_list.append(self.dist_way, self.time);
+
 			exit();
 		except
 			self.time := -1;
@@ -1131,8 +1133,10 @@ begin
 	inherited Create();
 	self.speed_avg := 0;
 	if (dist > 0) and (time > 0) then
+	begin
 		self.speed_avg := dist / (time / 60);
-	self.speed_avg := ifthen(self.speed_avg > 150, 0, self.speed_avg);
+		self.speed_avg := ifthen(self.speed_avg > 150, 0, self.speed_avg);
+	end;
 	self.dt := now();
 end;
 
@@ -1150,20 +1154,33 @@ end;
 
 function TSpeedList.average_speed : double;
 var pp : pointer;
+	sp : double;
+	cou : integer;
 begin
 	if self.speed_list.Count = 0 then
 		exit(self.old_speed)
 	else
 	begin
 		result := 0;
+		cou := 0;
 		for pp in self.speed_list do
 			try
-				result := result + TSpeed(pp).speed();
+				sp := TSpeed(pp).speed();
+				if sp > 0.5 then // отбрасываем глючные и нулевые скорости
+				begin
+					result := result + sp;
+					inc(cou);
+				end;
 			except
 				exit(self.old_speed);
 			end;
-		result := result / self.speed_list.Count;
-		self.old_speed := result;
+		if cou > 0 then
+		begin
+			result := result / cou;
+			self.old_speed := result;
+		end
+		else
+			result := self.old_speed;
 	end;
 end;
 
