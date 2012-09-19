@@ -22,13 +22,23 @@ type
 	TCar = class(TObject)
 		// вспомогательный класс для побора экипажа на заказ
 		PCrew : Pointer; // указатель на crew:TCrew
+		ap : TAdres; // АП, собсно, куда нам надо
+		from : TAdres; // откуда едем
+		way_to_ap : TWay; // маршрут до АП
 		dist_way_to_ap : double; // длина маршрута до АП, км;
+		raw_dist_way : double; // условная "длина" маршрута, определяемая из его цены, км
 		time_to_ap : Integer; // время подъезда к АП в минутах;
+		ap_source_time : TDateTime;
 		crew_state : Integer; // при несовпадении с crew.state вызывается
 		// перерасчёт, либо удаление экипажа из списка
 		res_data : string; // резултирующая строка с преферансом и профурсетками
 		constructor Create();
 		procedure Clear();
+		procedure def_time_to_ap();
+		function ret_data() : string;
+	private
+		procedure def_way_to_ap();
+		procedure set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 	end;
 
 	TOrder = class(TObject)
@@ -205,6 +215,9 @@ type
 		// function def_time_to_ap(var polist : Pointer) : Integer;
 		function def_time_to_ap() : Integer;
 		function pererasxod_color(half_dist_way : double) : string;
+		function real_state() : Integer;
+		function order_time_to_end() : Integer;
+		function last_porder() : Pointer;
 	private
 		rasxod : double;
 		function time_to_str(time : Integer) : string;
@@ -864,6 +877,13 @@ begin
 	// self.old_coord := self.coord;
 end;
 
+function TCrew.last_porder : Pointer;
+begin
+	result := self.POrder_vocheredi;
+	if result = nil then
+		result := self.POrder;
+end;
+
 function TCrew.line_number_color : string;
 begin
 	result := ifthen(pos('-2', self.Code) > 0, '!    2', '*    1');
@@ -874,6 +894,52 @@ begin
 	if self.coord = '' then
 		exit(false);
 	result := get_dist_from_coord(coord, self.coord) < CREW_RADIUS;
+end;
+
+function TCrew.order_time_to_end : Integer;
+var
+	order : TOrder;
+begin
+	if not(self.state in [CREW_SVOBODEN, CREW_NAZAKAZE]) then
+		exit(-1);
+
+	if self.state = CREW_SVOBODEN then
+		exit(0);
+
+	result := -1;
+	order := nil;
+	if self.POrder_vocheredi <> nil then
+	begin
+		try
+			order := TOrder(self.POrder_vocheredi);
+			if order.state <> ORDER_V_OCHEREDI then
+				order := nil;
+		except
+			exit();
+		end;
+	end
+	else
+		if self.POrder <> nil then
+			try
+				order := TOrder(self.POrder);
+			except
+				exit();
+			end
+		else
+			exit();
+
+	if (order <> nil) then
+	begin
+		// для экипажа "на заказе добавляем время до окончания тек. заказа
+		try
+			result := order.time_to_end;
+			// если заказ завершён, то как для свободного экипажа
+			if result = ORDER_AN_OK then
+				result := 0;
+		except
+			exit();
+		end;
+	end;
 end;
 
 function TCrew.pererasxod(half_dist_way : double) : Integer;
@@ -934,6 +1000,36 @@ begin
 	if (length(self.coord) < 19) then // '30.123456,59.123456'
 		self.coord := '';
 	exit(0);
+end;
+
+function TCrew.real_state : Integer;
+var order : TOrder;
+begin
+	if self.state <> CREW_NAZAKAZE then
+		exit(self.state);
+
+	result := self.state;
+	order := nil;
+	try
+		if self.POrder_vocheredi <> nil then
+		begin
+			order := TOrder(self.POrder_vocheredi);
+			if order.state <> ORDER_V_OCHEREDI then
+				order := nil;
+		end
+		else
+		begin
+			if (self.POrder <> nil) then
+				order := TOrder(self.POrder);
+		end;
+	except
+		exit();
+	end;
+
+	if (order <> nil) //
+		and (order.time_to_end = ORDER_AN_OK) // заказ фактически завершён, экипаж свободен
+		then
+		result := CREW_SVOBODEN;
 end;
 
 procedure TCrew.reset_old_coord;
@@ -3762,7 +3858,243 @@ end;
 constructor TCar.Create;
 begin
 	inherited Create();
+	self.ap := TAdres.Create('', '', '', '');
+	self.from := TAdres.Create('', '', '', '');
+	self.way_to_ap := TWay.Create();
+	self.way_to_ap.zapros.browser.OnNavigateComplete2 := self.set_time_to_ap;
 	self.Clear();
+end;
+
+procedure TCar.def_time_to_ap;
+begin
+	if self.way_to_ap.zapros.get_flag_zapros() then
+		exit();
+	self.def_way_to_ap();
+	if self.way_to_ap.points.count < 2 then
+		exit();
+	self.way_to_ap.get_way_time_dist_unlim();
+end;
+
+procedure TCar.def_way_to_ap;
+var st : Integer;
+	order : TOrder;
+	crew : TCrew;
+begin
+	if (self.PCrew = nil) or self.way_to_ap.zapros.get_flag_zapros() then
+		exit();
+
+	if not self.ap.gps_ok() then
+	begin
+		self.ap.get_gps_unlim();
+		exit();
+	end;
+
+	self.way_to_ap.points.Clear();
+	try
+		crew := TCrew(self.PCrew);
+		st := crew.real_state();
+	except
+		exit();
+	end;
+	if not(st in [CREW_SVOBODEN, CREW_NAZAKAZE]) then
+		exit();
+
+	try
+		if st = CREW_SVOBODEN then
+		begin
+			self.from.setAdres('', '', '', crew.coord);
+		end
+		else
+		begin
+			if crew.last_porder() = nil then
+				exit()
+			else
+			begin
+				order := TOrder(crew.last_porder());
+				if order.dest.gps_ok() then
+					from.setAdres('', '', '', order.dest.gps)
+				else
+				begin
+					order.dest.get_gps_unlim();
+					exit();
+				end;
+			end;
+		end;
+
+	except
+		exit();
+	end;
+
+	self.way_to_ap.points.Add(Pointer(from));
+	self.way_to_ap.points.Add(Pointer(self.ap));
+end;
+
+function TCar.ret_data : string;
+
+	function pererasxod() : Integer;
+	begin
+		result := -1;
+		if (self.dist_way < 0) or (self.dist < 0) then
+			exit();
+
+		self.rasxod := half_dist_way / 2.0;
+
+		if self.dist_way < self.rasxod then
+			exit(0)
+		else
+			if self.dist_way < 10.0 then
+				exit(1)
+			else
+				exit(2);
+	end;
+
+	function pererasxod_color() : string;
+	begin
+		result := '';
+		// FloatToStrF(self.rasxod, ffFixed, 8, 1);
+		case self.pererasxod(half_dist_way) of
+			0 :
+				result := '*' + result;
+			1 :
+				result := '!' + result;
+			2 :
+				result := '!!!' + result;
+		else
+			result := '#' + result;
+		end;
+	end;
+
+var
+	s_opozdanie, scolor, prefix, res, rasxod, line_num, pref_r, pref_l : string;
+	dt, ap_dt : TDateTime;
+	opozdanie : Integer;
+	prev_flag : boolean;
+	buf_time : Integer;
+	buf_dist_way : double;
+begin
+	prev_flag := false;
+	line_num := self.line_number_color();
+	rasxod := self.pererasxod_color(half_dist_way);
+	pref_l := ifthen(line_num[1] = '*', '#', '&');
+	pref_r := ifthen((rasxod[1] in ['*', '!']) and (pos('!!!', rasxod) = 0), '#', '&');
+
+	if self.time < 0 then
+	begin
+		prev_flag := true;
+		buf_time := self.time;
+		buf_dist_way := self.dist_way;
+		try
+			self.dist_way := 1.3 * self.dist / 1000;
+			self.time := round(60 * self.dist_way / speed_list.average_speed());
+
+			// prefix := '___';
+			// res := self.dist_str();
+			// s_opozdanie := self.time_as_string();
+			// scolor := '';
+		except
+			exit('');
+		end;
+	end
+	else
+	begin
+		pass();
+	end;
+	dt := IncMinute(now(), self.time);
+	ap_dt := source_time_to_datetime(source_time);
+	opozdanie := MinutesBetween(ap_dt, dt);
+	s_opozdanie := self.time_to_str(opozdanie);
+	if dt > ap_dt then
+	begin
+		s_opozdanie := 'опоздает на ' + s_opozdanie;
+		if opozdanie < 10 then
+		begin
+			res := self.dist_way_str();
+			scolor := '!';
+			prefix := '#' + pref_r + ifthen(pref_r = '#', pref_l, '_'); // вместе с успевающими !
+		end
+		else
+		begin
+			res := self.time_str();
+			scolor := '!!! ';
+			prefix := '&&&';
+		end;
+	end
+	else
+	begin
+		s_opozdanie := 'успевает с запасом ' + s_opozdanie;
+		// prefix := '#';
+		prefix := '#' + pref_r + ifthen(pref_r = '#', pref_l, '_');
+		res := self.dist_way_str();
+		scolor := '*';
+	end;
+
+	if prev_flag then
+	begin
+		scolor := '^';
+		// rasxod := '^';
+		prefix := '___';
+		res := self.dist_str();
+	end;
+
+	result := '' //
+		+ prefix + res //
+		+ '$' + self.dist_str() //
+		+ '|' + self.Code //
+		+ '||' + self.state_as_string() //
+		+ '|||' + scolor + s_opozdanie //
+		+ '||||' + rasxod + self.dist_way_as_string() //
+		+ '|||||' + rasxod //
+		+ '||||||' + line_num //
+		;
+
+	if prev_flag then
+	begin
+		self.time := buf_time;
+		self.dist_way := buf_dist_way;
+	end;
+end;
+
+procedure TCar.set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+var dob : Integer;
+	order : TOrder;
+	crew : TCrew;
+begin
+	self.way_to_ap.set_way_time_dist(ASender, pDisp, url);
+	self.time_to_ap := -1;
+	self.dist_way_to_ap := -1;
+	try
+		crew := TCrew(self.PCrew);
+		if crew.last_porder() <> nil then
+			order := TOrder(crew.last_porder())
+		else
+			order := nil;
+	except
+		exit();
+	end;
+
+	if not(crew.state in [CREW_SVOBODEN, CREW_NAZAKAZE]) then
+		exit();
+
+	dob := 0;
+	if (crew.state = CREW_NAZAKAZE) then
+	begin
+		try
+			dob := crew.order_time_to_end();
+		except
+			dob := -1;
+		end;
+	end;
+
+	if dob < 0 then
+		exit();
+
+	if (self.way_to_ap.time < 0) then
+		exit()
+	else
+	begin
+		self.time_to_ap := self.way_to_ap.time + dob;
+		self.dist_way_to_ap := self.way_to_ap.dist_way;
+	end;
 end;
 
 end.
