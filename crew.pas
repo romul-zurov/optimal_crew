@@ -123,10 +123,14 @@ type
 		procedure refresh_cars_stringlist();
 		procedure show_cars();
 		function need_get_cars() : boolean;
+		procedure hide_button_send_to_robocab();
 
 	private
+		opozdun20_flag : boolean;
 		robocab_http : TIdHTTP;
 
+		function opozdun() : boolean;
+		function opozdanie() : Integer;
 		procedure set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 		procedure set_time_to_end(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 		function time_as_string(time : Integer) : string;
@@ -143,7 +147,6 @@ type
 		function is_in_robocab() : boolean;
 		function add_to_robocab() : boolean;
 		procedure set_car_data(PCar : Pointer);
-
 	end;
 
 	TOrderList = class(TObject)
@@ -166,6 +169,7 @@ type
 		function ret_orders_as_grid(prior_flag : boolean; var slist : TstringList) : Integer;
 		procedure set_sort_col(col : Integer);
 		function get_sort_col() : Integer;
+		procedure hide_buttons_send_to_robocab();
 
 	private
 		sort_col : Integer;
@@ -279,7 +283,12 @@ type
 		function get_crew_list_by_order_list(var List : TOrderList) : Integer;
 		function get_crew_list_for_ap(new_ap : TAdres; Order_ID : Integer; var res_slist : TstringList)
 			: Integer;
+
+		// Ќ≈ »—ѕќЋ№«”≈“—я, см. TCrewList.get_pcrews_for_porder !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		function get_pcrews_for_ap(new_ap : TAdres; var res_pcrews : TList) : Integer;
+
+		function get_pcrews_for_porder(a_porder : Pointer; var res_pcrews : TList) : Integer;
+
 		function get_crew_list() : Integer;
 		function get_crews_coords() : Integer;
 		function ret_crews_stringlist() : TstringList;
@@ -914,7 +923,7 @@ begin
 	for i := 0 to (self.coords_full.count - 1) do
 	begin
 		s := get_substr(self.coords_full.Strings[i], '', '|');
-		if int_flag or (s < sdt) then
+		if int_flag or (s >= sdt) then
 		begin
 			cc := get_substr(self.coords_full.Strings[i], '|', '');
 			d := get_dist_from_coord(coord, cc);
@@ -1684,6 +1693,7 @@ var crew : TCrew;
 	i : Integer;
 
 begin
+	// Ќ≈ »—ѕќЋ№«”≈“—я, см. TCrewList.get_pcrews_for_porder !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	with new_ap do
 		self.set_ap(street, house, korpus, gps);
 	self.set_crews_dist(self.ap_gps);
@@ -1698,6 +1708,44 @@ begin
 			(crew.state in [CREW_SVOBODEN, CREW_NAZAKAZE]) //
 			and (crew.coord <> '') //
 			and (crew.dist >= 0) //
+			then
+			res_pcrews.Add(self.Crews.Items[i]);
+	end;
+	if res_pcrews.count = 0 then
+		exit(0)
+	else
+		exit(1);
+end;
+
+function TCrewList.get_pcrews_for_porder(a_porder : Pointer; var res_pcrews : TList) : Integer;
+var crew : TCrew;
+	i : Integer;
+	order : TOrder;
+begin
+	result := -1;
+	res_pcrews.Clear();
+	try
+		order := TOrder(a_porder);
+	except
+		exit();
+	end;
+	if not order.source.gps_ok() then
+		exit();
+
+	with order.source do
+		self.set_ap(street, house, korpus, gps);
+	self.set_crews_dist(self.ap_gps);
+
+	for i := 0 to self.Crews.count - 1 do
+	begin
+		crew := self.crew(self.Crews.Items[i]);
+
+		if //
+			(crew.state in [CREW_SVOBODEN, CREW_NAZAKAZE]) //
+			and (crew.coord <> '') //
+			and (crew.dist >= 0) //
+			and (crew.POrder <> a_porder) //
+			and (crew.POrder_vocheredi <> a_porder) //
 			then
 			res_pcrews.Add(self.Crews.Items[i]);
 	end;
@@ -2124,12 +2172,14 @@ begin
 								else
 									Canvas.Brush.color := $FFFFFF;
 
-			if self.hand_get_cars_flag // при принудительном подборе всегда цветным
-				or (self.state in [ORDER_PRINYAT, ORDER_VODITEL_OTKAZALSYA]) //
-				then
-				pass()
-			else
-				Canvas.Brush.color := $CCCCCC;
+			{
+			  if self.hand_get_cars_flag // при принудительном подборе всегда цветным
+			  or (self.state in [ORDER_PRINYAT, ORDER_VODITEL_OTKAZALSYA]) //
+			  then
+			  pass()
+			  else
+			  Canvas.Brush.color := $CCCCCC;
+			  }
 
 			Canvas.FillRect(Rect);
 			Canvas.TextOut(Rect.Left + 2, Rect.Top + 2, get_substr(Cells[ACol, ARow], sub, ''));
@@ -2764,6 +2814,7 @@ begin
 	self.Cars_StringList.Clear(); //
 	self.hand_get_cars_flag := false; //
 	self.cars_gbox.Caption := ''; //
+	self.opozdun20_flag := false;
 end;
 
 destructor TOrder.Destroy;
@@ -2802,7 +2853,8 @@ begin
 	if PMainCrewList = nil then
 		exit(-1);
 	try
-		result := TCrewList(PMainCrewList).get_pcrews_for_ap(self.source, self.PCrews_tmp);
+		// result := TCrewList(PMainCrewList).get_pcrews_for_ap(self.source, self.PCrews_tmp);
+		result := TCrewList(PMainCrewList).get_pcrews_for_porder(Pointer(self), self.PCrews_tmp);
 	except
 		exit(-1);
 	end;
@@ -2830,49 +2882,15 @@ begin
 		try
 			car := TCar(PCar);
 			car.def_time_to_ap();
-			{
-			  crew := TCrew(car.PCrew);
-			  if // услови€, при которых вызываем расчЄт
-			  (car.time_to_ap < 0) // ещЄ не считалось
-			  or (crew.state <> car.crew_state) // экипаж сменил состо€ние
-			  or (car.is_moved()) // экипаж существенно сместилс€
-			  then
-			  begin
-			  if car.ap.zapros.get_flag_zapros then
-			  pass()
-			  else
-			  car.def_time_to_ap();
-			  }
-			(*
-			  if (crew.POrder_time_to_ap <> nil) // у экипажа уже назначен заказ на подбор
-			  or //
-			  crew.ap.zapros.get_flag_zapros() // у экипажа идЄт веб-запрос
-			  then
-			  pass() // пропускаем данный экипаж до след. раза
-			  else
-			  begin
-			  car.crew_state := crew.state;
-			  with self.source do
-			  crew.ap.setAdres(street, house, korpus, gps);
-			  // указываем, куда записать данные при срабатывании crew.set_time
-			  // там же crew.POrder_time_to_ap станет Nil
-			  crew.POrder_time_to_ap := Pointer(self);
-			  // заполн€ем предварительными данными
-			  if car.res_data = '' then
-			  begin
-			  crew.time := -1;
-			  car.res_data := crew.ret_data_to_ap(self.source_time, //
-			  self.raw_dist_way);
-			  end;
-			  // вызываем расчЄт:
-			  crew.def_time_to_ap();
-			  end;
-			  *)
-			// end;
 		except
 			continue; // просто переходим к след. экипажу
 		end;
 	end;
+end;
+
+procedure TOrder.hide_button_send_to_robocab;
+begin
+	self.button_send_to_robocab.Left := -512;
 end;
 
 procedure TOrder.hide_cars_by_hand(Sender : TObject);
@@ -2961,12 +2979,7 @@ end;
 function TOrder.need_get_cars : boolean;
 begin
 	if self.is_bad() //
-	{
-	  self.destroy_flag // помеченные дл€ удалени€ заказы
-	  or //
-	  (self.ID < 0) // "стЄртые" заказы
-	  }
-	then
+		then
 		exit(false);
 
 	if self.hand_get_cars_flag then
@@ -2984,10 +2997,42 @@ begin
 			and //
 			self.is_not_prior() // и заказ не предварительный
 			then
-			exit(true)
+			result := true
 		else
-			exit(false);
+			result := self.opozdun(); //
 	end;
+end;
+
+function TOrder.opozdanie : Integer;
+var dt, ap_dt : TDateTime;
+begin
+	result := 0;
+	if self.time_to_ap <= 0 then
+		exit();
+	dt := IncMinute(now, self.time_to_ap);
+	ap_dt := source_time_to_datetime(self.source_time);
+	if dt > ap_dt then
+		result := MinutesBetween(dt, ap_dt);
+end;
+
+function TOrder.opozdun : boolean;
+var opoz : Integer;
+begin
+	// result := false;
+	opoz := self.opozdanie();
+	if opoz >= 20 then
+	begin
+		self.opozdun20_flag := true;
+		result := true;
+	end
+	else
+		if opoz <= 15 then
+		begin
+			self.opozdun20_flag := false;
+			result := false;
+		end
+		else
+			result := self.opozdun20_flag;
 end;
 
 procedure TOrder.refresh_cars_stringlist;
@@ -3252,7 +3297,8 @@ begin
 	if self.time_to_ap = ORDER_AP_OK then
 	begin
 		if (self.state in [ //
-				ORDER_VODITEL_PODTVERDIL, //
+				ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, ORDER_VODITEL_PRINYAL, //
+			ORDER_VODITEL_PODTVERDIL, //
 			ORDER_PRIGLASITE_KLIENTA, ORDER_KLIENT_NE_VYSHEL, //
 			ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
 				]) then
@@ -3797,6 +3843,13 @@ begin
 	result := self.sort_col;
 end;
 
+procedure TOrderList.hide_buttons_send_to_robocab;
+var pp : Pointer;
+begin
+	for pp in self.Orders do
+		TOrder(pp).hide_button_send_to_robocab();
+end;
+
 function TOrderList.is_defined(OrderId : Integer) : boolean;
 var pp : Pointer;
 begin
@@ -3987,7 +4040,7 @@ function TCar.approximate_opozdaet : boolean;
 var dt, ap_dt : TDateTime;
 	app_time, opozdanie : Integer;
 begin
-	result := true;
+	result := false;
 	app_time := self.approximate_time_po_pryamoy();
 	if app_time < 0 then
 		exit();

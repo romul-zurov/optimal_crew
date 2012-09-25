@@ -191,6 +191,7 @@ var res : TSTringList;
 
 	procedure sg_clear();
 	begin
+		order_list.hide_buttons_send_to_robocab();
 		grid.RowCount := 2;
 		grid.Rows[1].Clear();
 		inc(self.debug_show_count);
@@ -285,17 +286,19 @@ begin
 						Caption := IfThen( //
 							self.cb_show_orders_id.Checked, IntToStr(order.id), //
 							'Robocab.ru');
-						Enabled := true;
-						Visible := true;
+						// Enabled := true;
+						// Visible := true;
 					end;
-				end
-				else
-					with order.button_send_to_robocab do
-					begin
-						Visible := false;
-						Enabled := false;
-						Left := -500;
-					end;
+				end;
+				{
+				  else
+				  with order.button_send_to_robocab do
+				  begin
+				  Visible := false;
+				  Enabled := false;
+				  Left := -500;
+				  end;
+				  }
 			except
 				// end;
 			end;

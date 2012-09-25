@@ -855,7 +855,7 @@ begin
 	self.otvet := '';
 	self.flag_zapros := false;
 	self.flag_count := true;
-	CoInitialize(nil);
+	// CoInitialize(nil);
 	try
 		self.browser := TWebBrowser.Create(nil);
 		// TWinControl(self.browser).Parent := browser_panel; // global panel
@@ -873,7 +873,7 @@ begin
 		self.browser.OnNavigateComplete2 := self.zapros_complete;
 		self.timer.OnTimer := self.timeout_error;
 	finally
-		CoUnInitialize();
+		// CoUnInitialize();
 	end;
 end;
 
@@ -915,11 +915,11 @@ begin
 	self.otvet := '';
 	result := 1;
 	self.flag_zapros := true;
-	CoInitialize(nil);
+	// CoInitialize(nil);
 	try
 		self.browser.Navigate(surl);
 	finally
-		CoUnInitialize();
+		// CoUnInitialize();
 	end;
 end;
 
