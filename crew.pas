@@ -3095,6 +3095,7 @@ begin
 			with self.source do
 				car.ap.setAdres(street, house, korpus, gps);
 			car.ap_source_time := source_time_to_datetime(self.source_time);
+			car.raw_dist_way := self.raw_dist_way;
 		except
 			exit();
 		end;
@@ -4116,6 +4117,7 @@ begin
 	self.PCrew := nil;
 	// self.dist_to_ap := -1.0;
 	self.dist_way_to_ap := -1.0;
+	self.raw_dist_way := -1.0;
 	self.time_to_ap := -1;
 	self.crew_state := -1;
 	self.car_coord := '';
