@@ -124,13 +124,13 @@ type
 		procedure show_cars();
 		function need_get_cars() : boolean;
 		procedure hide_button_send_to_robocab();
+		function opozdun() : boolean;
+		function opozdanie() : Integer;
 
 	private
 		opozdun20_flag : boolean;
 		robocab_http : TIdHTTP;
 
-		function opozdun() : boolean;
-		function opozdanie() : Integer;
 		procedure set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 		procedure set_time_to_end(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
 		function time_as_string(time : Integer) : string;
@@ -3017,7 +3017,7 @@ begin
 			]) //
 		then
 		exit();
-	if (self.CrewID = -1) or (self.PCrew = nil) then
+	if (self.CrewID = -1) then
 		exit();
 	if self.time_to_ap <= 0 then
 		exit();
@@ -3332,7 +3332,7 @@ begin
 				if self.time_to_ap = 0 then
 				begin
 					if self.state in [ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
-					ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
+						ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
 						then
 						result := '!ожидание клиента'
 					else
@@ -3342,14 +3342,14 @@ begin
 				// self.time_to_ap > 0
 				begin
 					if self.state in [ORDER_PRIGLASITE_KLIENTA, ORDER_KLIENT_NE_VYSHEL, //
-					ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
+						ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
 						] //
 						then
 						result := 'ожидание клиента'
 					else
 						if self.state in [ORDER_V_OCHEREDI, //
-						ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
-						ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
+							ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
+							ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
 							then
 						begin
 							cur_dt := now();

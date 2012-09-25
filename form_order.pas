@@ -408,6 +408,7 @@ begin
 	add_row(self.grid_order, 'customer', order.customer);
 	add_row(self.grid_order, 'phone', order.phone);
 	add_row(self.grid_order, 'CrewID', IntToStr(order.CrewID));
+	add_row(self.grid_order, 'PCrew', IntToStr(Integer(order.PCrew)));
 	add_row(self.grid_order, 'prior_crewid', IntToStr(order.prior_crewid));
 	add_row(self.grid_order, 'is_not_prior', da_net(order.is_not_prior()));
 	add_row(self.grid_order, 'state', order.state_as_string());
@@ -464,6 +465,8 @@ begin
 	add_row(self.grid_order, 'raw_price', FloatToStrF(order.raw_price, ffFixed, 8, 2));
 	add_row(self.grid_order, 'POrder', IntToStr(Integer(Pointer(order))));
 	add_row(self.grid_order, 'cars_gbox_column', BoolToStr(order.cars_gbox_visible));
+	add_row(self.grid_order, 'opozdun', da_net(order.opozdun()));
+	add_row(self.grid_order, 'opozdanie', IntToStr(order.opozdanie()));
 end;
 
 procedure TFormOrder.Timer_get_carsTimer(Sender : TObject);
