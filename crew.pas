@@ -3007,8 +3007,21 @@ function TOrder.opozdanie : Integer;
 var dt, ap_dt : TDateTime;
 begin
 	result := 0;
+	if self.is_bad() then
+		exit();
+	// проверяем состояние заказа
+	if not(self.state in [ //
+			ORDER_V_OCHEREDI, //
+		ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, ORDER_VODITEL_PRINYAL, //
+		ORDER_VODITEL_PODTVERDIL //
+			]) //
+		then
+		exit();
+	if (self.CrewID = -1) or (self.PCrew = nil) then
+		exit();
 	if self.time_to_ap <= 0 then
 		exit();
+
 	dt := IncMinute(now, self.time_to_ap);
 	ap_dt := source_time_to_datetime(self.source_time);
 	if dt > ap_dt then
@@ -3319,7 +3332,7 @@ begin
 				if self.time_to_ap = 0 then
 				begin
 					if self.state in [ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
-						ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
+					ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
 						then
 						result := '!ожидание клиента'
 					else
@@ -3329,14 +3342,14 @@ begin
 				// self.time_to_ap > 0
 				begin
 					if self.state in [ORDER_PRIGLASITE_KLIENTA, ORDER_KLIENT_NE_VYSHEL, //
-						ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
+					ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
 						] //
 						then
 						result := 'ожидание клиента'
 					else
 						if self.state in [ORDER_V_OCHEREDI, //
-							ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
-							ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
+						ORDER_ZAKAZ_OTPRAVLEN, ORDER_ZAKAZ_POLUCHEN, //
+						ORDER_VODITEL_PRINYAL, ORDER_VODITEL_PODTVERDIL] //
 							then
 						begin
 							cur_dt := now();
