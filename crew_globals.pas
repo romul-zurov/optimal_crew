@@ -852,6 +852,7 @@ end;
 
 constructor TZapros.Create;
 begin
+	inherited Create();
 	self.otvet := '';
 	self.flag_zapros := false;
 	self.flag_count := true;
@@ -881,11 +882,14 @@ procedure TZapros.dec_counter;
 begin
 	// if GetZaprosCounter > 0 then
 	dec(GetZaprosCounter);
-	self.show_counter();
+	// self.show_counter();
 end;
 
 destructor TZapros.Destroy;
+
 begin
+	if self.flag_zapros then
+		self.dec_counter();
 	self.browser.Free();
 	self.timer.Free();
 	inherited;
@@ -939,11 +943,12 @@ end;
 procedure TZapros.inc_counter;
 begin
 	inc(GetZaprosCounter);
-	self.show_counter();
+	// self.show_counter();
 end;
 
 procedure TZapros.show_counter;
 begin
+	exit();
 	if PGlobalStatusBar = nil then
 		exit()
 	else
@@ -956,11 +961,16 @@ begin
 end;
 
 procedure TZapros.timeout_error(Sender : TObject);
+var pDisp : IDispatch;
+	url : OleVariant;
 begin
 	self.timer.Enabled := false;
+	// if self.flag_zapros then
+	// self.dec_counter();
 	self.flag_zapros := false;
 	self.otvet := 'ErrorTimeout';
-	self.browser.Stop();
+	self.zapros_complete(Sender, pDisp, url);
+	// self.browser.Stop();
 end;
 
 procedure TZapros.zapros_complete(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
@@ -1034,7 +1044,21 @@ begin
 end;
 
 destructor TWay.Destroy;
+var pa : pointer;
 begin
+
+	{
+	  for pa in self.points do
+	  begin
+	  try
+	  self.points.Remove(pa);
+	  TAdres(pa).Free();
+	  finally
+
+	  end;
+	  end;
+	  self.points.Pack();
+	  }
 	self.points.Clear();
 	self.points.Free();
 	self.zapros.Free();
@@ -1166,7 +1190,7 @@ begin
 		for pp in self.speed_list do
 			try
 				sp := TSpeed(pp).speed();
-				if sp > 0.5 then // îòáğàñûâàåì ãëş÷íûå è íóëåâûå ñêîğîñòè
+				if (sp > 0.5) and (sp < 200.0) then // îòáğàñûâàåì ãëş÷íûå è íóëåâûå ñêîğîñòè
 				begin
 					result := result + sp;
 					inc(cou);
@@ -1197,7 +1221,7 @@ end;
 constructor TSpeedList.Create;
 begin
 	inherited Create();
-	self.old_speed := 0;
+	self.old_speed := 25;
 	self.speed_list := TList.Create();
 	self.timer := TTimer.Create(nil);
 	self.timer.Interval := 60 * 1000;

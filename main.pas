@@ -884,6 +884,8 @@ end;
 
 procedure Tform_main.show_counts;
 begin
+	self.stbar_main.Panels[1].Text := //
+		'Get: ' + IntToStr(GetZaprosCounter);
 	self.stbar_main.Panels[2].Text := //
 		IntToStr(self.ord_req_count) //
 		+ '/' //

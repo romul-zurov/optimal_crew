@@ -36,9 +36,11 @@ type
 		car_coord : string; // координата для определнния сдвига экипажа
 
 		constructor Create();
+		destructor Destroy(); override;
 		procedure Clear();
 		procedure def_time_to_ap();
 		function ret_data() : string;
+		function opozdanie() : Integer;
 	private
 		procedure def_way_to_ap();
 		procedure set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
@@ -123,6 +125,7 @@ type
 		procedure refresh_cars_stringlist();
 		procedure show_cars();
 		function need_get_cars() : boolean;
+		function need_show_cars() : boolean;
 		procedure hide_button_send_to_robocab();
 		function opozdun() : boolean;
 		function opozdanie() : Integer;
@@ -147,6 +150,7 @@ type
 		function is_in_robocab() : boolean;
 		function add_to_robocab() : boolean;
 		procedure set_car_data(PCar : Pointer);
+		function del_car(PCar : Pointer) : Integer;
 	end;
 
 	TOrderList = class(TObject)
@@ -1964,17 +1968,17 @@ function TOrder.add_cars_and_sort : Integer;
 var
 	i, j : Integer;
 	car : TCar;
+	PCar : Pointer;
 begin
 	result := self.get_cars_for_ap();
 	if result <= 0 then
 		exit();
 	// сначала удаляем экипажи из текущего списка, которых нет в новом,
 	// ибо они уже не удовл.
-	for i := self.Cars.count - 1 downto 0 do
-	begin
-		if self.PCrews_tmp.IndexOf(TCar(self.Cars.Items[i]).PCrew) < 0 then
-			self.Cars.Delete(i);
-	end;
+	for PCar in self.Cars do
+		if self.PCrews_tmp.IndexOf(TCar(PCar).PCrew) < 0 then
+			self.del_car(PCar);
+
 	// теперь добавляем новые, да-с :)
 	for i := self.PCrews_tmp.count - 1 downto 0 do
 	begin
@@ -2207,7 +2211,8 @@ var pp : Pointer;
 begin
 	for pp in self.Cars do
 	begin
-		TCar(pp).time_to_ap := -1;
+		// TCar(pp).time_to_ap := -1;
+		self.del_car(pp);
 	end;
 end;
 
@@ -2780,6 +2785,20 @@ ras4et :
 	self.way_to_end.get_way_time_dist();
 end;
 
+function TOrder.del_car(PCar : Pointer) : Integer;
+begin
+	result := -1;
+	try
+		result := self.Cars.Remove(PCar);
+		if result < 0 then
+			exit();
+		self.Cars.Pack();
+		FreeAndNil(TCar(PCar));
+	except
+		exit();
+	end;
+end;
+
 procedure TOrder.del_order();
 begin
 	self.ID := -1; //
@@ -3003,6 +3022,27 @@ begin
 	end;
 end;
 
+function TOrder.need_show_cars : boolean;
+var opoz, car_opoz : Integer;
+	PCar : Pointer;
+begin
+	if self.hand_get_cars_flag then
+		exit(true);
+	result := self.need_get_cars();
+	if result then
+		if self.opozdun() then
+		begin
+			result := false; // true станет, если есть cars с меньшим опозданием
+			opoz := self.opozdanie();
+			for PCar in self.Cars do
+			begin
+				car_opoz := TCar(PCar).opozdanie();
+				if (car_opoz >= 0) and (car_opoz < opoz) then
+					exit(true);
+			end;
+		end;
+end;
+
 function TOrder.opozdanie : Integer;
 var dt, ap_dt : TDateTime;
 begin
@@ -3165,8 +3205,7 @@ var i_ctrl, i_col, j, rr, ww : Integer;
 	end;
 
 begin
-	if //
-		self.need_get_cars() then
+	if self.need_show_cars() then
 	begin // отображаем
 		if not self.cars_gbox_visible then
 			self.add_cars_grid_to_panel();
@@ -3178,7 +3217,7 @@ begin
 	begin
 		if self.cars_gbox_visible then
 			self.cars_gbox.Width := 0;
-		self.clear_cars();
+		// self.clear_cars();
 		exit();
 	end;
 
@@ -4040,6 +4079,19 @@ begin
 	result := get_dist_from_coord(self.car_coord, crew.coord) > CREW_MOVE_DIST;
 end;
 
+function TCar.opozdanie : Integer;
+var dt : TDateTime;
+begin
+	result := -1;
+	if self.time_to_ap < 0 then
+		exit();
+	dt := IncMinute(now(), self.time_to_ap);
+	if dt > self.ap_source_time then
+		result := MinutesBetween(dt, self.ap_source_time)
+	else
+		result := 0;
+end;
+
 function TCar.approximate_dist_way : double;
 var d : double;
 begin
@@ -4052,7 +4104,7 @@ end;
 
 function TCar.approximate_opozdaet : boolean;
 var dt, ap_dt : TDateTime;
-	app_time, opozdanie : Integer;
+	app_time : Integer;
 begin
 	result := false;
 	app_time := self.approximate_time_po_pryamoy();
@@ -4128,8 +4180,10 @@ begin
 	inherited Create();
 	self.ap := TAdres.Create('', '', '', '');
 	self.from := TAdres.Create('', '', '', '');
+
 	self.way_to_ap := TWay.Create();
 	self.way_to_ap.zapros.browser.OnNavigateComplete2 := self.set_time_to_ap;
+
 	self.Clear();
 end;
 
@@ -4189,6 +4243,15 @@ begin
 	from.setAdres('', '', '', coo);
 	self.way_to_ap.points.Add(Pointer(self.from));
 	self.way_to_ap.points.Add(Pointer(self.ap));
+end;
+
+destructor TCar.Destroy;
+begin
+	self.ap.Free();
+	self.from.Free();
+	self.way_to_ap.Free();
+	self.PCrew := nil;
+	inherited;
 end;
 
 function TCar.dist_to_ap : double;
