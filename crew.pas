@@ -3032,12 +3032,12 @@ begin
 	if result then
 		if self.opozdun() then
 		begin
-			result := false; // true станет, если есть cars с меньшим опозданием
+			result := false; // true станет, если есть cars с вдвое меньшим опозданием
 			opoz := self.opozdanie();
 			for PCar in self.Cars do
 			begin
 				car_opoz := TCar(PCar).opozdanie();
-				if (car_opoz >= 0) and (car_opoz < opoz) then
+				if (car_opoz >= 0) and (car_opoz < (opoz div 2)) then
 					exit(true);
 			end;
 		end;
