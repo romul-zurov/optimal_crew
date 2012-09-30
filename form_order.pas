@@ -387,7 +387,7 @@ procedure TFormOrder.show_order;
 var order : TOrder;
 	crew : TCRew;
 	i : Integer;
-	cr_coo : string;
+	coo1, coo2 : string;
 begin
 	order := TOrder(POrder);
 	if order = nil then
@@ -419,18 +419,13 @@ begin
 	add_row(self.grid_order, 'int_stops', order.raw_int_stops);
 	add_row(self.grid_order, 'dest', order.dest.get_as_string());
 
-	if order.CrewID > 0 then
-	begin
-		try
-			crew := TCrewList(PMainCrewList).crewByCrewId(order.CrewID);
-			cr_coo := crew.coord;
-		except
-			cr_coo := '';
-		end;
-	end
-	else
-		cr_coo := '';
-	add_row(self.grid_order, 'order.crew.coord', cr_coo);
+	coo1 := order.crew_coord;
+	coo2 := order.coordOfCrew;
+	add_row(self.grid_order, 'order.crew_coord', coo1);
+	add_row(self.grid_order, 'order.coord_of_crew', coo2);
+	add_row(self.grid_order, 'get_dist_from_coord', //
+		FloatToStrF(get_dist_from_coord(coo1, coo2), ffFixed, 8, 1));
+
 	add_row(self.grid_order, 'source.gps', order.source.gps);
 	// координаты пром. остановок
 	for i := 0 to order.int_stops.Count - 1 do

@@ -54,6 +54,35 @@ type
 	end;
 
 	TOrder = class(TObject)
+	private
+		opozdun20_flag : boolean;
+		robocab_http : TIdHTTP;
+		coord_of_crew : string; // координата, для которой проводился расчёт
+		new_coord_of_crew : string; // новая координата для проведения расчёта
+
+		function crew_is_moved() : boolean;
+		function crew_is_not_moved() : boolean;
+		function get_crew_coord() : string;
+
+		procedure set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+		procedure set_time_to_end(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
+		function time_as_string(time : Integer) : string;
+		function get_cars_for_ap() : Integer;
+		function add_cars_and_sort() : Integer;
+		procedure add_cars_grid_to_panel();
+		procedure cars_grid_DrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
+			state : TGridDrawState);
+		procedure hide_cars_by_hand(Sender : TObject);
+		procedure clear_cars();
+		procedure click_send_to_robocab(Sender : TObject; Button : TMouseButton; Shift : TShiftState;
+			X, Y : Integer);
+		function send_to_robocab() : Integer;
+		function is_in_robocab() : boolean;
+		function add_to_robocab() : boolean;
+		procedure set_car_data(PCar : Pointer);
+		function del_car(PCar : Pointer) : Integer;
+
+	public
 		ID : Integer; // order main ID in ORDERS table, -1 if not defined
 		CrewID : Integer; // crew ID for a order, -1 if not defined
 		// want_CrewId : Integer; // желаемый экипаж на заказе - НЕ НУЖЕН!
@@ -106,6 +135,9 @@ type
 
 		button_send_to_robocab : TButton;
 
+		property crew_coord : string read get_crew_coord;
+		property coordOfCrew : string read coord_of_crew;
+
 		constructor Create(OrderId : Integer; var IBQuery : TIBQuery);
 		destructor Destroy(); override;
 		procedure del_order(); // просто очищает заказ без удаления из памяти
@@ -129,28 +161,6 @@ type
 		procedure hide_button_send_to_robocab();
 		function opozdun() : boolean;
 		function opozdanie() : Integer;
-
-	private
-		opozdun20_flag : boolean;
-		robocab_http : TIdHTTP;
-
-		procedure set_time_to_ap(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
-		procedure set_time_to_end(ASender : TObject; const pDisp : IDispatch; var url : OleVariant);
-		function time_as_string(time : Integer) : string;
-		function get_cars_for_ap() : Integer;
-		function add_cars_and_sort() : Integer;
-		procedure add_cars_grid_to_panel();
-		procedure cars_grid_DrawCell(Sender : TObject; ACol, ARow : Integer; Rect : TRect;
-			state : TGridDrawState);
-		procedure hide_cars_by_hand(Sender : TObject);
-		procedure clear_cars();
-		procedure click_send_to_robocab(Sender : TObject; Button : TMouseButton; Shift : TShiftState;
-			X, Y : Integer);
-		function send_to_robocab() : Integer;
-		function is_in_robocab() : boolean;
-		function add_to_robocab() : boolean;
-		procedure set_car_data(PCar : Pointer);
-		function del_car(PCar : Pointer) : Integer;
 	end;
 
 	TOrderList = class(TObject)
@@ -188,7 +198,7 @@ type
 		Code : string;
 		name : string;
 		coord : string; // текущая (самая свежая) координата GPS
-		old_coord : string; // предыдущая координата
+		// old_coord : string; // предыдущая координата
 		dist : double; // расстояние до адреса подачи (АП) радиальное, по прямой, метров;
 		dist_way : double; // длина маршрута до АП, км;
 
@@ -222,13 +232,13 @@ type
 		function when_was_in_coord(coord : string) : string;
 		function was_in_coord(coord : string) : boolean;
 		function now_in_coord(coord : string) : boolean;
-		function is_moved() : boolean; // сместился более чем на...
+		// function is_moved() : boolean; // сместился более чем на...
 		procedure calc_dist(coord : string);
 		procedure set_time(m : Integer; d : double); // set time and time_as_string;
 		function get_time(var List : TOrderList; newOrder : boolean) : Integer;
 		function get_time_for_ap(var o_list : TOrderList; n_ap : TAdres) : Integer;
 		procedure show_status(s : string);
-		procedure reset_old_coord();
+		// procedure reset_old_coord();
 		function ret_data() : string;
 		function ret_data_to_ap(source_time : string; half_dist_way : double) : string;
 		// function def_time_to_ap(var polist : Pointer) : Integer;
@@ -551,7 +561,7 @@ begin
 	self.name := '';
 	// self.state_as_string := '';
 	self.coord := ''; // текущая (самая свежая) координата GPS
-	old_coord := ''; // предыдущая координата
+	// old_coord := ''; // предыдущая координата
 	self.dist := -1.0; // расстояние до адреса подачи (АП)
 	self.time := -1; // время подъезда к АП в минутах;
 	self.OrderId := -1; // ID заказа занятого экипажа
@@ -938,17 +948,19 @@ begin
 	exit('');
 end;
 
-function TCrew.is_moved : boolean;
-begin
-	if self.coord = '' then
-		exit(false);
-	if self.old_coord = '' then
-		result := true
-	else
-		result := get_dist_from_coord(self.coord, self.old_coord) > CREW_MOVE_DIST;
-	// if result then
-	// self.old_coord := self.coord;
-end;
+{
+  function TCrew.is_moved : boolean;
+  begin
+  if self.coord = '' then
+  exit(false);
+  if self.old_coord = '' then
+  result := true
+  else
+  result := get_dist_from_coord(self.coord, self.old_coord) > CREW_MOVE_DIST;
+  // if result then
+  // self.old_coord := self.coord;
+  end;
+}
 
 function TCrew.last_porder : Pointer;
 begin
@@ -1064,7 +1076,7 @@ begin
 	begin
 		// координата экипажа "устарела" на CREW_CUR_COORD_TIME минут и более
 		self.coord := '';
-		self.old_coord := '';
+		// self.old_coord := '';
 	end
 	else
 	begin
@@ -1105,10 +1117,12 @@ begin
 		result := CREW_SVOBODEN;
 end;
 
-procedure TCrew.reset_old_coord;
-begin
-	self.old_coord := self.coord;
-end;
+{
+  procedure TCrew.reset_old_coord;
+  begin
+  self.old_coord := self.coord;
+  end;
+}
 
 function TCrew.ret_data : string;
 begin
@@ -2308,9 +2322,26 @@ begin
 	end;
 end;
 
+function TOrder.crew_is_moved : boolean;
+var coord : string;
+begin
+	result := false;
+	coord := self.crew_coord;
+	if coord = '' then
+		exit();
+	if self.coord_of_crew = '' then
+		exit(true);
+	result := get_dist_from_coord(coord, self.coord_of_crew) > CREW_MOVE_DIST;
+end;
+
+function TOrder.crew_is_not_moved : boolean;
+begin
+	result := not self.crew_is_moved();
+end;
+
 procedure TOrder.def_time_to_ap(var PCrew : Pointer);
 var cur_pos : TAdres;
-	gps : string;
+	gps, cur_coord : string;
 	d : double;
 	crew : TCrew;
 	res : Integer;
@@ -2338,7 +2369,7 @@ begin
 		ORDER_SMS_PRIGL, ORDER_TEL_PRIGL //
 			]) //
 		or (self.CrewID = -1) //
-		or (self.source.isEmpty) //
+		or (self.source.isEmpty()) //
 		then
 	begin
 		self.time_to_ap := -1;
@@ -2362,7 +2393,8 @@ begin
 		exit();
 	end;
 
-	if (crew.coord = '') then
+	cur_coord := self.crew_coord;
+	if (cur_coord = '') then
 	begin
 		self.time_to_ap := ORDER_CREW_NO_COORD;
 		exit();
@@ -2409,7 +2441,7 @@ begin
 			if self.dobavka_v_ocheredi = ORDER_AN_OK then
 			begin
 				self.dobavka_v_ocheredi := 0;
-				cur_pos := TAdres.Create('', '', '', crew.coord) // тек. коорд. экипажа
+				cur_pos := TAdres.Create('', '', '', cur_coord) // тек. коорд. экипажа
 			end
 			else
 				try
@@ -2433,7 +2465,7 @@ begin
 		if (not crew.was_in_coord(gps)) then // водитель в АП не был ещё
 		begin
 			// начало маршрута - текущая координата машины
-			cur_pos := TAdres.Create('', '', '', crew.coord);
+			cur_pos := TAdres.Create('', '', '', cur_coord);
 			do_def();
 		end
 		else
@@ -2452,7 +2484,7 @@ end;
 procedure TOrder.def_time_to_end(var PCrew : Pointer);
 var
 	cur_pos, adr : TAdres;
-	gps : string;
+	gps, cur_coord : string;
 	// points : TList;
 	// stops_time : Integer;  - сделать self.stops_time
 	// время на остановки для экипажа на заказе
@@ -2524,14 +2556,15 @@ begin
 	if crew = nil then
 		exit();
 
-	if (crew.coord = '') then
+	cur_coord := self.crew_coord;
+	if (cur_coord = '') then
 	begin
 		self.time_to_end := ORDER_CREW_NO_COORD;
 		exit();
 	end;
 
 	if (self.time_to_end > 0) // уже считалось
-		and (not crew.is_moved()) // и экипаж не переместился с просчёта на заданное расстояние
+		and self.crew_is_not_moved() // и экипаж не переместился с просчёта на заданное расстояние
 		then // то не пересчитываем, просто ждём, когда экипаж переедет
 		exit();
 
@@ -2572,7 +2605,7 @@ begin
 	self.stops_time := 0; // + self.count_int_stops * INT_STOP_TIME; // !!!!!!!!!!!!
 	self.way_to_end.points.Clear(); // список точек маршрута
 	// начало маршрута - текущая координата машины (обычно, но не всегда)
-	cur_pos := TAdres.Create('', '', '', crew.coord);
+	cur_pos := TAdres.Create('', '', '', cur_coord);
 
 	// если экипаж на заказе, то проверяем, был ли он в точках source и dest
 	// если нет - добавляем их в маршрут и прибавляем время на остановки
@@ -2782,6 +2815,7 @@ begin
 ras4et :
 	self.PCrew := PCrew;
 	self.datetime_of_time_to_end := now(); // засекаем момент взятия времени
+	self.new_coord_of_crew := cur_coord; // засекаем, для какой координаты пытаемся вести расчёт
 	self.way_to_end.get_way_time_dist();
 end;
 
@@ -2834,6 +2868,8 @@ begin
 	self.hand_get_cars_flag := false; //
 	self.cars_gbox.Caption := ''; //
 	self.opozdun20_flag := false;
+	self.coord_of_crew := '';
+	self.new_coord_of_crew := '';
 end;
 
 destructor TOrder.Destroy;
@@ -2904,6 +2940,18 @@ begin
 		except
 			continue; // просто переходим к след. экипажу
 		end;
+	end;
+end;
+
+function TOrder.get_crew_coord : string;
+begin
+	result := '';
+	if self.CrewID < 0 then
+		exit();
+	try
+		result := TCrew(crew_list.crewByCrewId(self.CrewID)).coord;
+	except
+		exit();
 	end;
 end;
 
@@ -3169,8 +3217,9 @@ begin
 		// with self.way_to_end do
 		// speed_list.Append(dist_way, time);
 
-		// сбрасываем координату
-		TCrew(self.PCrew).reset_old_coord();
+		// обновляем координату
+		// TCrew(self.PCrew).reset_old_coord();  -- НЕ НАДО!
+		self.coord_of_crew := self.new_coord_of_crew;
 	end;
 end;
 

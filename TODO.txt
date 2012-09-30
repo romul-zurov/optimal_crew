@@ -1,6 +1,8 @@
 прям щас:
 
+почему дабл-клик закрывает АВТО-подбор экипажа??
 
+переписать критерий перерасчёта order.time_to_ap  order.time_to_end			ok!
 сортировка по approx_time													ok!
 отброс по approx_time при подборе											ok!
 при расчёте approx_time учитывать crew.order_time_to_end 					ok!
