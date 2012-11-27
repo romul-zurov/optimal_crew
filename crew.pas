@@ -81,6 +81,7 @@ type
 		function add_to_robocab() : boolean;
 		procedure set_car_data(PCar : Pointer);
 		function del_car(PCar : Pointer) : Integer;
+		procedure clear_crew();
 
 	public
 		ID : Integer; // order main ID in ORDERS table, -1 if not defined
@@ -2230,6 +2231,16 @@ begin
 	end;
 end;
 
+procedure TOrder.clear_crew;
+begin
+	// снимаем экипаж с заказа
+	self.time_to_end := -1;
+	self.time_to_ap := -1;
+	self.PCrew := nil;
+	self.CrewID := -1; // !!!
+	self.clear_cars();
+end;
+
 procedure TOrder.click_send_to_robocab(Sender : TObject; Button : TMouseButton; Shift : TShiftState;
 	X, Y : Integer);
 var but : Integer;
@@ -3750,8 +3761,12 @@ end;
 
 function TOrderList.get_current_orders_with_data : Integer;
 var sel, s, s1 : string;
-	res, sl : TstringList; sdate_from, sdate_to : string; ord_id : Integer; order : TOrder;
-	cur_time : TDateTime; pord : Pointer;
+	res, sl : TstringList;
+	sdate_from, sdate_to : string;
+	ord_id : Integer; order : TOrder;
+	cur_time : TDateTime;
+	pord : Pointer;
+	cr_id : Integer;
 begin
 	cur_time := now(); //
 	sdate_from := '''' + replace_time('{Last_day_1}', cur_time) + ''''; //
@@ -3851,18 +3866,16 @@ begin
 
 		// заполняем данные заказа
 		if res.Strings[0] <> '' then
-			order.CrewID := StrToInt(res.Strings[0])
-		else
 		begin
-			if order.CrewID > -1 then
+			cr_id := StrToInt(res.Strings[0]);
+			if cr_id <> order.CrewID then
 			begin
-				// снимаем экипаж с заказа
-				order.time_to_end := -1;
-				order.time_to_ap := -1;
-				order.PCrew := nil;
+				order.clear_crew();
+				order.CrewID := cr_id;
 			end;
-			order.CrewID := -1; // !!!
-		end;
+		end
+		else
+			order.clear_crew();
 
 		try
 			order.state := StrToInt(res.Strings[1]);
